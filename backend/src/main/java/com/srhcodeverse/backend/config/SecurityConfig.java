@@ -16,7 +16,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import java.util.List;
 
 @Configuration
@@ -45,6 +44,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
         	    "http://localhost:5173",
+                    "https://frontend-cpt6iyad4-siddus-projects-0ae5cf1a.vercel.app",
         	    "https://your-codeverse-frontend.vercel.app",
         	    "https://y-forge-git-main-yashbannurs-projects.vercel.app"
         	));
