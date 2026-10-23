@@ -1,0 +1,19 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { getCourses } from '../../api/courseApi'
+
+function Courses(){
+  const [courses,setCourses]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[query,setQuery]=useState(''),[category,setCategory]=useState('ALL'),[level,setLevel]=useState('ALL')
+  useEffect(()=>{getCourses().then(r=>setCourses(r.data)).catch(e=>setError(e.response?.data?.message||'Unable to load courses')).finally(()=>setLoading(false))},[])
+  const categories=['ALL',...new Set(courses.map(c=>c.category))]
+  const filtered=useMemo(()=>courses.filter(c=>(category==='ALL'||c.category===category)&&(level==='ALL'||c.level===level)&&(!query||`${c.title} ${c.shortDescription} ${c.category}`.toLowerCase().includes(query.toLowerCase()))),[courses,category,level,query])
+  if(loading)return <div className="cv-section-panel rounded-3xl p-8">Loading courses...</div>
+  if(error)return <div className="cv-section-panel rounded-3xl p-8 text-red-500">{error}</div>
+  return <main className="max-w-[1280px] mx-auto px-5 sm:px-8 py-10">
+    <div className="mb-8"><p className="cv-kicker">SRH CODEVERSE ACADEMY</p><h1 className="text-4xl sm:text-5xl font-black mt-2">Learn with <span className="cv-gradient-text">structure.</span></h1><p className="text-[var(--cv-muted)] mt-3 max-w-2xl">Real curricula, practical exercises, projects and free resources — organized from fundamentals to interview-ready skills.</p></div>
+    <div className="cv-section-panel rounded-2xl p-4 mb-7 flex flex-col lg:flex-row gap-3"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search courses..." className="cv-input flex-1"/><select value={category} onChange={e=>setCategory(e.target.value)} className="cv-input lg:w-52">{categories.map(c=><option key={c}>{c}</option>)}</select><select value={level} onChange={e=>setLevel(e.target.value)} className="cv-input lg:w-44"><option>ALL</option><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></div>
+    <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">{filtered.map(c=><Link key={c.slug} to={`/courses/${c.slug}`} className="cv-course-card rounded-3xl p-6 group"><div className="flex items-start justify-between gap-4"><img src={c.thumbnail} alt="" className="w-16 h-10 rounded-xl object-cover border border-[var(--cv-border)]"/><span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-violet-500/10 text-violet-600">{c.level}</span></div><h2 className="text-xl font-black mt-5">{c.title}</h2><p className="text-sm text-[var(--cv-muted)] leading-6 mt-2 min-h-12">{c.shortDescription}</p><div className="grid grid-cols-3 gap-2 mt-6 text-center"><div className="rounded-xl bg-[var(--cv-surface-2)] p-2"><b>{c.lessonCount}</b><span className="block text-[10px] text-[var(--cv-muted)]">Lessons</span></div><div className="rounded-xl bg-[var(--cv-surface-2)] p-2"><b>{c.problemCount}</b><span className="block text-[10px] text-[var(--cv-muted)]">Practice</span></div><div className="rounded-xl bg-[var(--cv-surface-2)] p-2"><b>{Math.round((c.estimatedDurationMinutes||0)/60)}h</b><span className="block text-[10px] text-[var(--cv-muted)]">Learning</span></div></div><div className="mt-5"><div className="flex justify-between text-[10px] text-[var(--cv-muted)]"><span>Progress</span><span>{c.progressPercent}%</span></div><div className="h-1.5 rounded-full bg-[var(--cv-surface-2)] mt-1 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 to-cyan-400" style={{width:`${c.progressPercent}%`}}/></div></div><div className="mt-5 text-sm font-bold text-violet-600 group-hover:translate-x-1 transition">Open course →</div></Link>)}</div>
+    {filtered.length===0&&<div className="text-center py-16 text-[var(--cv-muted)]">No courses match those filters.</div>}
+  </main>
+}
+export default Courses

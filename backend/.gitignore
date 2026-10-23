@@ -1,0 +1,42 @@
+# Maven
+target/
+
+# Spring Boot local secrets
+src/main/resources/application-secrets.properties
+
+# Maven Wrapper
+.mvn/wrapper/maven-wrapper.jar
+
+# Keep nested target directories ignoredq   
+**/src/main/**/target/
+**/src/test/**/target/
+
+# Eclipse / STS
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# Gradle
+build/
+**/src/main/**/build/
+**/src/test/**/build/
+
+# VS Code
+.vscode/

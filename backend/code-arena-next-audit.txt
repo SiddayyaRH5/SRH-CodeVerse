@@ -1,0 +1,2219 @@
+=== BACKEND CONFIGURATION ===
+
+===== src\main\resources\application.properties =====
+spring.application.name=srh-codeverse
+
+# Load local secrets if the file exists
+spring.config.import=optional:application-secrets.properties
+
+# =========================
+# DATABASE CONFIGURATION
+# =========================
+spring.datasource.url=${DB_URL:jdbc:mysql://localhost:3306/srh_codeverse_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata}
+spring.datasource.username=${DB_USERNAME:root}
+spring.datasource.password=${DB_PASSWORD:}
+
+# =========================
+# JPA / HIBERNATE
+# =========================
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+# =========================
+# JWT CONFIGURATION
+# =========================
+jwt.secret=${JWT_SECRET:SRHCodeVerse-Local-Development-Secret-Key-2026}
+jwt.expiration-ms=86400000
+
+# =========================
+# SERVER
+# =========================
+server.port=${PORT:8080}
+
+===== src\main\java\com\srhcodeverse\backend\config\SecurityConfig.java =====
+package com.srhcodeverse.backend.config;
+
+import com.srhcodeverse.backend.security.JwtAuthFilter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import java.util.List;
+
+@Configuration
+@EnableMethodSecurity
+public class SecurityConfig {
+
+    private final JwtAuthFilter jwtAuthFilter;
+
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+    
+    
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of(
+        	    "http://localhost:5173",
+        	    "https://your-codeverse-frontend.vercel.app",
+        	    "https://y-forge-git-main-yashbannurs-projects.vercel.app"
+        	));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/health", "/api/auth/**").permitAll()
+                .requestMatchers("/api/courses/*/progress").authenticated()
+                .requestMatchers("/api/courses/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+}
+
+===== src\main\java\com\srhcodeverse\backend\controller\SubmissionController.java =====
+package com.srhcodeverse.backend.controller;
+
+import com.srhcodeverse.backend.dto.SubmissionRequest;
+import com.srhcodeverse.backend.dto.SubmissionResponse;
+import com.srhcodeverse.backend.service.SubmissionService;
+import jakarta.validation.Valid;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api")
+public class SubmissionController {
+
+    private final SubmissionService submissionService;
+
+    public SubmissionController(SubmissionService submissionService) {
+        this.submissionService = submissionService;
+    }
+
+    @PostMapping("/problems/{id}/run")
+    public SubmissionResponse run(@PathVariable Long id, @RequestBody SubmissionRequest request) {
+        return submissionService.runCode(id, request.getCode());
+    }
+
+    @PostMapping("/problems/{id}/submit")
+    public SubmissionResponse submit(@PathVariable Long id, @RequestBody SubmissionRequest request) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return submissionService.submitCode(id, request.getCode(), username);
+    }
+}
+
+===== src\main\java\com\srhcodeverse\backend\service\ExecutionService.java =====
+package com.srhcodeverse.backend.service;
+
+import org.springframework.stereotype.Service;
+
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+@Service
+public class ExecutionService {
+
+    private static final int TIMEOUT_SECONDS = 5;
+
+    private static final Pattern MAIN_METHOD_PATTERN = Pattern.compile(
+            "public\\s+static\\s+void\\s+main\\s*\\("
+    );
+    private static final Pattern CLASS_PATTERN = Pattern.compile("\\bclass\\s+(\\w+)");
+    private static final Pattern METHOD_PATTERN = Pattern.compile(
+            "public\\s+(?:static\\s+)?([\\w\\[\\]]+)\\s+(\\w+)\\s*\\(([^)]*)\\)"
+    );
+
+    public record TestResult(boolean passed, String actualOutput, String errorMessage) {}
+    public record ExecutionOutcome(boolean compiled, String compileError, List<TestResult> results, long runtimeMs) {}
+
+    public ExecutionOutcome runAgainstTestCases(String code, List<String> inputs, List<String> expectedOutputs) {
+
+        String sourceToCompile;
+        try {
+            sourceToCompile = wrapIfNeeded(code);
+        } catch (IllegalArgumentException e) {
+            return new ExecutionOutcome(false, e.getMessage(), List.of(), 0);
+        }
+
+        Path tempDir;
+        try {
+            tempDir = Files.createTempDirectory("srhcodeverse_exec_");
+        } catch (IOException e) {
+            return new ExecutionOutcome(false, "Server error creating temp directory", List.of(), 0);
+        }
+
+        try {
+            Path sourceFile = tempDir.resolve("Main.java");
+            Files.writeString(sourceFile, sourceToCompile);
+
+            ProcessBuilder compileBuilder = new ProcessBuilder("javac", "Main.java");
+            compileBuilder.directory(tempDir.toFile());
+            compileBuilder.redirectErrorStream(true);
+            Process compileProcess = compileBuilder.start();
+
+            String compileOutput = readStream(compileProcess.getInputStream());
+            boolean compileFinished = compileProcess.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+            if (!compileFinished) {
+                compileProcess.destroyForcibly();
+                return new ExecutionOutcome(false, "Compilation timed out", List.of(), 0);
+            }
+            if (compileProcess.exitValue() != 0) {
+                return new ExecutionOutcome(false, compileOutput, List.of(), 0);
+            }
+
+            List<TestResult> results = new ArrayList<>();
+            long totalStart = System.currentTimeMillis();
+
+            for (int i = 0; i < inputs.size(); i++) {
+                results.add(runSingleTest(tempDir, inputs.get(i), expectedOutputs.get(i)));
+            }
+
+            long totalTime = System.currentTimeMillis() - totalStart;
+            return new ExecutionOutcome(true, null, results, totalTime);
+
+        } catch (Exception e) {
+            return new ExecutionOutcome(false, "Execution error: " + e.getMessage(), List.of(), 0);
+        } finally {
+            deleteDirectory(tempDir.toFile());
+        }
+    }
+
+    private TestResult runSingleTest(Path tempDir, String input, String expectedOutput) {
+        try {
+            ProcessBuilder runBuilder = new ProcessBuilder("java", "-cp", ".", "Main");
+            runBuilder.directory(tempDir.toFile());
+            Process process = runBuilder.start();
+
+            try (OutputStream stdin = process.getOutputStream()) {
+                stdin.write(input.getBytes());
+                stdin.flush();
+            }
+
+            boolean finished = process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            if (!finished) {
+                process.destroyForcibly();
+                return new TestResult(false, null, "Time Limit Exceeded");
+            }
+
+            String output = readStream(process.getInputStream()).trim();
+            String errorOutput = readStream(process.getErrorStream()).trim();
+
+            if (process.exitValue() != 0 && !errorOutput.isBlank()) {
+                return new TestResult(false, output, "Runtime Error: " + errorOutput);
+            }
+
+            boolean passed = output.equals(expectedOutput.trim());
+            return new TestResult(passed, output, null);
+
+        } catch (Exception e) {
+            return new TestResult(false, null, "Execution error: " + e.getMessage());
+        }
+    }
+
+    private String readStream(InputStream stream) throws IOException {
+        return new String(stream.readAllBytes());
+    }
+
+    private void deleteDirectory(File dir) {
+        File[] files = dir.listFiles();
+        if (files != null) {
+            for (File f : files) {
+                if (f.isDirectory()) deleteDirectory(f);
+                else f.delete();
+            }
+        }
+        dir.delete();
+    }
+
+    // ===================== MODE DETECTION =====================
+
+    private String wrapIfNeeded(String studentCode) {
+        if (MAIN_METHOD_PATTERN.matcher(studentCode).find()) {
+            return studentCode; // raw mode: unchanged
+        }
+
+        Matcher classMatcher = CLASS_PATTERN.matcher(studentCode);
+        if (classMatcher.find()) {
+            String primaryClassName = classMatcher.group(1);
+            List<String> allClassNames = new ArrayList<>();
+            Matcher allClasses = CLASS_PATTERN.matcher(studentCode);
+            while (allClasses.find()) {
+                allClassNames.add(allClasses.group(1));
+            }
+            return buildClassModeWrapper(studentCode, primaryClassName, allClassNames);
+        }
+
+        Matcher methodMatcher = METHOD_PATTERN.matcher(studentCode);
+        if (!methodMatcher.find()) {
+            throw new IllegalArgumentException(
+                    "Could not detect a method signature. Expected something like:\n" +
+                    "public <returnType> <methodName>(<parameters>) { ... }"
+            );
+        }
+
+        String returnType = methodMatcher.group(1).trim();
+        String methodName = methodMatcher.group(2).trim();
+        String rawParams = methodMatcher.group(3).trim();
+
+        List<String[]> params = new ArrayList<>();
+        if (!rawParams.isEmpty()) {
+            for (String rawParam : rawParams.split(",")) {
+                String p = rawParam.trim();
+                String[] tokens = p.split("\\s+");
+                String name = tokens[tokens.length - 1];
+                String type = p.substring(0, p.length() - name.length()).trim();
+                params.add(new String[]{type, name});
+            }
+        }
+
+        return buildMethodModeWrapper(studentCode, returnType, methodName, params);
+    }
+
+    // ===================== METHOD-MODE WRAPPER (single bare method) =====================
+
+    private String buildMethodModeWrapper(String studentCode, String returnType, String methodName, List<String[]> params) {
+        StringBuilder src = new StringBuilder();
+
+        src.append("import java.io.*;\n");
+        src.append("import java.lang.reflect.*;\n\n");
+        src.append("public class Main {\n\n");
+        src.append(studentCode);
+        src.append("\n\n");
+
+        src.append("    public static void main(String[] args) throws Exception {\n");
+        src.append("        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n");
+        src.append("        Main solution = new Main();\n\n");
+
+        List<String> argNames = new ArrayList<>();
+        for (int i = 0; i < params.size(); i++) {
+            String type = params.get(i)[0];
+            String name = params.get(i)[1];
+            argNames.add(name);
+
+            src.append("        String __line").append(i).append(" = br.readLine();\n");
+            src.append(buildParseLine(type, name, "__line" + i));
+        }
+        src.append("\n");
+
+        String argsJoined = String.join(", ", argNames);
+
+        if (returnType.equals("void")) {
+            src.append("        solution.").append(methodName).append("(").append(argsJoined).append(");\n");
+
+            String printedParamType = null;
+            String printedParamName = null;
+            for (String[] p : params) {
+                if (p[0].endsWith("[]")) {
+                    printedParamType = p[0];
+                    printedParamName = p[1];
+                    break;
+                }
+            }
+
+            if (printedParamName != null) {
+                src.append(buildPrintLine(printedParamType, printedParamName));
+            } else {
+                src.append("        System.out.println(\"\");\n");
+            }
+        } else {
+            src.append("        ").append(returnType).append(" result = solution.")
+               .append(methodName).append("(").append(argsJoined).append(");\n");
+            src.append(buildPrintLine(returnType, "result"));
+        }
+
+        src.append("    }\n\n");
+        src.append(buildSharedHelpers());
+        src.append("}\n");
+
+        return src.toString();
+    }
+
+    private String buildParseLine(String type, String varName, String lineVar) {
+        switch (type) {
+            case "int[]": return "        int[] " + varName + " = parseIntArray(" + lineVar + ");\n";
+            case "char[]": return "        char[] " + varName + " = parseCharArray(" + lineVar + ");\n";
+            case "String[]": return "        String[] " + varName + " = parseStringArray(" + lineVar + ");\n";
+            case "boolean[]": return "        boolean[] " + varName + " = parseBooleanArray(" + lineVar + ");\n";
+            case "long[]": return "        long[] " + varName + " = parseLongArray(" + lineVar + ");\n";
+            case "double[]": return "        double[] " + varName + " = parseDoubleArray(" + lineVar + ");\n";
+            case "int": return "        int " + varName + " = Integer.parseInt(" + lineVar + ".trim());\n";
+            case "long": return "        long " + varName + " = Long.parseLong(" + lineVar + ".trim());\n";
+            case "double": return "        double " + varName + " = Double.parseDouble(" + lineVar + ".trim());\n";
+            case "boolean": return "        boolean " + varName + " = Boolean.parseBoolean(" + lineVar + ".trim());\n";
+            case "char": return "        char " + varName + " = parseCharScalar(" + lineVar + ");\n";
+            case "String": return "        String " + varName + " = parseStringScalar(" + lineVar + ");\n";
+            default: throw new IllegalArgumentException("Unsupported parameter type: " + type);
+        }
+    }
+
+    private String buildPrintLine(String type, String varName) {
+        switch (type) {
+            case "int[]": return "        System.out.println(formatIntArray(" + varName + "));\n";
+            case "char[]": return "        System.out.println(formatCharArray(" + varName + "));\n";
+            case "String[]": return "        System.out.println(formatStringArray(" + varName + "));\n";
+            case "boolean[]": return "        System.out.println(formatBooleanArray(" + varName + "));\n";
+            case "long[]": return "        System.out.println(formatLongArray(" + varName + "));\n";
+            case "double[]": return "        System.out.println(formatDoubleArray(" + varName + "));\n";
+            case "int": case "long": case "double": case "boolean":
+                return "        System.out.println(String.valueOf(" + varName + "));\n";
+            case "char": case "String":
+                return "        System.out.println(\"\\\"\" + " + varName + " + \"\\\"\");\n";
+            default: throw new IllegalArgumentException("Unsupported return type: " + type);
+        }
+    }
+
+    // ===================== CLASS-MODE WRAPPER (stateful, multi-call, reflection-based) =====================
+
+    private String buildClassModeWrapper(String studentCode, String className, List<String> allClassNames) {
+        // Ensure only Main is the public top-level class in this file
+        String cleanedStudentCode = studentCode.replaceFirst(
+                "public\\s+class\\s+" + Pattern.quote(className),
+                "class " + className
+        );
+
+        StringBuilder src = new StringBuilder();
+
+        src.append("import java.io.*;\n");
+        src.append("import java.util.*;\n");
+        src.append("import java.lang.reflect.*;\n\n");
+
+        src.append(cleanedStudentCode);
+        src.append("\n\n");
+
+        src.append("public class Main {\n\n");
+        src.append("    public static void main(String[] args) throws Exception {\n");
+        src.append("        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n");
+        src.append("        String line = br.readLine();\n");
+        src.append("        if (line == null) line = \"\";\n");
+        src.append("        List<String> tokens = splitTopLevel(line);\n\n");
+
+        src.append("        String[] knownClasses = {");
+        for (int k = 0; k < allClassNames.size(); k++) {
+            if (k > 0) src.append(", ");
+            src.append("\"").append(allClassNames.get(k)).append("\"");
+        }
+        src.append("};\n\n");
+
+        src.append("        int i = 0;\n");
+        src.append("        String selectedClassName = \"").append(className).append("\";\n");
+        src.append("        List<String> ctorArgs = new ArrayList<>();\n\n");
+
+        src.append("        if (!tokens.isEmpty()) {\n");
+        src.append("            String firstToken = tokens.get(0).trim();\n");
+        src.append("            for (String kc : knownClasses) {\n");
+        src.append("                if (kc.equals(firstToken)) {\n");
+        src.append("                    selectedClassName = firstToken;\n");
+        src.append("                    i = 1;\n");
+        src.append("                    break;\n");
+        src.append("                }\n");
+        src.append("            }\n");
+        src.append("        }\n\n");
+
+        src.append("        if (i == 0) {\n");
+        src.append("            while (i < tokens.size() && !looksLikeCall(tokens.get(i))) {\n");
+        src.append("                ctorArgs.add(tokens.get(i).trim());\n");
+        src.append("                i++;\n");
+        src.append("            }\n");
+        src.append("        }\n\n");
+
+        src.append("        Class<?> clazz = Class.forName(selectedClassName);\n");
+        src.append("        Object instance = construct(clazz, ctorArgs);\n\n");
+
+        src.append("        Object lastResult = null;\n");
+        src.append("        boolean hadCall = false;\n");
+        src.append("        for (; i < tokens.size(); i++) {\n");
+        src.append("            String token = tokens.get(i).trim();\n");
+        src.append("            int paren = token.indexOf('(');\n");
+        src.append("            String methodName = token.substring(0, paren).trim();\n");
+        src.append("            String innerArgs = token.substring(paren + 1, token.lastIndexOf(')')).trim();\n");
+        src.append("            List<String> argTokens = innerArgs.isEmpty() ? new ArrayList<>() : splitTopLevel(innerArgs);\n");
+        src.append("            lastResult = invokeMethod(instance, methodName, argTokens);\n");
+        src.append("            hadCall = true;\n");
+        src.append("        }\n\n");
+
+        src.append("        if (!hadCall) {\n");
+        src.append("            throw new RuntimeException(\"Test case had no method calls after construction\");\n");
+        src.append("        }\n");
+        src.append("        if (lastResult == null) {\n");
+        src.append("            throw new RuntimeException(\"Last call in the sequence returned void. \" +\n");
+        src.append("                \"The final call must return a value (e.g. end with a getter).\");\n");
+        src.append("        }\n");
+        src.append("        System.out.println(formatValue(lastResult));\n");
+        src.append("    }\n\n");
+
+        src.append(buildClassModeHelpers());
+        src.append(buildSharedHelpers());
+        src.append("}\n");
+
+        return src.toString();
+    }
+
+    private String buildClassModeHelpers() {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("    private static List<String> splitTopLevel(String s) {\n")
+          .append("        List<String> result = new ArrayList<>();\n")
+          .append("        int depth = 0;\n")
+          .append("        StringBuilder current = new StringBuilder();\n")
+          .append("        for (char c : s.toCharArray()) {\n")
+          .append("            if (c == '(') depth++;\n")
+          .append("            if (c == ')') depth--;\n")
+          .append("            if (c == ',' && depth == 0) {\n")
+          .append("                result.add(current.toString().trim());\n")
+          .append("                current = new StringBuilder();\n")
+          .append("            } else {\n")
+          .append("                current.append(c);\n")
+          .append("            }\n")
+          .append("        }\n")
+          .append("        if (current.length() > 0 || !result.isEmpty()) {\n")
+          .append("            String last = current.toString().trim();\n")
+          .append("            if (!last.isEmpty()) result.add(last);\n")
+          .append("        }\n")
+          .append("        return result;\n")
+          .append("    }\n\n");
+
+        sb.append("    private static boolean looksLikeCall(String token) {\n")
+          .append("        return token.trim().matches(\"\\\\w+\\\\(.*\\\\)\");\n")
+          .append("    }\n\n");
+
+        sb.append("    private static Object construct(Class<?> clazz, List<String> rawArgs) throws Exception {\n")
+          .append("        for (Constructor<?> ctor : clazz.getDeclaredConstructors()) {\n")
+          .append("            if (ctor.getParameterCount() != rawArgs.size()) continue;\n")
+          .append("            try {\n")
+          .append("                Class<?>[] paramTypes = ctor.getParameterTypes();\n")
+          .append("                Object[] parsed = new Object[rawArgs.size()];\n")
+          .append("                for (int j = 0; j < rawArgs.size(); j++) {\n")
+          .append("                    parsed[j] = parseValue(rawArgs.get(j), paramTypes[j]);\n")
+          .append("                }\n")
+          .append("                ctor.setAccessible(true);\n")
+          .append("                return ctor.newInstance(parsed);\n")
+          .append("            } catch (Exception e) { /* try next candidate */ }\n")
+          .append("        }\n")
+          .append("        throw new RuntimeException(\"No matching constructor found for \" + rawArgs.size() + \" argument(s)\");\n")
+          .append("    }\n\n");
+
+        sb.append("    private static Object invokeMethod(Object instance, String methodName, List<String> rawArgs) throws Exception {\n")
+        .append("        List<Method> candidates = new ArrayList<>();\n")
+        .append("        for (Method m : instance.getClass().getDeclaredMethods()) {\n")
+        .append("            if (m.getName().equals(methodName) && m.getParameterCount() == rawArgs.size()) {\n")
+        .append("                candidates.add(m);\n")
+        .append("            }\n")
+        .append("        }\n")
+        .append("        candidates.sort((a, b) -> Integer.compare(specificity(a), specificity(b)));\n")
+        .append("        for (Method m : candidates) {\n")
+        .append("            try {\n")
+        .append("                Class<?>[] paramTypes = m.getParameterTypes();\n")
+        .append("                Object[] parsed = new Object[rawArgs.size()];\n")
+        .append("                for (int j = 0; j < rawArgs.size(); j++) {\n")
+        .append("                    parsed[j] = parseValue(rawArgs.get(j), paramTypes[j]);\n")
+        .append("                }\n")
+        .append("                m.setAccessible(true);\n")
+        .append("                return m.invoke(instance, parsed);\n")
+        .append("            } catch (Exception e) { /* try next candidate */ }\n")
+        .append("        }\n")
+        .append("        throw new RuntimeException(\"No matching method found: \" + methodName + \"(\" + rawArgs.size() + \" args)\");\n")
+        .append("    }\n\n");
+
+      sb.append("    private static int specificity(Method m) {\n")
+        .append("        int score = 0;\n")
+        .append("        for (Class<?> t : m.getParameterTypes()) {\n")
+        .append("            if (t == int.class || t == long.class || t == Integer.class || t == Long.class) score += 0;\n")
+        .append("            else if (t == double.class || t == Double.class) score += 1;\n")
+        .append("            else score += 0;\n")
+        .append("        }\n")
+        .append("        return score;\n")
+        .append("    }\n\n");
+
+        sb.append("    private static Object parseValue(String raw, Class<?> type) {\n")
+          .append("        raw = raw.trim();\n")
+          .append("        if (type.isArray()) {\n")
+          .append("            Class<?> comp = type.getComponentType();\n")
+          .append("            String inner = stripBrackets(raw);\n")
+          .append("            String[] parts = inner.isEmpty() ? new String[0] : inner.split(\",\");\n")
+          .append("            int n = parts.length;\n")
+          .append("            if (comp == int.class) { int[] a = new int[n]; for (int k=0;k<n;k++) a[k]=Integer.parseInt(parts[k].trim()); return a; }\n")
+          .append("            if (comp == long.class) { long[] a = new long[n]; for (int k=0;k<n;k++) a[k]=Long.parseLong(parts[k].trim()); return a; }\n")
+          .append("            if (comp == double.class) { double[] a = new double[n]; for (int k=0;k<n;k++) a[k]=Double.parseDouble(parts[k].trim()); return a; }\n")
+          .append("            if (comp == boolean.class) { boolean[] a = new boolean[n]; for (int k=0;k<n;k++) a[k]=Boolean.parseBoolean(parts[k].trim()); return a; }\n")
+          .append("            if (comp == char.class) { char[] a = new char[n]; for (int k=0;k<n;k++) a[k]=parseCharScalar(parts[k]); return a; }\n")
+          .append("            if (comp == String.class) { String[] a = new String[n]; for (int k=0;k<n;k++) a[k]=parseStringScalar(parts[k]); return a; }\n")
+          .append("            throw new RuntimeException(\"Unsupported array component type: \" + comp);\n")
+          .append("        }\n")
+          .append("        if (type == int.class || type == Integer.class) return Integer.parseInt(raw);\n")
+          .append("        if (type == long.class || type == Long.class) return Long.parseLong(raw);\n")
+          .append("        if (type == double.class || type == Double.class) return Double.parseDouble(raw);\n")
+          .append("        if (type == boolean.class || type == Boolean.class) return Boolean.parseBoolean(raw);\n")
+          .append("        if (type == char.class || type == Character.class) return parseCharScalar(raw);\n")
+          .append("        if (type == String.class) return parseStringScalar(raw);\n")
+          .append("        throw new RuntimeException(\"Unsupported parameter type: \" + type.getName());\n")
+          .append("    }\n\n");
+
+        sb.append("    private static String formatValue(Object val) {\n")
+          .append("        if (val == null) return \"null\";\n")
+          .append("        if (val instanceof int[]) return formatIntArray((int[]) val);\n")
+          .append("        if (val instanceof long[]) return formatLongArray((long[]) val);\n")
+          .append("        if (val instanceof double[]) return formatDoubleArray((double[]) val);\n")
+          .append("        if (val instanceof boolean[]) return formatBooleanArray((boolean[]) val);\n")
+          .append("        if (val instanceof char[]) return formatCharArray((char[]) val);\n")
+          .append("        if (val instanceof String[]) return formatStringArray((String[]) val);\n")
+          .append("        if (val instanceof Character) return \"\\\"\" + val + \"\\\"\";\n")
+          .append("        if (val instanceof String) return \"\\\"\" + val + \"\\\"\";\n")
+          .append("        return String.valueOf(val);\n")
+          .append("    }\n\n");
+
+        return sb.toString();
+    }
+
+    // ===================== SHARED HELPERS (used by both wrapper types) =====================
+
+    private String buildSharedHelpers() {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("    private static String stripBrackets(String line) {\n")
+          .append("        line = line.trim();\n")
+          .append("        if (line.startsWith(\"[\") && line.endsWith(\"]\")) {\n")
+          .append("            line = line.substring(1, line.length() - 1);\n")
+          .append("        }\n")
+          .append("        return line.trim();\n")
+          .append("    }\n\n");
+
+        sb.append("    private static int[] parseIntArray(String line) {\n")
+          .append("        String inner = stripBrackets(line);\n")
+          .append("        if (inner.isEmpty()) return new int[0];\n")
+          .append("        String[] parts = inner.split(\",\");\n")
+          .append("        int[] result = new int[parts.length];\n")
+          .append("        for (int i = 0; i < parts.length; i++) result[i] = Integer.parseInt(parts[i].trim());\n")
+          .append("        return result;\n")
+          .append("    }\n\n");
+
+        sb.append("    private static long[] parseLongArray(String line) {\n")
+          .append("        String inner = stripBrackets(line);\n")
+          .append("        if (inner.isEmpty()) return new long[0];\n")
+          .append("        String[] parts = inner.split(\",\");\n")
+          .append("        long[] result = new long[parts.length];\n")
+          .append("        for (int i = 0; i < parts.length; i++) result[i] = Long.parseLong(parts[i].trim());\n")
+          .append("        return result;\n")
+          .append("    }\n\n");
+
+        sb.append("    private static double[] parseDoubleArray(String line) {\n")
+          .append("        String inner = stripBrackets(line);\n")
+          .append("        if (inner.isEmpty()) return new double[0];\n")
+          .append("        String[] parts = inner.split(\",\");\n")
+          .append("        double[] result = new double[parts.length];\n")
+          .append("        for (int i = 0; i < parts.length; i++) result[i] = Double.parseDouble(parts[i].trim());\n")
+          .append("        return result;\n")
+          .append("    }\n\n");
+
+        sb.append("    private static boolean[] parseBooleanArray(String line) {\n")
+          .append("        String inner = stripBrackets(line);\n")
+          .append("        if (inner.isEmpty()) return new boolean[0];\n")
+          .append("        String[] parts = inner.split(\",\");\n")
+          .append("        boolean[] result = new boolean[parts.length];\n")
+          .append("        for (int i = 0; i < parts.length; i++) result[i] = Boolean.parseBoolean(parts[i].trim());\n")
+          .append("        return result;\n")
+          .append("    }\n\n");
+
+        sb.append("    private static char[] parseCharArray(String line) {\n")
+          .append("        String inner = stripBrackets(line);\n")
+          .append("        if (inner.isEmpty()) return new char[0];\n")
+          .append("        String[] parts = inner.split(\",\");\n")
+          .append("        char[] result = new char[parts.length];\n")
+          .append("        for (int i = 0; i < parts.length; i++) result[i] = parseCharScalar(parts[i]);\n")
+          .append("        return result;\n")
+          .append("    }\n\n");
+
+        sb.append("    private static String[] parseStringArray(String line) {\n")
+          .append("        String inner = stripBrackets(line);\n")
+          .append("        if (inner.isEmpty()) return new String[0];\n")
+          .append("        String[] parts = inner.split(\",\");\n")
+          .append("        String[] result = new String[parts.length];\n")
+          .append("        for (int i = 0; i < parts.length; i++) result[i] = parseStringScalar(parts[i]);\n")
+          .append("        return result;\n")
+          .append("    }\n\n");
+
+        sb.append("    private static char parseCharScalar(String raw) {\n")
+          .append("        String p = raw.trim();\n")
+          .append("        if (p.startsWith(\"\\\"\") && p.endsWith(\"\\\"\") && p.length() >= 2) {\n")
+          .append("            p = p.substring(1, p.length() - 1);\n")
+          .append("        }\n")
+          .append("        return p.isEmpty() ? ' ' : p.charAt(0);\n")
+          .append("    }\n\n");
+
+        sb.append("    private static String parseStringScalar(String raw) {\n")
+          .append("        String p = raw.trim();\n")
+          .append("        if (p.startsWith(\"\\\"\") && p.endsWith(\"\\\"\") && p.length() >= 2) {\n")
+          .append("            p = p.substring(1, p.length() - 1);\n")
+          .append("        }\n")
+          .append("        return p;\n")
+          .append("    }\n\n");
+
+        sb.append("    private static String formatIntArray(int[] arr) {\n")
+          .append("        StringBuilder sb = new StringBuilder(\"[\");\n")
+          .append("        for (int i = 0; i < arr.length; i++) { if (i > 0) sb.append(\",\"); sb.append(arr[i]); }\n")
+          .append("        sb.append(\"]\"); return sb.toString();\n")
+          .append("    }\n\n");
+
+        sb.append("    private static String formatLongArray(long[] arr) {\n")
+          .append("        StringBuilder sb = new StringBuilder(\"[\");\n")
+          .append("        for (int i = 0; i < arr.length; i++) { if (i > 0) sb.append(\",\"); sb.append(arr[i]); }\n")
+          .append("        sb.append(\"]\"); return sb.toString();\n")
+          .append("    }\n\n");
+
+        sb.append("    private static String formatDoubleArray(double[] arr) {\n")
+          .append("        StringBuilder sb = new StringBuilder(\"[\");\n")
+          .append("        for (int i = 0; i < arr.length; i++) { if (i > 0) sb.append(\",\"); sb.append(arr[i]); }\n")
+          .append("        sb.append(\"]\"); return sb.toString();\n")
+          .append("    }\n\n");
+
+        sb.append("    private static String formatBooleanArray(boolean[] arr) {\n")
+          .append("        StringBuilder sb = new StringBuilder(\"[\");\n")
+          .append("        for (int i = 0; i < arr.length; i++) { if (i > 0) sb.append(\",\"); sb.append(arr[i]); }\n")
+          .append("        sb.append(\"]\"); return sb.toString();\n")
+          .append("    }\n\n");
+
+        sb.append("    private static String formatCharArray(char[] arr) {\n")
+          .append("        StringBuilder sb = new StringBuilder(\"[\");\n")
+          .append("        for (int i = 0; i < arr.length; i++) { if (i > 0) sb.append(\",\"); sb.append('\\\"').append(arr[i]).append('\\\"'); }\n")
+          .append("        sb.append(\"]\"); return sb.toString();\n")
+          .append("    }\n\n");
+
+        sb.append("    private static String formatStringArray(String[] arr) {\n")
+          .append("        StringBuilder sb = new StringBuilder(\"[\");\n")
+          .append("        for (int i = 0; i < arr.length; i++) { if (i > 0) sb.append(\",\"); sb.append('\\\"').append(arr[i]).append('\\\"'); }\n")
+          .append("        sb.append(\"]\"); return sb.toString();\n")
+          .append("    }\n\n");
+
+        return sb.toString();
+    }
+}
+
+=== FRONTEND API AND EDITOR FILES ===
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\api\achievementApi.js =====
+
+import axiosInstance from "./axiosInstance"
+export const getAchievements = () => axiosInstance.get("/student/achievements")
+export const getAllAchievements = () => axiosInstance.get("/student/achievements/all")
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\api\activityApi.js =====
+import axiosInstance from "./axiosInstance"
+export const getActivity = () => axiosInstance.get("/student/activity")
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\api\analyticsApi.js =====
+import axiosInstance from "./axiosInstance"
+export const getAnalytics = () => axiosInstance.get("/trainer/analytics")
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\api\authApi.js =====
+import axiosInstance from "./axiosInstance"
+
+export const registerUser = (data) => axiosInstance.post("/auth/register", data)
+export const loginUser = (data) => axiosInstance.post("/auth/login", data)
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\api\axiosInstance.js =====
+import axios from "axios"
+
+const axiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080/api",
+})
+
+axiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem("srhcodeverse_token")
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+export default axiosInstance
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\api\courseApi.js =====
+import axiosInstance from './axiosInstance'
+export const getCourses = () => axiosInstance.get('/courses')
+export const getCourse = (slug) => axiosInstance.get(`/courses/${slug}`)
+export const getCourseProblems = (slug) => axiosInstance.get(`/courses/${slug}/problems`)
+export const updateCourseProgress = (slug, lessonId, completed) => axiosInstance.post(`/courses/${slug}/progress`, { lessonId, completed })
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\api\dailyChallengeApi.js =====
+import axiosInstance from "./axiosInstance"
+export const getTodaysChallenge = () => axiosInstance.get("/daily-challenge")
+export const setTodaysChallenge = (data) => axiosInstance.put("/trainer/daily-challenge", data)
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\api\dashboardApi.js =====
+import axiosInstance from "./axiosInstance"
+
+export const getDashboard = () => axiosInstance.get("/student/dashboard")
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\api\leaderboardApi.js =====
+import axiosInstance from "./axiosInstance"
+export const getLeaderboard = () => axiosInstance.get("/leaderboard")
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\api\problemApi.js =====
+import axiosInstance from "./axiosInstance"
+
+
+// Student-facing
+export const getProblems = () => axiosInstance.get("/problems")
+
+// Trainer-facing
+export const getTrainerProblems = () => axiosInstance.get("/trainer/problems")
+export const getTrainerProblem = (id) => axiosInstance.get(`/trainer/problems/${id}`)
+export const createProblem = (data) => axiosInstance.post("/trainer/problems", data)
+export const updateProblem = (id, data) => axiosInstance.put(`/trainer/problems/${id}`, data)
+export const deleteProblem = (id) => axiosInstance.delete(`/trainer/problems/${id}`)
+export const getProblemDetail = (id) => axiosInstance.get(`/problems/${id}`)
+export const getHint = (id, hintNumber) => axiosInstance.get(`/problems/${id}/hints/${hintNumber}`)
+export const runCode = (id, code) => axiosInstance.post(`/problems/${id}/run`, { code })
+export const submitCode = (id, code) => axiosInstance.post(`/problems/${id}/submit`, { code })
+export const getMyLastCode = (id) => axiosInstance.get(`/problems/${id}/my-code`)
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\api\profileApi.js =====
+import axiosInstance from "./axiosInstance"
+export const getProfile = () => axiosInstance.get("/profile")
+export const updateProfile = (data) => axiosInstance.put("/profile", data)
+export const changePassword = (data) => axiosInstance.put("/profile/password", data)
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\api\trainerApi.js =====
+import axiosInstance from "./axiosInstance"
+
+export const getTrainerDashboard = () => axiosInstance.get("/trainer/dashboard")
+export const getRecentSubmissions = () => axiosInstance.get("/trainer/dashboard/recent-submissions")
+export const getProblemPerformance = () => axiosInstance.get("/trainer/dashboard/problem-performance")
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\api\trainerStudentApi.js =====
+import axiosInstance from "./axiosInstance"
+export const getAllStudents = () => axiosInstance.get("/trainer/students")
+export const getStudentDetail = (username) => axiosInstance.get(`/trainer/students/${username}`)
+export const getStudentActivity = (username) => axiosInstance.get(`/trainer/students/${username}/activity`)
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\components\common\AICodeMentor.jsx =====
+import { useMemo, useState } from "react"
+
+function analyzeCode(code = "", problem = null, result = null) {
+  const normalized = code.toLowerCase()
+  const signals = []
+  const tips = []
+
+  if (!code.trim()) {
+    return {
+      title: "Start with a small plan",
+      body: "Write the simplest approach you can describe in 2–3 sentences, then turn that plan into code.",
+      tips: ["Identify the input and output first.", "Choose the data structure before writing the loop.", "Handle one example manually before coding."],
+    }
+  }
+
+  if (normalized.includes("system.out.println")) signals.push("You are using console output, which is useful for quick debugging.")
+  if (normalized.includes("hashmap") || normalized.includes("hashset")) signals.push("A hash-based collection is present; check whether its lookup complexity matches the problem.")
+  if (normalized.includes("for ") || normalized.includes("while ")) signals.push("You have an iteration step; trace the loop with the smallest and largest input cases.")
+  if (normalized.includes("nested") || (normalized.match(/for\s*\(/g) || []).length > 1) tips.push("Check whether the nested iteration can be reduced with a map, set, two pointers, or sorting.")
+  if (normalized.includes("==") && normalized.includes("string")) tips.push("For Java strings, prefer .equals(...) for value comparison rather than ==.")
+  if (normalized.includes("scanner")) tips.push("If the judge expects exact input parsing, confirm that you consume whitespace/newlines consistently.")
+  if (!normalized.includes("public static void main")) tips.push("For a standalone Java solution, confirm that the required main entry point is present.")
+
+  if (result?.status === "FAILED") {
+    tips.unshift("Your latest submission has failing tests. Start with the first failed visible case and compare expected vs actual output.")
+  }
+  if (result?.status === "COMPILE_ERROR" || result?.compileError) {
+    tips.unshift("Fix compilation before optimizing. Read the first compiler message carefully; later messages may be cascading errors.")
+  }
+  if (result?.status === "PASSED") {
+    tips.unshift("Nice work — all tests passed. Now review time complexity and whether the solution is easy to maintain.")
+  }
+
+  if (problem?.difficulty === "HARD") tips.push("For a hard problem, write down the invariant or recurrence before attempting optimization.")
+  if (problem?.topic) tips.push(`Focus on the core ${problem.topic} concept before reaching for a more complex solution.`)
+  if (!tips.length) tips.push("Trace the solution on an empty input, one-element input, and a boundary case.")
+
+  return {
+    title: signals[0] || "Your approach is taking shape",
+    body: signals.slice(1).join(" ") || "Keep the implementation simple first. Once it is correct, inspect complexity and edge cases.",
+    tips: [...new Set(tips)].slice(0, 4),
+  }
+}
+
+export default function AICodeMentor({ code, problem, result }) {
+  const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState("hint")
+  const [question, setQuestion] = useState("")
+  const [asked, setAsked] = useState("")
+  const analysis = useMemo(() => analyzeCode(code, problem, result), [code, problem, result])
+
+  const answer = mode === "hint"
+    ? analysis
+    : mode === "debug"
+      ? {
+          title: result?.compileError ? "Start with the compiler error" : result?.status === "FAILED" ? "Start with the first failing test" : "Run a focused edge-case check",
+          body: result?.compileError || (result?.status === "FAILED" ? "Compare the first failed test's expected output with your actual output. Avoid changing multiple parts at once." : "Try empty input, duplicate values, maximum values, and a case where the answer is already obvious."),
+          tips: analysis.tips,
+        }
+      : mode === "optimize"
+        ? {
+            title: "Optimization checklist",
+            body: "Correctness comes first. Then look for repeated work inside loops, unnecessary object creation, and data structures that can improve lookup time.",
+            tips: ["Estimate time complexity.", "Estimate extra space.", "Look for repeated searches or conversions.", "Keep the optimized version readable."],
+          }
+        : {
+            title: "Concept coach",
+            body: problem?.topic ? `Your current problem is about ${problem.topic}. Explain the idea in your own words before coding; that is the fastest way to build durable understanding.` : "Explain the approach aloud before coding. If you can explain it clearly, the implementation usually becomes much easier.",
+            tips: ["Define the invariant.", "Write one worked example.", "Identify the edge case that can break the approach."],
+          }
+
+  const submitQuestion = () => {
+    if (!question.trim()) return
+    setAsked(question.trim())
+    setQuestion("")
+  }
+
+  return (
+    <div className="mt-5 rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.07] via-[var(--cv-surface)] to-cyan-500/[0.05] overflow-hidden">
+      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-4 text-left hover:bg-violet-500/[0.04] transition">
+        <div className="flex items-center gap-3">
+          <span className="w-10 h-10 rounded-xl grid place-items-center bg-gradient-to-br from-violet-600 to-cyan-500 text-white shadow-lg">✦</span>
+          <div><p className="font-bold text-sm">AI Code Mentor</p><p className="text-[11px] text-[var(--cv-muted)]">Hints, debugging and optimization guidance</p></div>
+        </div>
+        <span className="text-violet-500">{open ? "⌃" : "⌄"}</span>
+      </button>
+      {open && <div className="px-4 pb-4">
+        <div className="flex flex-wrap gap-2 mb-4">
+          {[['hint','💡 Hint'],['debug','🐛 Debug'],['optimize','⚡ Optimize'],['concept','📚 Explain']].map(([value,label]) => <button key={value} onClick={() => setMode(value)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition ${mode === value ? 'bg-violet-600 text-white border-violet-600' : 'border-[var(--cv-border)] text-[var(--cv-muted)] hover:border-violet-400'}`}>{label}</button>)}
+        </div>
+        <div className="rounded-xl border border-[var(--cv-border)] bg-[var(--cv-surface)] p-4">
+          <p className="font-semibold text-sm">{answer.title}</p>
+          <p className="text-xs leading-5 text-[var(--cv-muted)] mt-2">{answer.body}</p>
+          <ul className="mt-3 space-y-2">{answer.tips.map((tip, i) => <li key={i} className="text-xs text-[var(--cv-muted)] flex gap-2"><span className="text-cyan-500">•</span>{tip}</li>)}</ul>
+        </div>
+        <div className="mt-3 flex gap-2">
+          <input value={question} onChange={(e) => setQuestion(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submitQuestion()} className="cv-input !py-2.5 !text-xs" placeholder="Ask: why does my loop fail on duplicates?" />
+          <button onClick={submitQuestion} className="cv-primary-btn !px-4 !py-2.5 text-xs">Ask</button>
+        </div>
+        {asked && <div className="mt-3 rounded-xl bg-[var(--cv-surface-2)] p-3 text-xs"><b>You asked:</b> {asked}<p className="text-[var(--cv-muted)] mt-1">Mentor tip: break the question into the smallest failing case, inspect the relevant state change, then test one hypothesis at a time.</p></div>}
+        <p className="text-[10px] text-[var(--cv-subtle)] mt-3">CodeVerse Mentor is designed to guide your reasoning instead of handing you a full solution.</p>
+      </div>}
+    </div>
+  )
+}
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\pages\student\ProblemDetail.jsx =====
+import { useState, useEffect } from "react"
+import { useParams } from "react-router-dom"
+import Editor from "@monaco-editor/react"
+import confetti from "canvas-confetti"
+import { getProblemDetail, getHint, runCode, submitCode, getMyLastCode } from "../../api/problemApi"
+import DifficultyBadge from "../../components/common/DifficultyBadge"
+import ProtectedContent from "../../components/common/ProtectedContent"
+import { invalidate } from "../../utils/cache"
+import { useAuth } from "../../context/AuthContext"
+import { isBookmarked, toggleBookmark, getNote, saveNote } from "../../utils/srhStudy"
+import AICodeMentor from "../../components/common/AICodeMentor"
+
+function fireConfetti() {
+  confetti({
+    particleCount: 120,
+    spread: 80,
+    origin: { y: 0.6 },
+    colors: ["#f97316", "#ea580c", "#4ade80", "#ffffff"],
+  })
+}
+
+function ProblemDetail() {
+  const { id } = useParams()
+  const { user } = useAuth()
+  const [problem, setProblem] = useState(null)
+  const [code, setCode] = useState("")
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [revealedHints, setRevealedHints] = useState([])
+  const [hintError, setHintError] = useState("")
+  const [showPasteWarning, setShowPasteWarning] = useState(false)
+  const [running, setRunning] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [result, setResult] = useState(null)
+  const [editorTheme, setEditorTheme] = useState(localStorage.getItem("srhcodeverse_editor_theme") || "vs-dark")
+  const [mobileTab, setMobileTab] = useState("description") // "description" | "editor"
+  const [bookmarked, setBookmarked] = useState(false)
+  const [noteOpen, setNoteOpen] = useState(false)
+  const [note, setNote] = useState("")
+
+  useEffect(() => {
+    Promise.all([getProblemDetail(id), getMyLastCode(id).catch(() => ({ data: {} }))])
+      .then(([problemRes, codeRes]) => {
+        setProblem(problemRes.data)
+        setBookmarked(isBookmarked(id))
+        setNote(getNote(id))
+        setCode(codeRes.data.code || problemRes.data.starterCode || "")
+      })
+      .catch((err) => setError(err.response?.data?.message || "Failed to load problem"))
+      .finally(() => setLoading(false))
+  }, [id])
+
+  const handleRevealHint = async (hintNumber) => {
+    setHintError("")
+    try {
+      const res = await getHint(id, hintNumber)
+      setRevealedHints((prev) => [...prev, res.data])
+    } catch (err) {
+      setHintError(err.response?.data?.message || "Hint not available")
+    }
+  }
+
+  const handleThemeChange = (theme) => {
+    setEditorTheme(theme)
+    localStorage.setItem("srhcodeverse_editor_theme", theme)
+  }
+
+  const handleReset = () => {
+    if (!window.confirm("Reset to starter code? Your current changes will be lost.")) return
+    setCode(problem.starterCode || "")
+  }
+
+  const handleRun = async () => {
+    setRunning(true)
+    setResult(null)
+    try {
+      const res = await runCode(id, code)
+      setResult(res.data)
+    } catch (err) {
+      setResult({ status: "ERROR", compileError: err.response?.data?.message || "Failed to run code" })
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  const handleSubmit = async () => {
+    setSubmitting(true)
+    setResult(null)
+    try {
+      const res = await submitCode(id, code)
+      setResult(res.data)
+      if (res.data.status === "PASSED") {
+        fireConfetti()
+        invalidate(`problems:${user?.username}`)
+      }
+    } catch (err) {
+      setResult({ status: "ERROR", compileError: err.response?.data?.message || "Failed to submit code" })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (loading) return <p className="text-[var(--color-text-secondary)]">Loading problem...</p>
+  if (error) return <p className="text-[var(--color-danger)]">{error}</p>
+
+  const nextHintNumber = revealedHints.length + 1
+
+  return (
+    <div>
+      {/* Mobile tab switcher - hidden on lg+ */}
+      <div className="flex lg:hidden gap-2 mb-3">
+        <button
+          onClick={() => setMobileTab("description")}
+          className={`flex-1 text-sm py-2 rounded ${
+            mobileTab === "description"
+              ? "bg-[var(--color-forge-500)] text-white"
+              : "bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] border border-[var(--color-border)]"
+          }`}
+        >
+          Description
+        </button>
+        <button
+          onClick={() => setMobileTab("editor")}
+          className={`flex-1 text-sm py-2 rounded ${
+            mobileTab === "editor"
+              ? "bg-[var(--color-forge-500)] text-white"
+              : "bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] border border-[var(--color-border)]"
+          }`}
+        >
+          Editor
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:h-[calc(100vh-120px)]">
+        {/* Left: description panel */}
+        <div
+          className={`${mobileTab === "description" ? "block" : "hidden"} lg:block overflow-y-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-4 sm:p-5 h-[calc(100vh-220px)] lg:h-auto`}
+        >
+          <ProtectedContent>
+            <div className="flex items-center gap-3 mb-3 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-bold">{problem.title}</h1>
+              <DifficultyBadge difficulty={problem.difficulty} />
+              <button
+                onClick={() => { const next = toggleBookmark(problem); setBookmarked(next) }}
+                className="text-lg"
+                title={bookmarked ? "Remove bookmark" : "Save problem"}
+              >{bookmarked ? "★" : "☆"}</button>
+              <button
+                onClick={() => setNoteOpen((v) => !v)}
+                className="text-xs px-2 py-1 rounded bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]"
+              >📝 Notes</button>
+            </div>
+            <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+              {problem.topic} · {problem.estimatedTimeMinutes} min
+            </p>
+
+            <p className="whitespace-pre-wrap text-sm mb-4">{problem.description}</p>
+
+            {noteOpen && (
+              <div className="mb-5 p-3 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
+                <p className="text-xs font-semibold mb-2">Your private study note</p>
+                <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={4}
+                  placeholder="Record your approach, edge cases, or what you learned..."
+                  className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded p-2 text-xs focus:outline-none focus:border-[var(--color-forge-500)]" />
+                <button onClick={() => { saveNote(id, note); setNoteOpen(false) }}
+                  className="mt-2 text-xs bg-[var(--color-forge-500)] text-white px-3 py-1.5 rounded">
+                  Save Note
+                </button>
+              </div>
+            )}
+
+            <AICodeMentor code={code} problem={problem} result={result} />
+
+            {problem.constraints && (
+              <>
+                <h3 className="font-semibold text-sm mb-1">Constraints</h3>
+                <p className="whitespace-pre-wrap text-sm text-[var(--color-text-secondary)] mb-4">
+                  {problem.constraints}
+                </p>
+              </>
+            )}
+
+            <h3 className="font-semibold text-sm mb-2">Examples</h3>
+            {problem.visibleTestCases.map((tc, i) => (
+              <div key={i} className="mb-3 text-sm">
+                <p className="text-[var(--color-text-secondary)]">Input:</p>
+                <pre className="bg-[var(--color-bg-tertiary)] rounded p-2 mb-1 overflow-x-auto">{tc.input}</pre>
+                <p className="text-[var(--color-text-secondary)]">Output:</p>
+                <pre className="bg-[var(--color-bg-tertiary)] rounded p-2 overflow-x-auto">{tc.expectedOutput}</pre>
+              </div>
+            ))}
+
+            {/* Hints section */}
+            <div className="mt-6 border-t border-[var(--color-border)] pt-4">
+              <h3 className="font-semibold text-sm mb-2">Forge Hints 🔥</h3>
+              {revealedHints.map((h) => (
+                <div key={h.hintNumber} className="mb-2 text-sm p-2 rounded bg-[var(--color-bg-tertiary)]">
+                  <span className="text-[var(--color-forge-500)] font-medium">Hint {h.hintNumber}: </span>
+                  {h.hint}
+                </div>
+              ))}
+              {hintError && <p className="text-xs text-[var(--color-danger)] mb-2">{hintError}</p>}
+              {nextHintNumber <= 3 && (
+                <button
+                  onClick={() => handleRevealHint(nextHintNumber)}
+                  className="text-sm text-[var(--color-forge-500)] hover:underline"
+                >
+                  Reveal Hint {nextHintNumber}
+                </button>
+              )}
+            </div>
+          </ProtectedContent>
+        </div>
+
+        {/* Right: editor panel */}
+        <div
+          className={`${mobileTab === "editor" ? "flex" : "hidden"} lg:flex flex-col bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg overflow-hidden h-[calc(100vh-220px)] lg:h-auto`}
+        >
+          <div className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-[var(--color-border)] gap-2 flex-wrap">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className="text-sm text-[var(--color-text-secondary)]">Java</span>
+              <select
+                value={editorTheme}
+                onChange={(e) => handleThemeChange(e.target.value)}
+                className="text-xs bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text-secondary)]"
+              >
+                <option value="vs-dark">Dark</option>
+                <option value="vs">Light</option>
+                <option value="hc-black">High Contrast</option>
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleReset}
+                disabled={running || submitting}
+                className="text-xs sm:text-sm bg-[var(--color-bg-tertiary)] px-2 sm:px-3 py-1 rounded hover:opacity-80 disabled:opacity-50"
+                title="Reset to starter code"
+              >
+                Reset
+              </button>
+              <button
+                onClick={handleRun}
+                disabled={running || submitting}
+                className="text-xs sm:text-sm bg-[var(--color-bg-tertiary)] px-2 sm:px-3 py-1 rounded hover:opacity-80 disabled:opacity-50"
+              >
+                {running ? "Running..." : "Run"}
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={running || submitting}
+                className="text-xs sm:text-sm bg-[var(--color-forge-500)] text-white px-2 sm:px-3 py-1 rounded hover:bg-[var(--color-forge-600)] disabled:opacity-50"
+              >
+                {submitting ? "Submitting..." : "Submit"}
+              </button>
+            </div>
+          </div>
+
+          {showPasteWarning && (
+            <div className="bg-[var(--color-forge-500)]/10 border-b border-[var(--color-forge-500)] text-[var(--color-forge-500)] text-xs sm:text-sm px-4 py-2">
+              Pasting is disabled in SRH CodeVerse. Write every line yourself. Keep forging. 🔥
+            </div>
+          )}
+
+          <div className="flex-1 min-h-0">
+            <Editor
+              height="100%"
+              language="java"
+              theme={editorTheme}
+              value={code}
+              onChange={(value) => setCode(value ?? "")}
+              onMount={(editor, monaco) => {
+                editor.onDidPaste(() => {
+                  editor.trigger("source", "undo")
+                  setShowPasteWarning(true)
+                  setTimeout(() => setShowPasteWarning(false), 3000)
+                })
+
+                monaco.languages.registerCompletionItemProvider("java", {
+                  provideCompletionItems: (model, position) => {
+                    const word = model.getWordUntilPosition(position)
+                    const range = {
+                      startLineNumber: position.lineNumber,
+                      endLineNumber: position.lineNumber,
+                      startColumn: word.startColumn,
+                      endColumn: word.endColumn,
+                    }
+                    const snippets = [
+                      { label: "sout", insertText: "System.out.println($1);", detail: "Print line" },
+                      { label: "for", insertText: "for (int ${1:i} = 0; ${1:i} < ${2:n}; ${1:i}++) {\n\t$0\n}", detail: "For loop" },
+                      { label: "forEach", insertText: "for (${1:int} ${2:item} : ${3:collection}) {\n\t$0\n}", detail: "For-each loop" },
+                      { label: "while", insertText: "while (${1:condition}) {\n\t$0\n}", detail: "While loop" },
+                      { label: "if", insertText: "if (${1:condition}) {\n\t$0\n}", detail: "If statement" },
+                      { label: "ifelse", insertText: "if (${1:condition}) {\n\t$2\n} else {\n\t$0\n}", detail: "If-else statement" },
+                      { label: "main", insertText: "public static void main(String[] args) {\n\t$0\n}", detail: "Main method" },
+                      { label: "scanner", insertText: "Scanner sc = new Scanner(System.in);", detail: "Create Scanner" },
+                      { label: "arraylist", insertText: "ArrayList<${1:Integer}> ${2:list} = new ArrayList<>();", detail: "ArrayList declaration" },
+                      { label: "hashmap", insertText: "HashMap<${1:String}, ${2:Integer}> ${3:map} = new HashMap<>();", detail: "HashMap declaration" },
+                      { label: "trycatch", insertText: "try {\n\t$1\n} catch (${2:Exception} e) {\n\t$0\n}", detail: "Try-catch block" },
+                    ]
+                    return {
+                      suggestions: snippets.map((s) => ({
+                        label: s.label,
+                        kind: monaco.languages.CompletionItemKind.Snippet,
+                        insertText: s.insertText,
+                        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                        detail: s.detail,
+                        range,
+                      })),
+                    }
+                  },
+                })
+              }}
+              options={{
+                fontSize: Number(localStorage.getItem("srhcodeverse_editor_fontsize")) || 14,
+                minimap: { enabled: false },
+                dropIntoEditor: { enabled: false },
+                contextmenu: false,
+                automaticLayout: true,
+              }}
+            />
+          </div>
+
+          {result && (
+            <div className="border-t border-[var(--color-border)] p-3 sm:p-4 max-h-48 sm:max-h-64 overflow-y-auto">
+              {result.compileError ? (
+                <div>
+                  <p className="text-[var(--color-danger)] font-semibold mb-2 text-sm">⚒ Compile Error</p>
+                  <pre className="text-xs text-[var(--color-danger)] whitespace-pre-wrap">{result.compileError}</pre>
+                </div>
+              ) : (
+                <>
+                  <p
+                    className={`font-semibold mb-2 text-sm ${
+                      result.status === "PASSED" ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"
+                    }`}
+                  >
+                    {result.status === "PASSED" ? "🔥 Solution Forged Successfully" : "⚒ Still Forging..."}
+                  </p>
+                  <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] mb-3">
+                    {result.passedTestCount}/{result.totalTestCount} test cases passed · {result.runtimeMs}ms
+                  </p>
+                  {result.testResults?.map((tr) => (
+                    <div key={tr.testNumber} className="mb-2 text-xs sm:text-sm p-2 rounded bg-[var(--color-bg-tertiary)]">
+                      <span className={tr.passed ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}>
+                        {tr.passed ? "✓" : "✗"} Test {tr.testNumber} {tr.hidden ? "🔒" : ""}
+                      </span>
+                      {!tr.hidden && !tr.passed && (
+                        <div className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                          <p>Expected: {tr.expectedOutput}</p>
+                          <p>Got: {tr.actualOutput || "(no output)"}</p>
+                          {tr.errorMessage && <p className="text-[var(--color-danger)]">{tr.errorMessage}</p>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default ProblemDetail
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\pages\student\Problems.jsx =====
+import { useState, useEffect } from "react"
+import { Link } from "react-router-dom"
+import { getProblems } from "../../api/problemApi"
+import { getCourses, getCourseProblems } from "../../api/courseApi"
+import DifficultyBadge from "../../components/common/DifficultyBadge"
+
+import { useAuth } from "../../context/AuthContext"
+import { isBookmarked, toggleBookmark } from "../../utils/srhStudy"
+
+function Problems() {
+  const [problems, setProblems] = useState([])
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(true)
+
+  const [difficultyFilter, setDifficultyFilter] = useState("ALL")
+  const [statusFilter, setStatusFilter] = useState("ALL")
+  const [topicFilter, setTopicFilter] = useState("ALL")
+  const [searchQuery, setSearchQuery] = useState("")
+  const { user } = useAuth()
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError("")
+
+    // The legacy /problems endpoint contains trainer-authored problems only.
+    // The learning curriculum stores its practice set under each course, so
+    // load those as well instead of showing an empty page for a fresh database.
+    Promise.all([
+      getCourses().then((response) => Array.isArray(response.data) ? response.data : []),
+      getProblems().then((response) => Array.isArray(response.data) ? response.data : []).catch(() => []),
+    ]).then(async ([courses, legacyProblems]) => {
+      const curriculumSets = await Promise.all(courses.map(async (course) => {
+        try {
+          const response = await getCourseProblems(course.slug)
+          const payload = response.data
+          const rows = Array.isArray(payload) ? payload : Array.isArray(payload?.content) ? payload.content : Array.isArray(payload?.data) ? payload.data : []
+          return rows.map((problem) => ({
+            ...problem,
+            solved: Boolean(problem.solved),
+            courseSlug: course.slug,
+            courseTitle: course.title,
+            source: "course",
+            topic: problem.topic || course.title,
+          }))
+        } catch {
+          return []
+        }
+      }))
+      const legacy = legacyProblems.map((problem) => ({ ...problem, source: "legacy" }))
+      const combined = [...legacy, ...curriculumSets.flat()]
+      const unique = Array.from(new Map(combined.map((problem) => [`${problem.source}:${problem.id}:${problem.courseSlug || ""}`, problem])).values())
+      if (!cancelled) setProblems(unique)
+    }).catch((err) => {
+      if (!cancelled) setError(err.response?.data?.message || "Failed to load problems. Check that the backend is running.")
+    }).finally(() => {
+      if (!cancelled) setLoading(false)
+    })
+
+    return () => { cancelled = true }
+  }, [user?.username])
+
+  if (loading) {
+    return (
+      <p className="text-[var(--color-text-secondary)]">
+        Loading problems...
+      </p>
+    )
+  }
+
+  if (error) {
+    return (
+      <p className="text-[var(--color-danger)]">
+        {error}
+      </p>
+    )
+  }
+
+  // =========================================================
+  // SORT PROBLEMS
+  // =========================================================
+
+  const sortedProblems = [...problems].sort((a, b) => a.id - b.id)
+
+  // =========================================================
+  // TOPICS
+  // =========================================================
+
+  const topics = ["ALL", ...Array.from(
+      new Set(problems.map((p) => p.topic))
+    ),
+  ]
+
+  // =========================================================
+  // SEARCH + FILTER
+  // =========================================================
+
+  const search = searchQuery.trim().toLowerCase()
+
+  const filtered = sortedProblems
+    .map((p, index) => ({
+      ...p,
+      problemNumber: index + 1,
+    }))
+
+    // -------------------------------------------------------
+    // SEARCH BY PROBLEM NUMBER OR NAME
+    // -------------------------------------------------------
+
+    .filter((p) => {
+      if (!search) {
+        return true
+      }
+
+      const problemNumber = String(p.problemNumber)
+
+      const problemName = p.title?.toLowerCase() || ""
+
+      const matchesNumber = problemNumber.includes(search)
+
+      const matchesName = problemName.includes(search)
+
+      return matchesNumber || matchesName
+    })
+
+    // -------------------------------------------------------
+    // DIFFICULTY
+    // -------------------------------------------------------
+
+    .filter(
+      (p) =>
+        difficultyFilter === "ALL" ||
+        p.difficulty === difficultyFilter
+    )
+
+    // -------------------------------------------------------
+    // STATUS
+    // -------------------------------------------------------
+
+    .filter(
+      (p) =>
+        statusFilter === "ALL" ||
+        (
+          statusFilter === "SOLVED"
+            ? p.solved
+            : !p.solved
+        )
+    )
+
+    // -------------------------------------------------------
+    // TOPIC
+    // -------------------------------------------------------
+
+    .filter(
+      (p) =>
+        topicFilter === "ALL" ||
+        p.topic === topicFilter
+    )
+
+  // =========================================================
+  // FILTER PILL STYLE
+  // =========================================================
+
+  const pillClass = (active) =>
+    `text-xs font-medium px-3 py-1.5 rounded-full border transition ${
+      active
+        ? "bg-[var(--color-forge-500)] text-white border-[var(--color-forge-500)]"
+        : "bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-forge-500)]"
+    }`
+
+  return (
+    <div>
+
+      {/* =====================================================
+          HEADER
+      ====================================================== */}
+
+      <h1 className="text-2xl font-bold mb-4">
+        Problems
+      </h1>
+
+      {/* =====================================================
+          FILTERS + SEARCH
+      ====================================================== */}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+
+        {/* ===================================================
+            FILTERS
+        ==================================================== */}
+
+        <div className="flex flex-wrap items-center gap-2">
+
+          {/* Difficulty */}
+          {["ALL", "EASY", "MEDIUM", "HARD"].map((d) => (
+            <button
+              key={d}
+              onClick={() =>
+                setDifficultyFilter(d)
+              }
+              className={pillClass(
+                difficultyFilter === d
+              )}
+            >
+              {d}
+            </button>
+          ))}
+
+          <span className="w-px h-5 bg-[var(--color-border)] mx-1" />
+
+          {/* Status */}
+          {["ALL", "SOLVED", "UNSOLVED"].map((s) => (
+            <button
+              key={s}
+              onClick={() =>
+                setStatusFilter(s)
+              }
+              className={pillClass(
+                statusFilter === s
+              )}
+            >
+              {s}
+            </button>
+          ))}
+
+          <span className="w-px h-5 bg-[var(--color-border)] mx-1" />
+
+          {/* Topic */}
+          <select
+            value={topicFilter}
+            onChange={(e) =>
+              setTopicFilter(e.target.value)
+            }
+            className="
+              text-xs
+              bg-[var(--color-bg-secondary)]
+              border
+              border-[var(--color-border)]
+              rounded-full
+              px-3
+              py-1.5
+              text-[var(--color-text-secondary)]
+              focus:outline-none
+              focus:border-[var(--color-forge-500)]
+              cursor-pointer
+            "
+          >
+            {topics.map((t) => (
+              <option key={t} value={t}>
+                {t === "ALL"
+                  ? "All Topics"
+                  : t}
+              </option>
+            ))}
+          </select>
+
+        </div>
+
+        {/* ===================================================
+            SEARCH BAR
+        ==================================================== */}
+
+        <div className="relative w-full sm:w-90 lg:w-100">
+
+          {/* Search Icon */}
+          <span
+            className="
+              absolute
+              left-3
+              top-1/2
+              -translate-y-1/2
+              text-[var(--color-text-secondary)]
+              pointer-events-none
+              text-sm
+            "
+          >
+            🔍
+          </span>
+
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) =>
+              setSearchQuery(e.target.value)
+            }
+            placeholder="Search problems..."
+            className="
+              w-full
+              pl-9
+              pr-9
+              py-1.5
+              text-xs
+              bg-[var(--color-bg-secondary)]
+              border
+              border-[var(--color-border)]
+              rounded-full
+              text-[var(--color-text-primary)]
+              placeholder:text-[var(--color-text-secondary)]
+              focus:outline-none
+              focus:border-[var(--color-forge-500)]
+              focus:ring-1
+              focus:ring-[var(--color-forge-500)]
+              transition
+            "
+          />
+
+          {/* Clear Search */}
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() =>
+                setSearchQuery("")
+              }
+              className="
+                absolute
+                right-3
+                top-1/2
+                -translate-y-1/2
+                text-[var(--color-text-secondary)]
+                hover:text-[var(--color-text-primary)]
+                transition
+              "
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          )}
+
+        </div>
+
+      </div>
+
+      {/* =====================================================
+          RESULTS COUNT
+      ====================================================== */}
+
+      {searchQuery && (
+        <p className="text-xs text-[var(--color-text-secondary)] mb-3">
+          {filtered.length}{" "}
+          {filtered.length === 1
+            ? "problem"
+            : "problems"}{" "}
+          found
+        </p>
+      )}
+
+      {/* =====================================================
+          PROBLEM LIST / NO RESULTS
+      ====================================================== */}
+
+      {filtered.length === 0 ? (
+
+        <div className="py-10 text-center">
+
+          <div className="text-3xl mb-3"> 🔍 </div>
+
+          <p className="text-sm font-medium">
+            No problems found
+          </p>
+
+          <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+            Try searching for a different problem
+            name or number.
+          </p>
+
+          {searchQuery && (
+            <button
+              onClick={() =>
+                setSearchQuery("")
+              }
+              className="
+                mt-4
+                text-xs
+                font-medium
+                text-[var(--color-forge-500)]
+                hover:underline
+              "
+            >
+              Clear search
+            </button>
+          )}
+
+        </div>
+
+      ) : (
+
+        <div className="flex flex-col gap-2">
+
+          {filtered.map((p) => (
+
+            <Link
+              key={`${p.source || "legacy"}-${p.courseSlug || ""}-${p.id}`}
+              to={p.source === "course" ? `/courses/${p.courseSlug}?tab=problems` : `/problems/${p.id}`}
+              className="
+                flex
+                items-center
+                justify-between
+                bg-[var(--color-bg-secondary)]
+                border
+                border-[var(--color-border)]
+                rounded-lg
+                p-4
+                hover:border-[var(--color-forge-500)]
+                transition
+              "
+            >
+
+              {/* =================================================
+                  LEFT SIDE
+              ================================================== */}
+
+              <div className="flex items-center gap-3">
+
+                {/* Solved */}
+                {p.solved && (
+                  <span className="text-[var(--color-success)]">
+                    ✓
+                  </span>
+                )}
+
+                {/* Problem Number + Title */}
+                <span className="font-medium">
+
+                  <span className="text-[var(--color-text-secondary)] mr-2">
+                    {p.problemNumber}.
+                  </span>
+
+                  {p.title}
+
+                </span>
+
+                {/* Topic */}
+                <span className="text-sm text-[var(--color-text-secondary)]">
+                  {p.topic}{p.courseTitle ? ` · ${p.courseTitle}` : ""}
+                </span>
+
+              </div>
+
+              {/* =================================================
+                  RIGHT SIDE
+              ================================================== */}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); toggleBookmark(p); setProblems((current) => [...current]) }}
+                  className={`text-lg transition hover:scale-110 ${isBookmarked(p.id) ? "text-[var(--color-forge-500)]" : "text-[var(--color-text-secondary)]"}`}
+                  title={isBookmarked(p.id) ? "Remove bookmark" : "Bookmark problem"}
+                  aria-label={isBookmarked(p.id) ? "Remove bookmark" : "Bookmark problem"}
+                >
+                  {isBookmarked(p.id) ? "★" : "☆"}
+                </button>
+
+                <div className="flex items-center gap-4">
+
+                {/* Estimated Time */}
+                <span className="text-sm text-[var(--color-text-secondary)]">
+                  {p.estimatedTimeMinutes} min
+                </span>
+
+                {/* Difficulty */}
+                  <DifficultyBadge
+                    difficulty={p.difficulty}
+                  />
+                </div>
+
+              </div>
+
+            </Link>
+
+          ))}
+
+        </div>
+
+      )}
+
+    </div>
+  )
+}
+
+export default Problems
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\pages\trainer\ProblemForm.jsx =====
+import { useState, useEffect } from "react"
+import { useNavigate, useParams } from "react-router-dom"
+import { createProblem, updateProblem, getTrainerProblem } from "../../api/problemApi"
+
+const emptyTestCase = () => ({ input: "", expectedOutput: "", hidden: false, orderIndex: 1 })
+
+function ProblemForm() {
+  const { id } = useParams() // undefined on /new, a value on /:id/edit
+  const isEditMode = Boolean(id)
+  const navigate = useNavigate()
+
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    difficulty: "EASY",
+    topic: "",
+    constraints: "",
+    starterCode: "",
+    estimatedTimeMinutes: 15,
+    hint1: "",
+    hint2: "",
+    hint3: "",
+  })
+  const [testCases, setTestCases] = useState([emptyTestCase()])
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(isEditMode)
+
+  useEffect(() => {
+    if (!isEditMode) return
+    getTrainerProblem(id)
+      .then((res) => {
+        const p = res.data
+        setForm({
+          title: p.title,
+          description: p.description,
+          difficulty: p.difficulty,
+          topic: p.topic,
+          constraints: p.constraints || "",
+          starterCode: p.starterCode || "",
+          estimatedTimeMinutes: p.estimatedTimeMinutes || 15,
+          hint1: p.hint1 || "",
+          hint2: p.hint2 || "",
+          hint3: p.hint3 || "",
+        })
+        setTestCases(
+          p.testCases.length > 0
+            ? p.testCases.map((tc) => ({
+                input: tc.input,
+                expectedOutput: tc.expectedOutput,
+                hidden: tc.hidden,
+                orderIndex: tc.orderIndex,
+              }))
+            : [emptyTestCase()]
+        )
+      })
+      .catch((err) => setError(err.response?.data?.message || "Failed to load problem"))
+      .finally(() => setInitialLoading(false))
+  }, [id, isEditMode])
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  const handleTestCaseChange = (index, field, value) => {
+    const updated = [...testCases]
+    updated[index] = { ...updated[index], [field]: value }
+    setTestCases(updated)
+  }
+
+  const addTestCase = () => {
+    setTestCases([...testCases, emptyTestCase()])
+  }
+
+  const removeTestCase = (index) => {
+    if (testCases.length === 1) return // always keep at least one
+    setTestCases(testCases.filter((_, i) => i !== index))
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError("")
+    setLoading(true)
+
+    const payload = {
+      ...form,
+      estimatedTimeMinutes: Number(form.estimatedTimeMinutes),
+      testCases: testCases.map((tc, i) => ({ ...tc, orderIndex: i + 1 })),
+    }
+
+    try {
+      if (isEditMode) {
+        await updateProblem(id, payload)
+      } else {
+        await createProblem(payload)
+      }
+      navigate("/trainer/problems")
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to save problem")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (initialLoading) return <p className="text-[var(--color-text-secondary)]">Loading problem...</p>
+
+  const inputClass =
+    "w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded px-3 py-2 text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-forge-500)]"
+
+  return (
+    <div className="max-w-3xl">
+      <h1 className="text-2xl font-bold mb-6">{isEditMode ? "Edit Problem" : "Create New Problem"}</h1>
+
+      {error && (
+        <div className="mb-4 p-3 rounded bg-[var(--color-danger)]/10 border border-[var(--color-danger)] text-[var(--color-danger)] text-sm">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div>
+          <label className="block text-sm text-[var(--color-text-secondary)] mb-1">Title</label>
+          <input name="title" value={form.title} onChange={handleChange} className={inputClass} required />
+        </div>
+
+        <div>
+          <label className="block text-sm text-[var(--color-text-secondary)] mb-1">Description</label>
+          <textarea name="description" value={form.description} onChange={handleChange} rows={4} className={inputClass} required />
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm text-[var(--color-text-secondary)] mb-1">Difficulty</label>
+            <select name="difficulty" value={form.difficulty} onChange={handleChange} className={inputClass}>
+              <option value="EASY">Easy</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HARD">Hard</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-[var(--color-text-secondary)] mb-1">Topic</label>
+            <input name="topic" value={form.topic} onChange={handleChange} className={inputClass} required />
+          </div>
+          <div>
+            <label className="block text-sm text-[var(--color-text-secondary)] mb-1">Est. Time (min)</label>
+            <input
+              type="number"
+              name="estimatedTimeMinutes"
+              value={form.estimatedTimeMinutes}
+              onChange={handleChange}
+              className={inputClass}
+              min={1}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm text-[var(--color-text-secondary)] mb-1">Constraints</label>
+          <textarea name="constraints" value={form.constraints} onChange={handleChange} rows={2} className={inputClass} />
+        </div>
+
+        <div>
+          <label className="block text-sm text-[var(--color-text-secondary)] mb-1">Starter Code</label>
+          <textarea
+            name="starterCode"
+            value={form.starterCode}
+            onChange={handleChange}
+            rows={4}
+            className={`${inputClass} font-mono text-sm`}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-3">
+          <div>
+            <label className="block text-sm text-[var(--color-text-secondary)] mb-1">Hint 1</label>
+            <input name="hint1" value={form.hint1} onChange={handleChange} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm text-[var(--color-text-secondary)] mb-1">Hint 2</label>
+            <input name="hint2" value={form.hint2} onChange={handleChange} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm text-[var(--color-text-secondary)] mb-1">Hint 3</label>
+            <input name="hint3" value={form.hint3} onChange={handleChange} className={inputClass} />
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold">Test Cases</h2>
+            <button
+              type="button"
+              onClick={addTestCase}
+              className="text-sm text-[var(--color-forge-500)] hover:underline"
+            >
+              + Add test case
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {testCases.map((tc, index) => (
+              <div key={index} className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-bg-secondary)]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-[var(--color-text-secondary)]">Test Case {index + 1}</span>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1 text-sm text-[var(--color-text-secondary)]">
+                      <input
+                        type="checkbox"
+                        checked={tc.hidden}
+                        onChange={(e) => handleTestCaseChange(index, "hidden", e.target.checked)}
+                      />
+                      Hidden
+                    </label>
+                    {testCases.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeTestCase(index)}
+                        className="text-xs text-[var(--color-danger)] hover:underline"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    placeholder="Input"
+                    value={tc.input}
+                    onChange={(e) => handleTestCaseChange(index, "input", e.target.value)}
+                    className={inputClass}
+                    required
+                  />
+                  <input
+                    placeholder="Expected Output"
+                    value={tc.expectedOutput}
+                    onChange={(e) => handleTestCaseChange(index, "expectedOutput", e.target.value)}
+                    className={inputClass}
+                    required
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-[var(--color-forge-500)] hover:bg-[var(--color-forge-600)] text-white font-semibold py-2 rounded transition disabled:opacity-50 self-start px-6"
+        >
+          {loading ? "Saving..." : isEditMode ? "Save Changes" : "Create Problem"}
+        </button>
+      </form>
+    </div>
+  )
+}
+
+export default ProblemForm
+
+===== C:\Users\siddu\Downloads\SRH-CodeVerse-Practice-Lessons-Fixed\SRH-CodeVerse\frontend\src\pages\trainer\TrainerProblems.jsx =====
+import { useState, useEffect } from "react"
+import { Link } from "react-router-dom"
+import { getTrainerProblems, deleteProblem } from "../../api/problemApi"
+import DifficultyBadge from "../../components/common/DifficultyBadge"
+import ConfirmModal from "../../components/common/ConfirmModal"
+import { useToast } from "../../context/ToastContext"
+
+function TrainerProblems() {
+  const { showToast } = useToast()
+
+  const [problems, setProblems] = useState([])
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [confirmDelete, setConfirmDelete] = useState(null) // { id, title } or null
+
+  const loadProblems = () => {
+    setLoading(true)
+    getTrainerProblems()
+      .then((res) => setProblems(res.data))
+      .catch((err) => setError(err.response?.data?.message || "Failed to load problems"))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadProblems()
+  }, [])
+
+  const requestDelete = (id, title) => {
+    setConfirmDelete({ id, title })
+  }
+
+  const confirmDeleteProblem = async () => {
+    const { id, title } = confirmDelete
+    setConfirmDelete(null)
+    try {
+      await deleteProblem(id)
+      setProblems((prev) => prev.filter((p) => p.id !== id))
+      showToast(`"${title}" deleted.`, "success")
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to delete problem", "error")
+    }
+  }
+
+  if (loading) return <p className="text-[var(--color-text-secondary)]">Loading problems...</p>
+  if (error) return <p className="text-[var(--color-danger)]">{error}</p>
+
+  const search = searchQuery.trim().toLowerCase()
+  const sortedProblems = [...problems].sort((a, b) => a.id - b.id)
+  const filteredProblems = sortedProblems.filter((p) => {
+    if (!search) return true
+    const title = p.title?.toLowerCase() || ""
+    const topic = p.topic?.toLowerCase() || ""
+    const difficulty = p.difficulty?.toLowerCase() || ""
+    return title.includes(search) || topic.includes(search) || difficulty.includes(search)
+  })
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="text-2xl font-bold">Manage Problems</h1>
+
+        <div className="flex items-center gap-3">
+          <div className="relative w-64 sm:w-80">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] pointer-events-none text-sm">
+              🔍
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search problems..."
+              className="w-full pl-9 pr-9 py-2 text-sm bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)] focus:outline-none focus:border-[var(--color-forge-500)] focus:ring-1 focus:ring-[var(--color-forge-500)] transition"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                aria-label="Clear search"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          <Link
+            to="/trainer/problems/new"
+            className="whitespace-nowrap bg-[var(--color-forge-500)] hover:bg-[var(--color-forge-600)] text-white font-semibold px-4 py-2 rounded transition"
+          >
+            + New Problem
+          </Link>
+        </div>
+      </div>
+
+      {/* Results count */}
+      {searchQuery && problems.length > 0 && (
+        <p className="text-xs text-[var(--color-text-secondary)] mb-3">
+          {filteredProblems.length} {filteredProblems.length === 1 ? "problem" : "problems"} found
+        </p>
+      )}
+
+      {/* Empty / no-results / list */}
+      {problems.length === 0 ? (
+        <p className="text-[var(--color-text-secondary)]">No problems yet. Create your first one.</p>
+      ) : filteredProblems.length === 0 ? (
+        <div className="py-10 text-center">
+          <div className="text-3xl mb-3">🔍</div>
+          <p className="text-sm font-medium">No problems found</p>
+          <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+            Try searching with a different problem name, topic, or difficulty.
+          </p>
+          <button
+            onClick={() => setSearchQuery("")}
+            className="mt-4 text-xs font-medium text-[var(--color-forge-500)] hover:underline"
+          >
+            Clear search
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {filteredProblems.map((p) => {
+            const problemNumber = sortedProblems.findIndex((problem) => problem.id === p.id) + 1
+
+            return (
+              <div
+                key={p.id}
+                className="flex items-center justify-between bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-4 hover:border-[var(--color-forge-500)] transition"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="font-medium truncate">
+                    <span className="text-[var(--color-text-secondary)] mr-2">{problemNumber}.</span>
+                    {p.title}
+                  </span>
+                  <DifficultyBadge difficulty={p.difficulty} />
+                  <span className="text-sm text-[var(--color-text-secondary)]">{p.topic}</span>
+                </div>
+
+                <div className="flex gap-3 text-sm shrink-0">
+                  <Link to={`/trainer/problems/${p.id}/edit`} className="text-[var(--color-forge-500)] hover:underline">
+                    Edit
+                  </Link>
+                  <button
+                    onClick={() => requestDelete(p.id, p.title)}
+                    className="text-xs text-[var(--color-danger)] hover:underline"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <ConfirmModal
+        open={confirmDelete !== null}
+        title="Delete Problem"
+        message={confirmDelete ? `Delete "${confirmDelete.title}"? This cannot be undone.` : ""}
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteProblem}
+        onCancel={() => setConfirmDelete(null)}
+      />
+    </div>
+  )
+}
+
+export default TrainerProblems
