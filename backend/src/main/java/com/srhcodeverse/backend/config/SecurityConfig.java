@@ -45,11 +45,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of(
-            "http://localhost:5173",
-            "https://frontend-ct11gap11-siddus-projects-0ae5cf1a.vercel.app",
-            "https://frontend-cpt6iyad4-siddus-projects-0ae5cf1a.vercel.app"
-        ));
+      configuration.setAllowedOrigins(List.of(
+    "http://localhost:5173",
+    "https://frontend-git-main-siddus-projects-0ae5cf1a.vercel.app",
+    "https://frontend-ct11gap11-siddus-projects-0ae5cf1a.vercel.app",
+    "https://frontend-cpt6iyad4-siddus-projects-0ae5cf1a.vercel.app"
+));
 
         configuration.setAllowedMethods(List.of(
             "GET",
