@@ -2,7 +2,6 @@
 package com.srhcodeverse.backend.config;
 
 import com.srhcodeverse.backend.security.JwtAuthFilter;
-
 import java.util.List;
 
 import org.springframework.context.annotation.Bean;
@@ -20,80 +19,68 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final JwtAuthFilter jwtAuthFilter;
+        private final JwtAuthFilter jwtAuthFilter;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
-        this.jwtAuthFilter = jwtAuthFilter;
-    }
+        public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+                this.jwtAuthFilter = jwtAuthFilter;
+        }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
+        @Bean
+        public AuthenticationManager authenticationManager(
+                        AuthenticationConfiguration config) throws Exception {
+                return config.getAuthenticationManager();
+        }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
 
-      configuration.setAllowedOrigins(List.of(
-    "http://localhost:5173",
-    "https://frontend-git-main-siddus-projects-0ae5cf1a.vercel.app",
-    "https://frontend-ct11gap11-siddus-projects-0ae5cf1a.vercel.app",
-    "https://frontend-cpt6iyad4-siddus-projects-0ae5cf1a.vercel.app"
-));
+                configuration.setAllowedOrigins(List.of(
+                                "http://localhost:5173",
+                                "http://localhost:5174",
+                                "https://frontend-git-main-siddus-projects-0ae5cf1a.vercel.app",
+                                "https://frontend-ct11gap11-siddus-projects-0ae5cf1a.vercel.app",
+                                "https://frontend-cpt6iyad4-siddus-projects-0ae5cf1a.vercel.app"));
 
-        configuration.setAllowedMethods(List.of(
-            "GET",
-            "POST",
-            "PUT",
-            "DELETE",
-            "OPTIONS"
-        ));
+                configuration.setAllowedMethods(List.of(
+                                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+                configuration.setAllowedHeaders(List.of("*"));
+                configuration.setAllowCredentials(true);
+                configuration.setMaxAge(3600L);
 
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
 
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
+                return source;
+        }
 
-        source.registerCorsConfiguration("/**", configuration);
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http)
+                        throws Exception {
 
-        return source;
-    }
+                http
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .csrf(csrf -> csrf.disable())
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers("/api/health", "/api/auth/**").permitAll()
+                                                .requestMatchers("/api/courses/*/progress").authenticated()
+                                                .requestMatchers("/api/courses/**").permitAll()
+                                                .anyRequest().authenticated())
+                                .addFilterBefore(
+                                                jwtAuthFilter,
+                                                UsernamePasswordAuthenticationFilter.class);
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http) throws Exception {
-
-        http
-            .cors(cors ->
-                cors.configurationSource(corsConfigurationSource())
-            )
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/health", "/api/auth/**").permitAll()
-                .requestMatchers("/api/courses/*/progress").authenticated()
-                .requestMatchers("/api/courses/**").permitAll()
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(
-                jwtAuthFilter,
-                UsernamePasswordAuthenticationFilter.class
-            );
-
-        return http.build();
-    }
+                return http.build();
+        }
 }

@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react"
+
+import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { getProblems } from "../../api/problemApi"
-import { getCourses, getCourseProblems } from "../../api/courseApi"
 import DifficultyBadge from "../../components/common/DifficultyBadge"
-
+import { cachedFetch } from "../../utils/cache"
 import { useAuth } from "../../context/AuthContext"
 import { isBookmarked, toggleBookmark } from "../../utils/srhStudy"
 
@@ -11,7 +11,6 @@ function Problems() {
   const [problems, setProblems] = useState([])
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
-
   const [difficultyFilter, setDifficultyFilter] = useState("ALL")
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [topicFilter, setTopicFilter] = useState("ALL")
@@ -19,462 +18,384 @@ function Problems() {
   const { user } = useAuth()
 
   useEffect(() => {
-    let cancelled = false
+    let active = true
     setLoading(true)
     setError("")
 
-    // The legacy /problems endpoint contains trainer-authored problems only.
-    // The learning curriculum stores its practice set under each course, so
-    // load those as well instead of showing an empty page for a fresh database.
-    Promise.all([
-      getCourses().then((response) => Array.isArray(response.data) ? response.data : []),
-      getProblems().then((response) => Array.isArray(response.data) ? response.data : []).catch(() => []),
-    ]).then(async ([courses, legacyProblems]) => {
-      const curriculumSets = await Promise.all(courses.map(async (course) => {
-        try {
-          const response = await getCourseProblems(course.slug)
-          const payload = response.data
-          const rows = Array.isArray(payload) ? payload : Array.isArray(payload?.content) ? payload.content : Array.isArray(payload?.data) ? payload.data : []
-          return rows.map((problem) => ({
-            ...problem,
-            solved: Boolean(problem.solved),
-            courseSlug: course.slug,
-            courseTitle: course.title,
-            source: "course",
-            topic: problem.topic || course.title,
-          }))
-        } catch {
-          return []
+    cachedFetch(
+      `problems:${user?.username}`,
+      () => getProblems().then((res) => res.data)
+    )
+      .then((data) => {
+        if (active) setProblems(Array.isArray(data) ? data : [])
+      })
+      .catch((err) => {
+        if (active) {
+          setError(
+            err.response?.data?.message || "Failed to load problems."
+          )
         }
-      }))
-      const legacy = legacyProblems.map((problem) => ({ ...problem, source: "legacy" }))
-      const combined = [...legacy, ...curriculumSets.flat()]
-      const unique = Array.from(new Map(combined.map((problem) => [`${problem.source}:${problem.id}:${problem.courseSlug || ""}`, problem])).values())
-      if (!cancelled) setProblems(unique)
-    }).catch((err) => {
-      if (!cancelled) setError(err.response?.data?.message || "Failed to load problems. Check that the backend is running.")
-    }).finally(() => {
-      if (!cancelled) setLoading(false)
-    })
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
 
-    return () => { cancelled = true }
+    return () => {
+      active = false
+    }
   }, [user?.username])
+
+  const topics = useMemo(
+    () => [
+      "ALL",
+      ...Array.from(
+        new Set(problems.map((problem) => problem.topic).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b)),
+    ],
+    [problems]
+  )
+
+  const filtered = useMemo(() => {
+    const search = searchQuery.trim().toLowerCase()
+
+    return problems
+      .slice()
+      .sort((a, b) => Number(a.id) - Number(b.id))
+      .map((problem, index) => ({
+        ...problem,
+        problemNumber: index + 1,
+      }))
+      .filter((problem) => {
+        const matchesSearch =
+          !search ||
+          String(problem.problemNumber).includes(search) ||
+          String(problem.title || "").toLowerCase().includes(search)
+
+        const matchesDifficulty =
+          difficultyFilter === "ALL" ||
+          String(problem.difficulty || "").toUpperCase() === difficultyFilter
+
+        const matchesStatus =
+          statusFilter === "ALL" ||
+          (statusFilter === "SOLVED"
+            ? Boolean(problem.solved)
+            : !problem.solved)
+
+        const matchesTopic =
+          topicFilter === "ALL" || problem.topic === topicFilter
+
+        return (
+          matchesSearch &&
+          matchesDifficulty &&
+          matchesStatus &&
+          matchesTopic
+        )
+      })
+  }, [problems, searchQuery, difficultyFilter, statusFilter, topicFilter])
+
+  const solvedCount = problems.filter((problem) => problem.solved).length
+
+  const resetFilters = () => {
+    setDifficultyFilter("ALL")
+    setStatusFilter("ALL")
+    setTopicFilter("ALL")
+    setSearchQuery("")
+  }
+
+  const filterButton = (active) =>
+    `shrink-0 rounded-full border px-3.5 py-2 text-xs font-semibold transition ${
+      active
+        ? "border-violet-500 bg-violet-500 text-white shadow-sm shadow-violet-500/20"
+        : "border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:border-violet-500/50 hover:text-[var(--color-text-primary)]"
+    }`
 
   if (loading) {
     return (
-      <p className="text-[var(--color-text-secondary)]">
-        Loading problems...
-      </p>
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="animate-pulse">
+          <div className="h-3 w-40 rounded bg-slate-700/50" />
+          <div className="mt-4 h-10 w-72 rounded bg-slate-700/50" />
+          <div className="mt-3 h-4 w-96 max-w-full rounded bg-slate-700/30" />
+          <div className="mt-8 h-28 rounded-2xl bg-slate-700/20" />
+          <div className="mt-5 space-y-3">
+            {[1, 2, 3, 4, 5].map((item) => (
+              <div
+                key={item}
+                className="h-20 rounded-xl bg-slate-700/20"
+              />
+            ))}
+          </div>
+        </div>
+      </main>
     )
   }
 
   if (error) {
     return (
-      <p className="text-[var(--color-danger)]">
-        {error}
-      </p>
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div
+          role="alert"
+          className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-400"
+        >
+          <h1 className="text-lg font-bold">Unable to load problems</h1>
+          <p className="mt-2">{error}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-4 rounded-xl border border-red-500/30 px-4 py-2 font-semibold hover:bg-red-500/10"
+          >
+            Try again
+          </button>
+        </div>
+      </main>
     )
   }
 
-  // =========================================================
-  // SORT PROBLEMS
-  // =========================================================
-
-  const sortedProblems = [...problems].sort((a, b) => a.id - b.id)
-
-  // =========================================================
-  // TOPICS
-  // =========================================================
-
-  const topics = ["ALL", ...Array.from(
-      new Set(problems.map((p) => p.topic))
-    ),
-  ]
-
-  // =========================================================
-  // SEARCH + FILTER
-  // =========================================================
-
-  const search = searchQuery.trim().toLowerCase()
-
-  const filtered = sortedProblems
-    .map((p, index) => ({
-      ...p,
-      problemNumber: index + 1,
-    }))
-
-    // -------------------------------------------------------
-    // SEARCH BY PROBLEM NUMBER OR NAME
-    // -------------------------------------------------------
-
-    .filter((p) => {
-      if (!search) {
-        return true
-      }
-
-      const problemNumber = String(p.problemNumber)
-
-      const problemName = p.title?.toLowerCase() || ""
-
-      const matchesNumber = problemNumber.includes(search)
-
-      const matchesName = problemName.includes(search)
-
-      return matchesNumber || matchesName
-    })
-
-    // -------------------------------------------------------
-    // DIFFICULTY
-    // -------------------------------------------------------
-
-    .filter(
-      (p) =>
-        difficultyFilter === "ALL" ||
-        p.difficulty === difficultyFilter
-    )
-
-    // -------------------------------------------------------
-    // STATUS
-    // -------------------------------------------------------
-
-    .filter(
-      (p) =>
-        statusFilter === "ALL" ||
-        (
-          statusFilter === "SOLVED"
-            ? p.solved
-            : !p.solved
-        )
-    )
-
-    // -------------------------------------------------------
-    // TOPIC
-    // -------------------------------------------------------
-
-    .filter(
-      (p) =>
-        topicFilter === "ALL" ||
-        p.topic === topicFilter
-    )
-
-  // =========================================================
-  // FILTER PILL STYLE
-  // =========================================================
-
-  const pillClass = (active) =>
-    `text-xs font-medium px-3 py-1.5 rounded-full border transition ${
-      active
-        ? "bg-[var(--color-forge-500)] text-white border-[var(--color-forge-500)]"
-        : "bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-forge-500)]"
-    }`
-
   return (
-    <div>
+    <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      {/* Page heading */}
+      <header className="mb-8">
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-violet-400">
+          PRACTICE • IMPROVE • MASTER
+        </p>
 
-      {/* =====================================================
-          HEADER
-      ====================================================== */}
+        <div className="mt-3 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
+              Problem Library
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
+              Find your next challenge, practise consistently, and track the
+              problems you have solved.
+            </p>
+          </div>
 
-      <h1 className="text-2xl font-bold mb-4">
-        Problems
-      </h1>
-
-      {/* =====================================================
-          FILTERS + SEARCH
-      ====================================================== */}
-
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-
-        {/* ===================================================
-            FILTERS
-        ==================================================== */}
-
-        <div className="flex flex-wrap items-center gap-2">
-
-          {/* Difficulty */}
-          {["ALL", "EASY", "MEDIUM", "HARD"].map((d) => (
-            <button
-              key={d}
-              onClick={() =>
-                setDifficultyFilter(d)
-              }
-              className={pillClass(
-                difficultyFilter === d
-              )}
-            >
-              {d}
-            </button>
-          ))}
-
-          <span className="w-px h-5 bg-[var(--color-border)] mx-1" />
-
-          {/* Status */}
-          {["ALL", "SOLVED", "UNSOLVED"].map((s) => (
-            <button
-              key={s}
-              onClick={() =>
-                setStatusFilter(s)
-              }
-              className={pillClass(
-                statusFilter === s
-              )}
-            >
-              {s}
-            </button>
-          ))}
-
-          <span className="w-px h-5 bg-[var(--color-border)] mx-1" />
-
-          {/* Topic */}
-          <select
-            value={topicFilter}
-            onChange={(e) =>
-              setTopicFilter(e.target.value)
-            }
-            className="
-              text-xs
-              bg-[var(--color-bg-secondary)]
-              border
-              border-[var(--color-border)]
-              rounded-full
-              px-3
-              py-1.5
-              text-[var(--color-text-secondary)]
-              focus:outline-none
-              focus:border-[var(--color-forge-500)]
-              cursor-pointer
-            "
-          >
-            {topics.map((t) => (
-              <option key={t} value={t}>
-                {t === "ALL"
-                  ? "All Topics"
-                  : t}
-              </option>
-            ))}
-          </select>
-
+          <div className="grid grid-cols-2 gap-3 sm:min-w-[230px]">
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4">
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Total problems
+              </p>
+              <p className="mt-1 text-2xl font-black">{problems.length}</p>
+            </div>
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Solved
+              </p>
+              <p className="mt-1 text-2xl font-black text-emerald-400">
+                {solvedCount}
+              </p>
+            </div>
+          </div>
         </div>
+      </header>
 
-        {/* ===================================================
-            SEARCH BAR
-        ==================================================== */}
+      {/* Search and filters */}
+      <section className="mb-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4 sm:p-5">
+        <label
+          htmlFor="problem-search"
+          className="mb-2 block text-xs font-semibold text-[var(--color-text-secondary)]"
+        >
+          SEARCH PROBLEMS
+        </label>
 
-        <div className="relative w-full sm:w-90 lg:w-100">
-
-          {/* Search Icon */}
-          <span
-            className="
-              absolute
-              left-3
-              top-1/2
-              -translate-y-1/2
-              text-[var(--color-text-secondary)]
-              pointer-events-none
-              text-sm
-            "
-          >
+        <div className="relative">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
             🔍
           </span>
-
           <input
-            type="text"
+            id="problem-search"
+            type="search"
             value={searchQuery}
-            onChange={(e) =>
-              setSearchQuery(e.target.value)
-            }
-            placeholder="Search problems..."
-            className="
-              w-full
-              pl-9
-              pr-9
-              py-1.5
-              text-xs
-              bg-[var(--color-bg-secondary)]
-              border
-              border-[var(--color-border)]
-              rounded-full
-              text-[var(--color-text-primary)]
-              placeholder:text-[var(--color-text-secondary)]
-              focus:outline-none
-              focus:border-[var(--color-forge-500)]
-              focus:ring-1
-              focus:ring-[var(--color-forge-500)]
-              transition
-            "
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search by problem name or number..."
+            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] py-3 pl-11 pr-4 text-sm text-[var(--color-text-primary)] outline-none transition placeholder:text-[var(--color-text-secondary)] focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
           />
+        </div>
 
-          {/* Clear Search */}
-          {searchQuery && (
+        <div className="mt-5">
+          <p className="mb-2.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+            DIFFICULTY
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {["ALL", "EASY", "MEDIUM", "HARD"].map((difficulty) => (
+              <button
+                key={difficulty}
+                type="button"
+                aria-pressed={difficultyFilter === difficulty}
+                onClick={() => setDifficultyFilter(difficulty)}
+                className={filterButton(difficultyFilter === difficulty)}
+              >
+                {difficulty === "ALL" ? "All difficulties" : difficulty}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div>
+            <p className="mb-2.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+              STATUS
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {["ALL", "SOLVED", "UNSOLVED"].map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  aria-pressed={statusFilter === status}
+                  onClick={() => setStatusFilter(status)}
+                  className={filterButton(statusFilter === status)}
+                >
+                  {status === "ALL"
+                    ? "All status"
+                    : status === "SOLVED"
+                      ? "✓ Solved"
+                      : "Unsolved"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="problem-topic"
+              className="mb-2.5 block text-xs font-semibold text-[var(--color-text-secondary)]"
+            >
+              TOPIC
+            </label>
+            <select
+              id="problem-topic"
+              value={topicFilter}
+              onChange={(event) => setTopicFilter(event.target.value)}
+              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] px-3 py-2.5 text-sm text-[var(--color-text-primary)] outline-none focus:border-violet-500"
+            >
+              {topics.map((topic) => (
+                <option key={topic} value={topic}>
+                  {topic === "ALL" ? "All topics" : topic}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)] pt-4">
+          <p className="text-xs text-[var(--color-text-secondary)]">
+            Showing <strong>{filtered.length}</strong> of {problems.length} problems
+          </p>
+
+          {(searchQuery ||
+            difficultyFilter !== "ALL" ||
+            statusFilter !== "ALL" ||
+            topicFilter !== "ALL") && (
             <button
               type="button"
-              onClick={() =>
-                setSearchQuery("")
-              }
-              className="
-                absolute
-                right-3
-                top-1/2
-                -translate-y-1/2
-                text-[var(--color-text-secondary)]
-                hover:text-[var(--color-text-primary)]
-                transition
-              "
-              aria-label="Clear search"
+              onClick={resetFilters}
+              className="text-xs font-semibold text-violet-400 hover:text-violet-300"
             >
-              ✕
+              Clear all filters ✕
             </button>
           )}
-
         </div>
+      </section>
 
-      </div>
-
-      {/* =====================================================
-          RESULTS COUNT
-      ====================================================== */}
-
-      {searchQuery && (
-        <p className="text-xs text-[var(--color-text-secondary)] mb-3">
-          {filtered.length}{" "}
-          {filtered.length === 1
-            ? "problem"
-            : "problems"}{" "}
-          found
-        </p>
-      )}
-
-      {/* =====================================================
-          PROBLEM LIST / NO RESULTS
-      ====================================================== */}
-
+      {/* Problem results */}
       {filtered.length === 0 ? (
-
-        <div className="py-10 text-center">
-
-          <div className="text-3xl mb-3"> 🔍 </div>
-
-          <p className="text-sm font-medium">
-            No problems found
+        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-6 py-16 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/10 text-2xl">
+            🔎
+          </div>
+          <h2 className="mt-4 text-lg font-bold">No problems found</h2>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+            Try another search or adjust your filters.
           </p>
-
-          <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-            Try searching for a different problem
-            name or number.
-          </p>
-
-          {searchQuery && (
-            <button
-              onClick={() =>
-                setSearchQuery("")
-              }
-              className="
-                mt-4
-                text-xs
-                font-medium
-                text-[var(--color-forge-500)]
-                hover:underline
-              "
-            >
-              Clear search
-            </button>
-          )}
-
-        </div>
-
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="mt-5 rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-500"
+          >
+            Clear filters
+          </button>
+        </section>
       ) : (
+        <section className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+          <div className="hidden grid-cols-[minmax(0,1fr)_100px_100px_44px] items-center gap-4 border-b border-[var(--color-border)] px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)] md:grid">
+            <span>Problem</span>
+            <span>Difficulty</span>
+            <span>Time</span>
+            <span className="text-center">Save</span>
+          </div>
 
-        <div className="flex flex-col gap-2">
+          <div className="divide-y divide-[var(--color-border)]">
+            {filtered.map((problem) => {
+              const bookmarked = isBookmarked(problem.id)
 
-          {filtered.map((p) => (
-
-            <Link
-              key={`${p.source || "legacy"}-${p.courseSlug || ""}-${p.id}`}
-              to={p.source === "course" ? `/courses/${p.courseSlug}?tab=problems` : `/problems/${p.id}`}
-              className="
-                flex
-                items-center
-                justify-between
-                bg-[var(--color-bg-secondary)]
-                border
-                border-[var(--color-border)]
-                rounded-lg
-                p-4
-                hover:border-[var(--color-forge-500)]
-                transition
-              "
-            >
-
-              {/* =================================================
-                  LEFT SIDE
-              ================================================== */}
-
-              <div className="flex items-center gap-3">
-
-                {/* Solved */}
-                {p.solved && (
-                  <span className="text-[var(--color-success)]">
-                    ✓
-                  </span>
-                )}
-
-                {/* Problem Number + Title */}
-                <span className="font-medium">
-
-                  <span className="text-[var(--color-text-secondary)] mr-2">
-                    {p.problemNumber}.
-                  </span>
-
-                  {p.title}
-
-                </span>
-
-                {/* Topic */}
-                <span className="text-sm text-[var(--color-text-secondary)]">
-                  {p.topic}{p.courseTitle ? ` · ${p.courseTitle}` : ""}
-                </span>
-
-              </div>
-
-              {/* =================================================
-                  RIGHT SIDE
-              ================================================== */}
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={(e) => { e.preventDefault(); toggleBookmark(p); setProblems((current) => [...current]) }}
-                  className={`text-lg transition hover:scale-110 ${isBookmarked(p.id) ? "text-[var(--color-forge-500)]" : "text-[var(--color-text-secondary)]"}`}
-                  title={isBookmarked(p.id) ? "Remove bookmark" : "Bookmark problem"}
-                  aria-label={isBookmarked(p.id) ? "Remove bookmark" : "Bookmark problem"}
+              return (
+                <div
+                  key={problem.id}
+                  className="flex min-w-0 items-start gap-3 px-4 py-4 transition hover:bg-[var(--color-bg-tertiary)] sm:px-5 md:items-center md:gap-4"
                 >
-                  {isBookmarked(p.id) ? "★" : "☆"}
-                </button>
+                  <Link
+                    to={`/problems/${problem.id}`}
+                    className="flex min-w-0 flex-1 items-start gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-violet-500 md:items-center"
+                  >
+                    <span
+                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold md:mt-0 ${
+                        problem.solved
+                          ? "bg-emerald-500/10 text-emerald-400"
+                          : "bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]"
+                      }`}
+                    >
+                      {problem.solved ? "✓" : problem.problemNumber}
+                    </span>
 
-                <div className="flex items-center gap-4">
+                    <div className="min-w-0 flex-1">
+                      <h2 className="break-words text-sm font-semibold text-[var(--color-text-primary)] transition hover:text-violet-400 sm:text-base">
+                        {problem.title}
+                      </h2>
+                      <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                        {problem.topic || "General"}
+                        {problem.solved ? " · Solved" : ""}
+                      </p>
+                    </div>
+                  </Link>
 
-                {/* Estimated Time */}
-                <span className="text-sm text-[var(--color-text-secondary)]">
-                  {p.estimatedTimeMinutes} min
-                </span>
+                  <div className="flex shrink-0 flex-col items-end gap-2 md:contents">
+                    <div className="md:justify-self-start">
+                      <DifficultyBadge difficulty={problem.difficulty} />
+                    </div>
 
-                {/* Difficulty */}
-                  <DifficultyBadge
-                    difficulty={p.difficulty}
-                  />
+                    <span className="whitespace-nowrap text-xs text-[var(--color-text-secondary)] md:justify-self-start">
+                      {problem.estimatedTimeMinutes
+                        ? `${problem.estimatedTimeMinutes} min`
+                        : "—"}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toggleBookmark(problem)
+                      setProblems((current) => [...current])
+                    }}
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl transition hover:bg-violet-500/10 ${
+                      bookmarked
+                        ? "text-violet-400"
+                        : "text-[var(--color-text-secondary)] hover:text-violet-400"
+                    }`}
+                    title={bookmarked ? "Remove bookmark" : "Bookmark problem"}
+                    aria-label={
+                      bookmarked ? "Remove bookmark" : "Bookmark problem"
+                    }
+                    aria-pressed={bookmarked}
+                  >
+                    {bookmarked ? "★" : "☆"}
+                  </button>
                 </div>
-
-              </div>
-
-            </Link>
-
-          ))}
-
-        </div>
-
+              )
+            })}
+          </div>
+        </section>
       )}
-
-    </div>
+    </main>
   )
 }
 

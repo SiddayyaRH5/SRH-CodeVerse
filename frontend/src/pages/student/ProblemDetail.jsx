@@ -1,366 +1,402 @@
-import { useState, useEffect } from "react"
-import { useParams } from "react-router-dom"
-import Editor from "@monaco-editor/react"
-import confetti from "canvas-confetti"
-import { getProblemDetail, getHint, runCode, submitCode, getMyLastCode } from "../../api/problemApi"
+
+import { useEffect, useMemo, useState } from "react"
+import { Link } from "react-router-dom"
+import { getProblems } from "../../api/problemApi"
 import DifficultyBadge from "../../components/common/DifficultyBadge"
-import ProtectedContent from "../../components/common/ProtectedContent"
-import { invalidate } from "../../utils/cache"
+import { cachedFetch } from "../../utils/cache"
 import { useAuth } from "../../context/AuthContext"
-import { isBookmarked, toggleBookmark, getNote, saveNote } from "../../utils/srhStudy"
-import AICodeMentor from "../../components/common/AICodeMentor"
+import { isBookmarked, toggleBookmark } from "../../utils/srhStudy"
 
-function fireConfetti() {
-  confetti({
-    particleCount: 120,
-    spread: 80,
-    origin: { y: 0.6 },
-    colors: ["#f97316", "#ea580c", "#4ade80", "#ffffff"],
-  })
-}
-
-function ProblemDetail() {
-  const { id } = useParams()
-  const { user } = useAuth()
-  const [problem, setProblem] = useState(null)
-  const [code, setCode] = useState("")
+function Problems() {
+  const [problems, setProblems] = useState([])
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
-  const [revealedHints, setRevealedHints] = useState([])
-  const [hintError, setHintError] = useState("")
-  const [showPasteWarning, setShowPasteWarning] = useState(false)
-  const [running, setRunning] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [result, setResult] = useState(null)
-  const [editorTheme, setEditorTheme] = useState(localStorage.getItem("srhcodeverse_editor_theme") || "vs-dark")
-  const [mobileTab, setMobileTab] = useState("description") // "description" | "editor"
-  const [bookmarked, setBookmarked] = useState(false)
-  const [noteOpen, setNoteOpen] = useState(false)
-  const [note, setNote] = useState("")
+  const [difficultyFilter, setDifficultyFilter] = useState("ALL")
+  const [statusFilter, setStatusFilter] = useState("ALL")
+  const [topicFilter, setTopicFilter] = useState("ALL")
+  const [searchQuery, setSearchQuery] = useState("")
+  const { user } = useAuth()
 
   useEffect(() => {
-    Promise.all([getProblemDetail(id), getMyLastCode(id).catch(() => ({ data: {} }))])
-      .then(([problemRes, codeRes]) => {
-        setProblem(problemRes.data)
-        setBookmarked(isBookmarked(id))
-        setNote(getNote(id))
-        setCode(codeRes.data.code || problemRes.data.starterCode || "")
+    let active = true
+    setLoading(true)
+    setError("")
+
+    cachedFetch(
+      `problems:${user?.username}`,
+      () => getProblems().then((res) => res.data)
+    )
+      .then((data) => {
+        if (active) setProblems(Array.isArray(data) ? data : [])
       })
-      .catch((err) => setError(err.response?.data?.message || "Failed to load problem"))
-      .finally(() => setLoading(false))
-  }, [id])
+      .catch((err) => {
+        if (active) {
+          setError(
+            err.response?.data?.message || "Failed to load problems."
+          )
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
 
-  const handleRevealHint = async (hintNumber) => {
-    setHintError("")
-    try {
-      const res = await getHint(id, hintNumber)
-      setRevealedHints((prev) => [...prev, res.data])
-    } catch (err) {
-      setHintError(err.response?.data?.message || "Hint not available")
+    return () => {
+      active = false
     }
+  }, [user?.username])
+
+  const topics = useMemo(
+    () => [
+      "ALL",
+      ...Array.from(
+        new Set(problems.map((problem) => problem.topic).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b)),
+    ],
+    [problems]
+  )
+
+  const filtered = useMemo(() => {
+    const search = searchQuery.trim().toLowerCase()
+
+    return problems
+      .slice()
+      .sort((a, b) => Number(a.id) - Number(b.id))
+      .map((problem, index) => ({
+        ...problem,
+        problemNumber: index + 1,
+      }))
+      .filter((problem) => {
+        const matchesSearch =
+          !search ||
+          String(problem.problemNumber).includes(search) ||
+          String(problem.title || "").toLowerCase().includes(search)
+
+        const matchesDifficulty =
+          difficultyFilter === "ALL" ||
+          String(problem.difficulty || "").toUpperCase() === difficultyFilter
+
+        const matchesStatus =
+          statusFilter === "ALL" ||
+          (statusFilter === "SOLVED"
+            ? Boolean(problem.solved)
+            : !problem.solved)
+
+        const matchesTopic =
+          topicFilter === "ALL" || problem.topic === topicFilter
+
+        return (
+          matchesSearch &&
+          matchesDifficulty &&
+          matchesStatus &&
+          matchesTopic
+        )
+      })
+  }, [problems, searchQuery, difficultyFilter, statusFilter, topicFilter])
+
+  const solvedCount = problems.filter((problem) => problem.solved).length
+
+  const resetFilters = () => {
+    setDifficultyFilter("ALL")
+    setStatusFilter("ALL")
+    setTopicFilter("ALL")
+    setSearchQuery("")
   }
 
-  const handleThemeChange = (theme) => {
-    setEditorTheme(theme)
-    localStorage.setItem("srhcodeverse_editor_theme", theme)
+  const filterButton = (active) =>
+    `shrink-0 rounded-full border px-3.5 py-2 text-xs font-semibold transition ${
+      active
+        ? "border-violet-500 bg-violet-500 text-white shadow-sm shadow-violet-500/20"
+        : "border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:border-violet-500/50 hover:text-[var(--color-text-primary)]"
+    }`
+
+  if (loading) {
+    return (
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="animate-pulse">
+          <div className="h-3 w-40 rounded bg-slate-700/50" />
+          <div className="mt-4 h-10 w-72 rounded bg-slate-700/50" />
+          <div className="mt-3 h-4 w-96 max-w-full rounded bg-slate-700/30" />
+          <div className="mt-8 h-28 rounded-2xl bg-slate-700/20" />
+          <div className="mt-5 space-y-3">
+            {[1, 2, 3, 4, 5].map((item) => (
+              <div
+                key={item}
+                className="h-20 rounded-xl bg-slate-700/20"
+              />
+            ))}
+          </div>
+        </div>
+      </main>
+    )
   }
 
-  const handleReset = () => {
-    if (!window.confirm("Reset to starter code? Your current changes will be lost.")) return
-    setCode(problem.starterCode || "")
+  if (error) {
+    return (
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div
+          role="alert"
+          className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-400"
+        >
+          <h1 className="text-lg font-bold">Unable to load problems</h1>
+          <p className="mt-2">{error}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-4 rounded-xl border border-red-500/30 px-4 py-2 font-semibold hover:bg-red-500/10"
+          >
+            Try again
+          </button>
+        </div>
+      </main>
+    )
   }
-
-  const handleRun = async () => {
-    setRunning(true)
-    setResult(null)
-    try {
-      const res = await runCode(id, code)
-      setResult(res.data)
-    } catch (err) {
-      setResult({ status: "ERROR", compileError: err.response?.data?.message || "Failed to run code" })
-    } finally {
-      setRunning(false)
-    }
-  }
-
-  const handleSubmit = async () => {
-    setSubmitting(true)
-    setResult(null)
-    try {
-      const res = await submitCode(id, code)
-      setResult(res.data)
-      if (res.data.status === "PASSED") {
-        fireConfetti()
-        invalidate(`problems:${user?.username}`)
-      }
-    } catch (err) {
-      setResult({ status: "ERROR", compileError: err.response?.data?.message || "Failed to submit code" })
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  if (loading) return <p className="text-[var(--color-text-secondary)]">Loading problem...</p>
-  if (error) return <p className="text-[var(--color-danger)]">{error}</p>
-
-  const nextHintNumber = revealedHints.length + 1
 
   return (
-    <div>
-      {/* Mobile tab switcher - hidden on lg+ */}
-      <div className="flex lg:hidden gap-2 mb-3">
-        <button
-          onClick={() => setMobileTab("description")}
-          className={`flex-1 text-sm py-2 rounded ${
-            mobileTab === "description"
-              ? "bg-[var(--color-forge-500)] text-white"
-              : "bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] border border-[var(--color-border)]"
-          }`}
-        >
-          Description
-        </button>
-        <button
-          onClick={() => setMobileTab("editor")}
-          className={`flex-1 text-sm py-2 rounded ${
-            mobileTab === "editor"
-              ? "bg-[var(--color-forge-500)] text-white"
-              : "bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] border border-[var(--color-border)]"
-          }`}
-        >
-          Editor
-        </button>
-      </div>
+    <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      {/* Page heading */}
+      <header className="mb-8">
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-violet-400">
+          PRACTICE • IMPROVE • MASTER
+        </p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:h-[calc(100vh-120px)]">
-        {/* Left: description panel */}
-        <div
-          className={`${mobileTab === "description" ? "block" : "hidden"} lg:block overflow-y-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-4 sm:p-5 h-[calc(100vh-220px)] lg:h-auto`}
-        >
-          <ProtectedContent>
-            <div className="flex items-center gap-3 mb-3 flex-wrap">
-              <h1 className="text-lg sm:text-xl font-bold">{problem.title}</h1>
-              <DifficultyBadge difficulty={problem.difficulty} />
-              <button
-                onClick={() => { const next = toggleBookmark(problem); setBookmarked(next) }}
-                className="text-lg"
-                title={bookmarked ? "Remove bookmark" : "Save problem"}
-              >{bookmarked ? "★" : "☆"}</button>
-              <button
-                onClick={() => setNoteOpen((v) => !v)}
-                className="text-xs px-2 py-1 rounded bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]"
-              >📝 Notes</button>
-            </div>
-            <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-              {problem.topic} · {problem.estimatedTimeMinutes} min
+        <div className="mt-3 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
+              Problem Library
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
+              Find your next challenge, practise consistently, and track the
+              problems you have solved.
             </p>
+          </div>
 
-            <p className="whitespace-pre-wrap text-sm mb-4">{problem.description}</p>
-
-            {noteOpen && (
-              <div className="mb-5 p-3 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
-                <p className="text-xs font-semibold mb-2">Your private study note</p>
-                <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={4}
-                  placeholder="Record your approach, edge cases, or what you learned..."
-                  className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded p-2 text-xs focus:outline-none focus:border-[var(--color-forge-500)]" />
-                <button onClick={() => { saveNote(id, note); setNoteOpen(false) }}
-                  className="mt-2 text-xs bg-[var(--color-forge-500)] text-white px-3 py-1.5 rounded">
-                  Save Note
-                </button>
-              </div>
-            )}
-
-            <AICodeMentor code={code} problem={problem} result={result} />
-
-            {problem.constraints && (
-              <>
-                <h3 className="font-semibold text-sm mb-1">Constraints</h3>
-                <p className="whitespace-pre-wrap text-sm text-[var(--color-text-secondary)] mb-4">
-                  {problem.constraints}
-                </p>
-              </>
-            )}
-
-            <h3 className="font-semibold text-sm mb-2">Examples</h3>
-            {problem.visibleTestCases.map((tc, i) => (
-              <div key={i} className="mb-3 text-sm">
-                <p className="text-[var(--color-text-secondary)]">Input:</p>
-                <pre className="bg-[var(--color-bg-tertiary)] rounded p-2 mb-1 overflow-x-auto">{tc.input}</pre>
-                <p className="text-[var(--color-text-secondary)]">Output:</p>
-                <pre className="bg-[var(--color-bg-tertiary)] rounded p-2 overflow-x-auto">{tc.expectedOutput}</pre>
-              </div>
-            ))}
-
-            {/* Hints section */}
-            <div className="mt-6 border-t border-[var(--color-border)] pt-4">
-              <h3 className="font-semibold text-sm mb-2">Forge Hints 🔥</h3>
-              {revealedHints.map((h) => (
-                <div key={h.hintNumber} className="mb-2 text-sm p-2 rounded bg-[var(--color-bg-tertiary)]">
-                  <span className="text-[var(--color-forge-500)] font-medium">Hint {h.hintNumber}: </span>
-                  {h.hint}
-                </div>
-              ))}
-              {hintError && <p className="text-xs text-[var(--color-danger)] mb-2">{hintError}</p>}
-              {nextHintNumber <= 3 && (
-                <button
-                  onClick={() => handleRevealHint(nextHintNumber)}
-                  className="text-sm text-[var(--color-forge-500)] hover:underline"
-                >
-                  Reveal Hint {nextHintNumber}
-                </button>
-              )}
+          <div className="grid grid-cols-2 gap-3 sm:min-w-[230px]">
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4">
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Total problems
+              </p>
+              <p className="mt-1 text-2xl font-black">{problems.length}</p>
             </div>
-          </ProtectedContent>
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Solved
+              </p>
+              <p className="mt-1 text-2xl font-black text-emerald-400">
+                {solvedCount}
+              </p>
+            </div>
+          </div>
         </div>
+      </header>
 
-        {/* Right: editor panel */}
-        <div
-          className={`${mobileTab === "editor" ? "flex" : "hidden"} lg:flex flex-col bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg overflow-hidden h-[calc(100vh-220px)] lg:h-auto`}
+      {/* Search and filters */}
+      <section className="mb-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4 sm:p-5">
+        <label
+          htmlFor="problem-search"
+          className="mb-2 block text-xs font-semibold text-[var(--color-text-secondary)]"
         >
-          <div className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-[var(--color-border)] gap-2 flex-wrap">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <span className="text-sm text-[var(--color-text-secondary)]">Java</span>
-              <select
-                value={editorTheme}
-                onChange={(e) => handleThemeChange(e.target.value)}
-                className="text-xs bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text-secondary)]"
-              >
-                <option value="vs-dark">Dark</option>
-                <option value="vs">Light</option>
-                <option value="hc-black">High Contrast</option>
-              </select>
-            </div>
-            <div className="flex gap-2">
+          SEARCH PROBLEMS
+        </label>
+
+        <div className="relative">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
+            🔍
+          </span>
+          <input
+            id="problem-search"
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search by problem name or number..."
+            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] py-3 pl-11 pr-4 text-sm text-[var(--color-text-primary)] outline-none transition placeholder:text-[var(--color-text-secondary)] focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+          />
+        </div>
+
+        <div className="mt-5">
+          <p className="mb-2.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+            DIFFICULTY
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {["ALL", "EASY", "MEDIUM", "HARD"].map((difficulty) => (
               <button
-                onClick={handleReset}
-                disabled={running || submitting}
-                className="text-xs sm:text-sm bg-[var(--color-bg-tertiary)] px-2 sm:px-3 py-1 rounded hover:opacity-80 disabled:opacity-50"
-                title="Reset to starter code"
+                key={difficulty}
+                type="button"
+                aria-pressed={difficultyFilter === difficulty}
+                onClick={() => setDifficultyFilter(difficulty)}
+                className={filterButton(difficultyFilter === difficulty)}
               >
-                Reset
+                {difficulty === "ALL" ? "All difficulties" : difficulty}
               </button>
-              <button
-                onClick={handleRun}
-                disabled={running || submitting}
-                className="text-xs sm:text-sm bg-[var(--color-bg-tertiary)] px-2 sm:px-3 py-1 rounded hover:opacity-80 disabled:opacity-50"
-              >
-                {running ? "Running..." : "Run"}
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={running || submitting}
-                className="text-xs sm:text-sm bg-[var(--color-forge-500)] text-white px-2 sm:px-3 py-1 rounded hover:bg-[var(--color-forge-600)] disabled:opacity-50"
-              >
-                {submitting ? "Submitting..." : "Submit"}
-              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div>
+            <p className="mb-2.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+              STATUS
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {["ALL", "SOLVED", "UNSOLVED"].map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  aria-pressed={statusFilter === status}
+                  onClick={() => setStatusFilter(status)}
+                  className={filterButton(statusFilter === status)}
+                >
+                  {status === "ALL"
+                    ? "All status"
+                    : status === "SOLVED"
+                      ? "✓ Solved"
+                      : "Unsolved"}
+                </button>
+              ))}
             </div>
           </div>
 
-          {showPasteWarning && (
-            <div className="bg-[var(--color-forge-500)]/10 border-b border-[var(--color-forge-500)] text-[var(--color-forge-500)] text-xs sm:text-sm px-4 py-2">
-              Pasting is disabled in SRH CodeVerse. Write every line yourself. Keep forging. 🔥
-            </div>
-          )}
-
-          <div className="flex-1 min-h-0">
-            <Editor
-              height="100%"
-              language="java"
-              theme={editorTheme}
-              value={code}
-              onChange={(value) => setCode(value ?? "")}
-              onMount={(editor, monaco) => {
-                editor.onDidPaste(() => {
-                  editor.trigger("source", "undo")
-                  setShowPasteWarning(true)
-                  setTimeout(() => setShowPasteWarning(false), 3000)
-                })
-
-                monaco.languages.registerCompletionItemProvider("java", {
-                  provideCompletionItems: (model, position) => {
-                    const word = model.getWordUntilPosition(position)
-                    const range = {
-                      startLineNumber: position.lineNumber,
-                      endLineNumber: position.lineNumber,
-                      startColumn: word.startColumn,
-                      endColumn: word.endColumn,
-                    }
-                    const snippets = [
-                      { label: "sout", insertText: "System.out.println($1);", detail: "Print line" },
-                      { label: "for", insertText: "for (int ${1:i} = 0; ${1:i} < ${2:n}; ${1:i}++) {\n\t$0\n}", detail: "For loop" },
-                      { label: "forEach", insertText: "for (${1:int} ${2:item} : ${3:collection}) {\n\t$0\n}", detail: "For-each loop" },
-                      { label: "while", insertText: "while (${1:condition}) {\n\t$0\n}", detail: "While loop" },
-                      { label: "if", insertText: "if (${1:condition}) {\n\t$0\n}", detail: "If statement" },
-                      { label: "ifelse", insertText: "if (${1:condition}) {\n\t$2\n} else {\n\t$0\n}", detail: "If-else statement" },
-                      { label: "main", insertText: "public static void main(String[] args) {\n\t$0\n}", detail: "Main method" },
-                      { label: "scanner", insertText: "Scanner sc = new Scanner(System.in);", detail: "Create Scanner" },
-                      { label: "arraylist", insertText: "ArrayList<${1:Integer}> ${2:list} = new ArrayList<>();", detail: "ArrayList declaration" },
-                      { label: "hashmap", insertText: "HashMap<${1:String}, ${2:Integer}> ${3:map} = new HashMap<>();", detail: "HashMap declaration" },
-                      { label: "trycatch", insertText: "try {\n\t$1\n} catch (${2:Exception} e) {\n\t$0\n}", detail: "Try-catch block" },
-                    ]
-                    return {
-                      suggestions: snippets.map((s) => ({
-                        label: s.label,
-                        kind: monaco.languages.CompletionItemKind.Snippet,
-                        insertText: s.insertText,
-                        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                        detail: s.detail,
-                        range,
-                      })),
-                    }
-                  },
-                })
-              }}
-              options={{
-                fontSize: Number(localStorage.getItem("srhcodeverse_editor_fontsize")) || 14,
-                minimap: { enabled: false },
-                dropIntoEditor: { enabled: false },
-                contextmenu: false,
-                automaticLayout: true,
-              }}
-            />
+          <div>
+            <label
+              htmlFor="problem-topic"
+              className="mb-2.5 block text-xs font-semibold text-[var(--color-text-secondary)]"
+            >
+              TOPIC
+            </label>
+            <select
+              id="problem-topic"
+              value={topicFilter}
+              onChange={(event) => setTopicFilter(event.target.value)}
+              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] px-3 py-2.5 text-sm text-[var(--color-text-primary)] outline-none focus:border-violet-500"
+            >
+              {topics.map((topic) => (
+                <option key={topic} value={topic}>
+                  {topic === "ALL" ? "All topics" : topic}
+                </option>
+              ))}
+            </select>
           </div>
+        </div>
 
-          {result && (
-            <div className="border-t border-[var(--color-border)] p-3 sm:p-4 max-h-48 sm:max-h-64 overflow-y-auto">
-              {result.compileError ? (
-                <div>
-                  <p className="text-[var(--color-danger)] font-semibold mb-2 text-sm">⚒ Compile Error</p>
-                  <pre className="text-xs text-[var(--color-danger)] whitespace-pre-wrap">{result.compileError}</pre>
-                </div>
-              ) : (
-                <>
-                  <p
-                    className={`font-semibold mb-2 text-sm ${
-                      result.status === "PASSED" ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"
-                    }`}
-                  >
-                    {result.status === "PASSED" ? "🔥 Solution Forged Successfully" : "⚒ Still Forging..."}
-                  </p>
-                  <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] mb-3">
-                    {result.passedTestCount}/{result.totalTestCount} test cases passed · {result.runtimeMs}ms
-                  </p>
-                  {result.testResults?.map((tr) => (
-                    <div key={tr.testNumber} className="mb-2 text-xs sm:text-sm p-2 rounded bg-[var(--color-bg-tertiary)]">
-                      <span className={tr.passed ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}>
-                        {tr.passed ? "✓" : "✗"} Test {tr.testNumber} {tr.hidden ? "🔒" : ""}
-                      </span>
-                      {!tr.hidden && !tr.passed && (
-                        <div className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                          <p>Expected: {tr.expectedOutput}</p>
-                          <p>Got: {tr.actualOutput || "(no output)"}</p>
-                          {tr.errorMessage && <p className="text-[var(--color-danger)]">{tr.errorMessage}</p>}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)] pt-4">
+          <p className="text-xs text-[var(--color-text-secondary)]">
+            Showing <strong>{filtered.length}</strong> of {problems.length} problems
+          </p>
+
+          {(searchQuery ||
+            difficultyFilter !== "ALL" ||
+            statusFilter !== "ALL" ||
+            topicFilter !== "ALL") && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="text-xs font-semibold text-violet-400 hover:text-violet-300"
+            >
+              Clear all filters ✕
+            </button>
           )}
         </div>
-      </div>
-    </div>
+      </section>
+
+      {/* Problem results */}
+      {filtered.length === 0 ? (
+        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-6 py-16 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/10 text-2xl">
+            🔎
+          </div>
+          <h2 className="mt-4 text-lg font-bold">No problems found</h2>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+            Try another search or adjust your filters.
+          </p>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="mt-5 rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-500"
+          >
+            Clear filters
+          </button>
+        </section>
+      ) : (
+        <section className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+          <div className="hidden grid-cols-[minmax(0,1fr)_100px_100px_44px] items-center gap-4 border-b border-[var(--color-border)] px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)] md:grid">
+            <span>Problem</span>
+            <span>Difficulty</span>
+            <span>Time</span>
+            <span className="text-center">Save</span>
+          </div>
+
+          <div className="divide-y divide-[var(--color-border)]">
+            {filtered.map((problem) => {
+              const bookmarked = isBookmarked(problem.id)
+
+              return (
+                <div
+                  key={problem.id}
+                  className="flex min-w-0 items-start gap-3 px-4 py-4 transition hover:bg-[var(--color-bg-tertiary)] sm:px-5 md:items-center md:gap-4"
+                >
+                  <Link
+                    to={`/problems/${problem.id}`}
+                    className="flex min-w-0 flex-1 items-start gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-violet-500 md:items-center"
+                  >
+                    <span
+                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold md:mt-0 ${
+                        problem.solved
+                          ? "bg-emerald-500/10 text-emerald-400"
+                          : "bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]"
+                      }`}
+                    >
+                      {problem.solved ? "✓" : problem.problemNumber}
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <h2 className="break-words text-sm font-semibold text-[var(--color-text-primary)] transition hover:text-violet-400 sm:text-base">
+                        {problem.title}
+                      </h2>
+                      <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                        {problem.topic || "General"}
+                        {problem.solved ? " · Solved" : ""}
+                      </p>
+                    </div>
+                  </Link>
+
+                  <div className="flex shrink-0 flex-col items-end gap-2 md:contents">
+                    <div className="md:justify-self-start">
+                      <DifficultyBadge difficulty={problem.difficulty} />
+                    </div>
+
+                    <span className="whitespace-nowrap text-xs text-[var(--color-text-secondary)] md:justify-self-start">
+                      {problem.estimatedTimeMinutes
+                        ? `${problem.estimatedTimeMinutes} min`
+                        : "—"}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toggleBookmark(problem)
+                      setProblems((current) => [...current])
+                    }}
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl transition hover:bg-violet-500/10 ${
+                      bookmarked
+                        ? "text-violet-400"
+                        : "text-[var(--color-text-secondary)] hover:text-violet-400"
+                    }`}
+                    title={bookmarked ? "Remove bookmark" : "Bookmark problem"}
+                    aria-label={
+                      bookmarked ? "Remove bookmark" : "Bookmark problem"
+                    }
+                    aria-pressed={bookmarked}
+                  >
+                    {bookmarked ? "★" : "☆"}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+    </main>
   )
 }
 
-export default ProblemDetail
+export default Problems

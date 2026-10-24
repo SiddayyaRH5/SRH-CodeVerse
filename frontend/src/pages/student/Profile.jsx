@@ -22,13 +22,20 @@ function Profile() {
   const isTrainer = profile.role === "TRAINER"
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Profile</h1>
+    <main className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-[var(--color-forge-500)]">YOUR SPACE</p>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Profile</h1>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">Your coding journey, progress, and activity in one place.</p>
+        </div>
+      </div>
 
-      <div className="max-w-2xl">
-        <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-6 mb-6">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <section className="min-w-0 lg:col-span-2">
+        <div className="mb-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-sm sm:p-8">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 rounded-full bg-[var(--color-forge-500)] flex items-center justify-center text-2xl font-bold text-white">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-cyan-500 text-2xl font-bold text-white shadow-lg shadow-violet-900/20">
               {profile.username.charAt(0).toUpperCase()}
             </div>
             <div>
@@ -36,7 +43,7 @@ function Profile() {
               <span className="text-xs text-[var(--color-forge-500)] font-medium">{profile.role}</span>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 gap-4 border-t border-[var(--color-border)] pt-5 text-sm sm:grid-cols-2">
             <div>
               <p className="text-[var(--color-text-secondary)]">Email</p>
               <p>{profile.email}</p>
@@ -48,33 +55,37 @@ function Profile() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {isTrainer ? (
-            <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-5">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-sm">
               <p className="text-sm text-[var(--color-text-secondary)] mb-1">Problems Created</p>
               <p className="text-2xl font-bold text-[var(--color-forge-500)]">{profile.problemsCreated}</p>
             </div>
           ) : (
             <>
-              <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-5">
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-sm">
                 <p className="text-sm text-[var(--color-text-secondary)] mb-1">Problems Solved</p>
                 <p className="text-2xl font-bold">{profile.problemsSolved}</p>
               </div>
-              <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-5">
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-sm">
                 <p className="text-sm text-[var(--color-text-secondary)] mb-1">Current Streak</p>
                 <p className="text-2xl font-bold text-[var(--color-forge-500)]">{profile.forgeStreakCurrent} 🔥</p>
               </div>
             </>
           )}
         </div>
-      </div>
+        </section>
 
-      {!isTrainer && (
-        <div className="mt-6">
-            <ActivityHeatmap />
-        </div>
+        {!isTrainer && (
+          <section className="min-w-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4 shadow-sm sm:p-6 lg:col-span-3">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <div><h2 className="text-lg font-bold">Activity</h2><p className="mt-1 text-sm text-[var(--color-text-secondary)]">Your consistency, one day at a time.</p></div>
+            </div>
+            <div className="w-full min-w-0 overflow-x-auto pb-2"><div className="min-w-[760px]"><ActivityHeatmap /></div></div>
+          </section>
         )}
-    </div>
+      </div>
+    </main>
   )
 }
 
