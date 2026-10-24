@@ -45,6 +45,7 @@ public class SecurityConfig {
                 CorsConfiguration configuration = new CorsConfiguration();
 
                 configuration.setAllowedOrigins(List.of(
+                                "https://srh-codeverse.vercel.app",
                                 "http://localhost:5173",
                                 "http://localhost:5174",
                                 "https://frontend-git-main-siddus-projects-0ae5cf1a.vercel.app",
@@ -52,12 +53,15 @@ public class SecurityConfig {
                                 "https://frontend-cpt6iyad4-siddus-projects-0ae5cf1a.vercel.app"));
 
                 configuration.setAllowedMethods(List.of(
-                                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+                                "GET", "POST", "PUT", "PATCH",
+                                "DELETE", "OPTIONS"));
+
                 configuration.setAllowedHeaders(List.of("*"));
                 configuration.setAllowCredentials(true);
                 configuration.setMaxAge(3600L);
 
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+
                 source.registerCorsConfiguration("/**", configuration);
 
                 return source;
