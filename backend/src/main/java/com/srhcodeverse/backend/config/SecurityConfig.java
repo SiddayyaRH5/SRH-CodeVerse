@@ -46,6 +46,7 @@ public class SecurityConfig {
 
                 configuration.setAllowedOrigins(List.of(
                                 "https://srh-codeverse.vercel.app",
+                                "https://srh-codeverse-5eo3ol4jh-sidus-projects-0ae5cf1a.vercel.app",
                                 "http://localhost:5173",
                                 "http://localhost:5174",
                                 "https://frontend-git-main-siddus-projects-0ae5cf1a.vercel.app",
@@ -88,3 +89,4 @@ public class SecurityConfig {
                 return http.build();
         }
 }
+
