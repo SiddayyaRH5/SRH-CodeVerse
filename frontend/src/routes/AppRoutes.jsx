@@ -1,3 +1,4 @@
+﻿import CourseLessonDetail from '../pages/student/CourseLessonDetail'
 import { Routes, Route } from "react-router-dom"
 import PageLayout from "../components/layout/PageLayout"
 import ProtectedRoute from "./ProtectedRoute"
@@ -28,6 +29,7 @@ import LearningPath from "../pages/student/LearningPath"
 import Certificates from "../pages/student/Certificates"
 import Courses from "../pages/student/Courses"
 import CourseDetail from "../pages/student/CourseDetail"
+import CourseProblemDetail from "../pages/student/CourseProblemDetail";
 
 function AppRoutes() {
   return (
@@ -38,6 +40,14 @@ function AppRoutes() {
         <Route path="/register" element={<Register />} />
         <Route path="/courses" element={<Courses />} />
         <Route path="/courses/:slug" element={<CourseDetail />} />
+<Route
+  path="/courses/:slug/lessons/:lessonId"
+  element={
+    <ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}>
+      <CourseLessonDetail />
+    </ProtectedRoute>
+  }
+/>
         <Route
           path="/dashboard"
           element={
@@ -149,6 +159,15 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+  path="/courses/:slug/problems/:problemId"
+  element={
+    <ProtectedRoute allowedRoles={['STUDENT', 'TRAINER']}>
+      <CourseProblemDetail />
+    </ProtectedRoute>
+  }
+/>
 
         <Route
           path="/achievements"

@@ -1,0 +1,311 @@
+
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { getCourseProblem } from '../../api/courseApi'
+
+export default function CourseProblemDetail() {
+  const { slug, problemId } = useParams()
+
+  const [problem, setProblem] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [code, setCode] = useState('')
+  const [customInput, setCustomInput] = useState('')
+  const [output, setOutput] = useState('')
+  const [result, setResult] = useState(null)
+  const [action, setAction] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadProblem() {
+      setLoading(true)
+      setError('')
+      setResult(null)
+      setOutput('')
+
+      try {
+        const response = await getCourseProblem(slug, problemId)
+
+        if (!cancelled) {
+          const data = response.data
+          setProblem(data)
+          setCode(data.starterCode || '')
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err.response?.data?.message ||
+              'Unable to load this course problem.'
+          )
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadProblem()
+
+    return () => {
+      cancelled = true
+    }
+  }, [slug, problemId])
+
+  async function handleCodeAction(type) {
+    setAction(type)
+    setResult(null)
+    setOutput('')
+
+    try {
+      // These endpoints must be implemented by the backend.
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/courses/${slug}/problems/${problemId}/${type === 'run' ? 'run' : 'submit'}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(localStorage.getItem('srhcodeverse_token')
+              ? {
+                  Authorization: `Bearer ${localStorage.getItem('srhcodeverse_token')}`,
+                }
+              : {}),
+          },
+          body: JSON.stringify({
+            code,
+            language: 'java',
+            input: customInput,
+          }),
+        }
+      )
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            `The ${type === 'run' ? 'Run Code' : 'Submit'} request failed.`
+        )
+      }
+
+      setResult(data)
+      setOutput(
+        data.output ??
+          data.stdout ??
+          data.message ??
+          JSON.stringify(data, null, 2)
+      )
+    } catch (err) {
+      setOutput(err.message || 'Request failed.')
+      setResult({ success: false })
+    } finally {
+      setAction('')
+    }
+  }
+
+  if (loading) {
+    return <main className="max-w-6xl mx-auto p-8">Loading problem...</main>
+  }
+
+  if (error || !problem) {
+    return (
+      <main className="max-w-6xl mx-auto p-8">
+        <p className="text-red-500">{error || 'Problem not found.'}</p>
+        <Link
+          to={`/courses/${slug}`}
+          className="inline-block mt-4 text-violet-500 font-bold"
+        >
+          ← Back to course
+        </Link>
+      </main>
+    )
+  }
+
+  return (
+    <main className="max-w-7xl mx-auto px-5 py-8">
+      <Link
+        to={`/courses/${slug}`}
+        className="text-sm font-bold text-violet-500"
+      >
+        ← Back to course
+      </Link>
+
+      <div className="grid lg:grid-cols-2 gap-5 mt-5 items-start">
+        {/* Problem description */}
+        <section className="cv-section-panel rounded-2xl p-6 min-w-0">
+          <div className="flex justify-between gap-3">
+            <span className="text-xs font-black text-violet-500">
+              {problem.topic || 'Practice'}
+            </span>
+            <span className="text-xs font-bold">
+              {problem.difficulty || 'UNRATED'}
+            </span>
+          </div>
+
+          <h1 className="text-3xl font-black mt-3">
+            {problem.title}
+          </h1>
+
+          <p className="text-sm text-[var(--cv-muted)] mt-4 leading-7 whitespace-pre-wrap">
+            {problem.statement}
+          </p>
+
+          {problem.constraints && (
+            <div className="mt-6">
+              <h2 className="font-bold">Constraints</h2>
+              <pre className="text-sm mt-2 whitespace-pre-wrap font-mono">
+                {problem.constraints}
+              </pre>
+            </div>
+          )}
+
+          {(problem.exampleInput || problem.exampleOutput) && (
+            <div className="grid sm:grid-cols-2 gap-4 mt-6">
+              <div>
+                <h2 className="font-bold">Example input</h2>
+                <pre className="rounded-xl p-4 mt-2 bg-[var(--cv-surface-2)] overflow-auto whitespace-pre-wrap text-sm">
+                  {problem.exampleInput || 'No example provided'}
+                </pre>
+              </div>
+
+              <div>
+                <h2 className="font-bold">Example output</h2>
+                <pre className="rounded-xl p-4 mt-2 bg-[var(--cv-surface-2)] overflow-auto whitespace-pre-wrap text-sm">
+                  {problem.exampleOutput || 'No example provided'}
+                </pre>
+              </div>
+            </div>
+          )}
+
+          {problem.explanation && (
+            <div className="mt-6">
+              <h2 className="font-bold">Explanation</h2>
+              <p className="text-sm text-[var(--cv-muted)] mt-2 whitespace-pre-wrap">
+                {problem.explanation}
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* Coding workspace */}
+        <section className="cv-section-panel rounded-2xl p-5 min-w-0">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-black">Coding Workspace</h2>
+            <span className="text-xs font-bold text-violet-500">
+              Java
+            </span>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setCode(problem.starterCode || '')
+                setOutput('')
+                setResult(null)
+              }}
+              className="px-3 py-2 rounded-lg border border-[var(--cv-border)] text-xs font-bold hover:border-violet-500"
+            >
+              Reset code
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard?.writeText(code)
+              }}
+              className="px-3 py-2 rounded-lg border border-[var(--cv-border)] text-xs font-bold hover:border-violet-500"
+            >
+              Copy code
+            </button>
+          </div>
+
+          <label className="block text-sm font-bold mt-5 mb-2">
+            Your Java solution
+          </label>
+
+          <textarea
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            spellCheck={false}
+            aria-label="Java code editor"
+            className="w-full min-h-[350px] rounded-xl p-4 bg-[#080d1b] text-green-300 border border-[var(--cv-border)] font-mono text-sm leading-6 resize-y focus:outline-none focus:ring-2 focus:ring-violet-500"
+            placeholder="Write your Java solution here..."
+          />
+
+          <label className="block text-sm font-bold mt-5 mb-2">
+            Custom input
+          </label>
+
+          <textarea
+            value={customInput}
+            onChange={(event) => setCustomInput(event.target.value)}
+            spellCheck={false}
+            className="w-full min-h-[90px] rounded-xl p-3 bg-[var(--cv-surface-2)] border border-[var(--cv-border)] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+            placeholder="Enter input for your program..."
+          />
+
+          <div className="flex flex-wrap gap-3 mt-5">
+            <button
+              type="button"
+              disabled={!!action || !code.trim()}
+              onClick={() => handleCodeAction('run')}
+              className="rounded-xl px-5 py-3 bg-violet-600 text-white font-bold hover:bg-violet-700 disabled:opacity-50"
+            >
+              {action === 'run' ? 'Running...' : '▶ Run Code'}
+            </button>
+
+            <button
+              type="button"
+              disabled={!!action || !code.trim()}
+              onClick={() => handleCodeAction('submit')}
+              className="rounded-xl px-5 py-3 border border-violet-500 text-violet-500 font-bold hover:bg-violet-500/10 disabled:opacity-50"
+            >
+              {action === 'submit' ? 'Submitting...' : '✓ Submit Solution'}
+            </button>
+          </div>
+
+          <div className="mt-6">
+            <h3 className="font-bold">Execution results</h3>
+
+            {result && (
+              <p
+                className={`mt-3 text-sm font-bold ${
+                  result.success ? 'text-emerald-500' : 'text-red-500'
+                }`}
+              >
+                {result.success
+                  ? 'Request completed successfully.'
+                  : 'Execution or submission failed.'}
+              </p>
+            )}
+
+            <pre className="mt-3 min-h-[100px] rounded-xl p-4 bg-[#080d1b] text-sm text-[var(--cv-muted)] whitespace-pre-wrap break-words overflow-auto">
+              {output || 'Your program output and test results will appear here.'}
+            </pre>
+
+            {Array.isArray(result?.testResults) && (
+              <div className="mt-4 space-y-2">
+                {result.testResults.map((test, index) => (
+                  <div
+                    key={test.id ?? index}
+                    className="rounded-lg border border-[var(--cv-border)] p-3 text-sm"
+                  >
+                    <b>
+                      Test {index + 1}:{' '}
+                      {test.passed ? 'Passed' : 'Failed'}
+                    </b>
+                    {test.message && (
+                      <p className="mt-1 text-[var(--cv-muted)]">
+                        {test.message}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+    </main>
+  )
+}

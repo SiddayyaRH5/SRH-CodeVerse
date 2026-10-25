@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useParams } from "react-router-dom"
-import Editor from "@monaco-editor/react"
+import CodeEditor from "../../components/editor/CodeEditor"
 import confetti from "canvas-confetti"
 import { getProblemDetail, getHint, runCode, submitCode, getMyLastCode } from "../../api/problemApi"
 import DifficultyBadge from "../../components/common/DifficultyBadge"
@@ -144,14 +144,14 @@ function ProblemDetail() {
                 onClick={() => { const next = toggleBookmark(problem); setBookmarked(next) }}
                 className="text-lg"
                 title={bookmarked ? "Remove bookmark" : "Save problem"}
-              >{bookmarked ? "★" : "☆"}</button>
+              >{bookmarked ? "â˜…" : "â˜†"}</button>
               <button
                 onClick={() => setNoteOpen((v) => !v)}
                 className="text-xs px-2 py-1 rounded bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]"
-              >📝 Notes</button>
+              >ðŸ“ Notes</button>
             </div>
             <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-              {problem.topic} · {problem.estimatedTimeMinutes} min
+              {problem.topic} . {problem.estimatedTimeMinutes} min
             </p>
 
             <p className="whitespace-pre-wrap text-sm mb-4">{problem.description}</p>
@@ -192,7 +192,7 @@ function ProblemDetail() {
 
             {/* Hints section */}
             <div className="mt-6 border-t border-[var(--color-border)] pt-4">
-              <h3 className="font-semibold text-sm mb-2">Forge Hints 🔥</h3>
+              <h3 className="font-semibold text-sm mb-2">Forge Hints ðŸ”¥</h3>
               {revealedHints.map((h) => (
                 <div key={h.hintNumber} className="mb-2 text-sm p-2 rounded bg-[var(--color-bg-tertiary)]">
                   <span className="text-[var(--color-forge-500)] font-medium">Hint {h.hintNumber}: </span>
@@ -257,12 +257,12 @@ function ProblemDetail() {
 
           {showPasteWarning && (
             <div className="bg-[var(--color-forge-500)]/10 border-b border-[var(--color-forge-500)] text-[var(--color-forge-500)] text-xs sm:text-sm px-4 py-2">
-              Pasting is disabled in SRH CodeVerse. Write every line yourself. Keep forging. 🔥
+              Pasting is disabled in SRH CodeVerse. Write every line yourself. Keep forging. ðŸ”¥
             </div>
           )}
 
           <div className="flex-1 min-h-0">
-            <Editor
+            <CodeEditor
               height="100%"
               language="java"
               theme={editorTheme}
@@ -324,7 +324,7 @@ function ProblemDetail() {
             <div className="border-t border-[var(--color-border)] p-3 sm:p-4 max-h-48 sm:max-h-64 overflow-y-auto">
               {result.compileError ? (
                 <div>
-                  <p className="text-[var(--color-danger)] font-semibold mb-2 text-sm">⚒ Compile Error</p>
+                  <p className="text-[var(--color-danger)] font-semibold mb-2 text-sm">âš’ Compile Error</p>
                   <pre className="text-xs text-[var(--color-danger)] whitespace-pre-wrap">{result.compileError}</pre>
                 </div>
               ) : (
@@ -334,15 +334,15 @@ function ProblemDetail() {
                       result.status === "PASSED" ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"
                     }`}
                   >
-                    {result.status === "PASSED" ? "🔥 Solution Forged Successfully" : "⚒ Still Forging..."}
+                    {result.status === "PASSED" ? "ðŸ”¥ Solution Forged Successfully" : "âš’ Still Forging..."}
                   </p>
                   <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] mb-3">
-                    {result.passedTestCount}/{result.totalTestCount} test cases passed · {result.runtimeMs}ms
+                    {result.passedTestCount}/{result.totalTestCount} test cases passed . {result.runtimeMs}ms
                   </p>
                   {result.testResults?.map((tr) => (
                     <div key={tr.testNumber} className="mb-2 text-xs sm:text-sm p-2 rounded bg-[var(--color-bg-tertiary)]">
                       <span className={tr.passed ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}>
-                        {tr.passed ? "✓" : "✗"} Test {tr.testNumber} {tr.hidden ? "🔒" : ""}
+                        {tr.passed ? "✓" : "✗—"} Test {tr.testNumber} {tr.hidden ? "ðŸ”’" : ""}
                       </span>
                       {!tr.hidden && !tr.passed && (
                         <div className="mt-1 text-xs text-[var(--color-text-secondary)]">

@@ -1,5 +1,7 @@
 package com.srhcodeverse.backend.service;
 
+import com.srhcodeverse.backend.dto.SubmissionHistoryResponse;
+
 import com.srhcodeverse.backend.dto.*;
 import com.srhcodeverse.backend.entity.*;
 import com.srhcodeverse.backend.repository.DailyChallengeRepository;
@@ -224,5 +226,23 @@ public class SubmissionService {
                 .runtimeMs(outcome.runtimeMs())
                 .testResults(results)
                 .build();
+    }
+
+    public List<SubmissionHistoryResponse> getMySubmissions(String username) {
+        return submissionRepository
+                .findByStudentUsernameOrderBySubmittedAtDesc(username)
+                .stream()
+                .map(s -> new SubmissionHistoryResponse(
+                        s.getId(),
+                        s.getProblem().getId(),
+                        s.getProblem().getTitle(),
+                        s.getCode(),
+                        s.getStatus().name(),
+                        s.getPassedTestCount(),
+                        s.getTotalTestCount(),
+                        s.getRuntimeMs(),
+                        s.getSubmittedAt()
+                ))
+                .toList();
     }
 }

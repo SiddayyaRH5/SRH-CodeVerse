@@ -1,0 +1,447 @@
+﻿import { useEffect, useMemo, useRef, useState } from "react"
+import CodeEditor from "../../components/editor/CodeEditor"
+import { getProblemDetail, getProblems, runCode, submitCode } from "../../api/problemApi"
+
+const START_SECONDS = 45 * 60
+const LANGUAGES = [{ id: "java", label: "Java", file: "Main.java" }]
+const LEFT_TABS = ["Description", "Instructions", "Submissions"]
+
+const diffStyle = {
+  easy: "bg-emerald-500/15 text-[color:var(--ar-green)]",
+  medium: "bg-amber-500/15 text-[color:var(--ar-amber)]",
+  hard: "bg-rose-500/15 text-[color:var(--ar-red)]",
+}
+
+
+// Palettes are applied as CSS variables on the page root, so the WHOLE page
+// switches together (no dependency on Tailwind's dark: variant configuration).
+const DARK = {
+  "--ar-page": "#070b14", "--ar-panel": "#0a0f1c", "--ar-control": "#0f1626", "--ar-card": "#0d1424",
+  "--ar-tag": "#101a2e", "--ar-hover": "#141d33", "--ar-line": "rgba(255,255,255,.06)", "--ar-line2": "rgba(255,255,255,.12)",
+  "--ar-strong": "#ffffff", "--ar-text": "#e2e8f0", "--ar-body": "#cbd5e1", "--ar-muted": "#94a3b8",
+  "--ar-green": "#34d399", "--ar-red": "#fb7185", "--ar-amber": "#fbbf24", "--ar-blue": "#60a5fa",
+  "--ar-accent-bg": "rgba(59,130,246,.10)", "--ar-accent-line": "rgba(59,130,246,.35)",
+  "--ar-primary": "linear-gradient(#059669,#059669)",
+  "--ar-logo-bg": "linear-gradient(rgba(59,130,246,.10),rgba(59,130,246,.10))", "--ar-logo-line": "rgba(59,130,246,.40)", "--ar-logo-fg": "#60a5fa",
+}
+// Light palette follows the CodeVerse reference: pale slate page, white rounded cards,
+// navy text, violet accent and the violet-to-cyan brand gradient on primary buttons.
+const LIGHT = {
+  "--ar-page": "#f8fafc", "--ar-panel": "#ffffff", "--ar-control": "#ffffff", "--ar-card": "#f8fafc",
+  "--ar-tag": "#f1f5f9", "--ar-hover": "#f1f5f9", "--ar-line": "#e2e8f0", "--ar-line2": "#e2e8f0",
+  "--ar-strong": "#0f172a", "--ar-text": "#1e293b", "--ar-body": "#475569", "--ar-muted": "#64748b",
+  "--ar-green": "#059669", "--ar-red": "#e11d48", "--ar-amber": "#b45309", "--ar-blue": "#6d28d9",
+  "--ar-accent-bg": "rgba(124,58,237,.08)", "--ar-accent-line": "rgba(124,58,237,.30)",
+  "--ar-primary": "linear-gradient(90deg,#6d28d9 0%,#4f46e5 50%,#06b6d4 100%)",
+  "--ar-logo-bg": "linear-gradient(135deg,#6d28d9,#4f46e5 55%,#06b6d4)", "--ar-logo-line": "transparent", "--ar-logo-fg": "#ffffff",
+}
+
+// Detects the app's current theme: explicit marker on <html>/<body>, then the
+// actual page background colour, then the OS preference.
+function detectDark() {
+  const els = [document.documentElement, document.body]
+  for (const el of els) {
+    const marks = [...el.classList, el.dataset.theme, el.dataset.bsTheme, el.dataset.mode, el.dataset.colorMode, el.dataset.cvTheme]
+      .filter(Boolean).map((m) => String(m).toLowerCase())
+    if (marks.some((m) => m.includes("dark"))) return true
+    if (marks.some((m) => m.includes("light"))) return false
+  }
+  for (const el of els) {
+    const m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g)
+    if (m && m.length >= 3 && (m.length < 4 || Number(m[3]) > 0.5)) {
+      const [r, g, b] = m.map(Number)
+      return (0.299 * r + 0.587 * g + 0.114 * b) < 140
+    }
+  }
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? true
+}
+
+function useIsDark() {
+  const [isDark, setIsDark] = useState(() => (typeof document === "undefined" ? true : detectDark()))
+  useEffect(() => {
+    const update = () => setIsDark(detectDark())
+    const obs = new MutationObserver(update)
+    const opts = { attributes: true }
+    obs.observe(document.documentElement, opts)
+    obs.observe(document.body, opts)
+    const mq = window.matchMedia?.("(prefers-color-scheme: dark)")
+    mq?.addEventListener?.("change", update)
+    update()
+    return () => { obs.disconnect(); mq?.removeEventListener?.("change", update) }
+  }, [])
+  return isDark
+}
+
+const Icon = ({ d, className = "w-4 h-4" }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d={d} />
+  </svg>
+)
+
+export default function LiveCodingArena() {
+  const isDark = useIsDark()
+  const [problems, setProblems] = useState([])
+  const [selectedId, setSelectedId] = useState("")
+  const [problem, setProblem] = useState(null)
+  const [code, setCode] = useState("")
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState("")
+  const [problemLoading, setProblemLoading] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [seconds, setSeconds] = useState(START_SECONDS)
+  const [started, setStarted] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [leftTab, setLeftTab] = useState("Description")
+  const [bottomTab, setBottomTab] = useState("Testcase")
+  const [activeCase, setActiveCase] = useState(0)
+  const [customInputs, setCustomInputs] = useState({})
+  const [saved, setSaved] = useState(true)
+  const [copied, setCopied] = useState(false)
+  const editorRef = useRef(null)
+
+  useEffect(() => {
+    getProblems()
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : []
+        setProblems(list)
+        if (list[0]) setSelectedId(String(list[0].id))
+        else setLoadError("No coding problems are available yet. Restart the backend so the Code Arena starter problems can be seeded.")
+      })
+      .catch((err) => setLoadError(err.response?.data?.message || "Could not load problems. Check that the backend is running and you are signed in."))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    if (!selectedId) return
+    setResult(null)
+    setActiveCase(0)
+    setBottomTab("Testcase")
+    setProblemLoading(true)
+    getProblemDetail(selectedId)
+      .then((res) => {
+        setProblem(res.data)
+        let draft = null
+        try { draft = localStorage.getItem(`arena-code-${selectedId}`) } catch {}
+        setCode(draft ?? (res.data.starterCode || ""))
+        setLoadError("")
+      })
+      .catch((err) => {
+        setProblem(null)
+        setLoadError(err.response?.data?.message || "Could not load this problem.")
+      })
+      .finally(() => setProblemLoading(false))
+  }, [selectedId])
+
+  // Auto-save draft
+  useEffect(() => {
+    if (!selectedId || problemLoading) return
+    setSaved(false)
+    const t = setTimeout(() => {
+      try { localStorage.setItem(`arena-code-${selectedId}`, code) } catch {}
+      setSaved(true)
+    }, 600)
+    return () => clearTimeout(t)
+  }, [code, selectedId, problemLoading])
+
+  useEffect(() => {
+    if (!started || submitted || seconds <= 0) return
+    const timer = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000)
+    return () => clearInterval(timer)
+  }, [started, submitted, seconds])
+
+  const formatted = useMemo(
+    () => `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`,
+    [seconds]
+  )
+
+  const run = async (isSubmit = false) => {
+    if (!problem || busy) return
+    if (!started) setStarted(true)
+    setBusy(true)
+    setBottomTab("Test Result")
+    try {
+      const res = await (isSubmit ? submitCode(problem.id, code) : runCode(problem.id, code))
+      setResult(res.data)
+      if (isSubmit && res.data.status === "PASSED") setSubmitted(true)
+    } catch (err) {
+      setResult({ status: "ERROR", compileError: err.response?.data?.message || "Request failed" })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const resetArena = () => {
+    setStarted(false); setSubmitted(false); setSeconds(START_SECONDS); setResult(null)
+    setCode(problem?.starterCode || ""); setBottomTab("Testcase")
+  }
+
+  const copyCode = async () => {
+    try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1500) } catch {}
+  }
+
+  const formatCode = () => editorRef.current?.getAction("editor.action.formatDocument")?.run()
+
+  const cases = problem?.visibleTestCases || []
+  const currentCase = cases[activeCase]
+  const diffKey = String(problem?.difficulty || "").toLowerCase()
+  const lowTime = seconds < 300
+
+  if (loading) return <div style={isDark ? DARK : LIGHT} className="min-h-screen bg-[var(--ar-page)] text-[color:var(--ar-muted)] grid place-items-center">Loading coding arena...</div>
+
+  return (
+    <div style={isDark ? DARK : LIGHT} className="h-screen flex flex-col bg-[var(--ar-page)] text-[color:var(--ar-text)]">
+      {/* ===== Top bar ===== */}
+      <header className="flex items-center justify-between gap-4 px-5 h-[68px] border-b border-[color:var(--ar-line)] bg-[var(--ar-panel)] shrink-0">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl border border-[color:var(--ar-logo-line)] bg-[image:var(--ar-logo-bg)] grid place-items-center text-[color:var(--ar-logo-fg)]">
+              <Icon d="M16 18l6-6-6-6M8 6l-6 6 6 6" className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-[15px] font-bold text-[color:var(--ar-strong)] leading-tight">Live Coding Arena</h1>
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-[color:var(--ar-accent-line)] bg-[var(--ar-accent-bg)] text-[color:var(--ar-blue)]">PRO</span>
+              </div>
+              <p className="text-xs text-slate-500">Focus. Solve. Submit.</p>
+            </div>
+          </div>
+          <div className="w-px h-8 bg-white/10 hidden md:block" />
+          <div className="relative hidden md:block">
+            <Icon d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--ar-muted)] pointer-events-none" />
+            <select
+              value={selectedId}
+              onChange={(e) => { setSelectedId(e.target.value); resetArena() }}
+              className="appearance-none h-10 pl-9 pr-9 rounded-2xl bg-[var(--ar-control)] border border-[color:var(--ar-line2)] text-sm text-[color:var(--ar-text)] outline-none focus:border-[color:var(--ar-accent-line)] max-w-[260px] truncate"
+            >
+              {problems.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+            </select>
+            <Icon d="M6 9l6 6 6-6" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--ar-muted)] pointer-events-none" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-2 h-11 px-5 rounded-2xl border font-mono text-lg font-bold ${lowTime ? "border-rose-500/40 bg-rose-500/10 text-[color:var(--ar-red)]" : "border-emerald-500/30 bg-emerald-500/10 text-[color:var(--ar-green)]"}`}>
+            <Icon d="M12 6v6l4 2M22 12a10 10 0 11-20 0 10 10 0 0120 0z" className="w-5 h-5" />
+            {formatted}
+          </div>
+          <button
+            onClick={() => setStarted(true)}
+            disabled={started}
+            className="hidden sm:flex items-center gap-2 h-9 px-4 rounded-full border border-[color:var(--ar-line2)] bg-[var(--ar-control)] text-xs text-[color:var(--ar-body)] disabled:cursor-default"
+          >
+            <span className={`w-2 h-2 rounded-full ${started ? "bg-emerald-400" : "bg-slate-500"}`} />
+            {started ? "Session Active" : "Start Session"}
+          </button>
+        </div>
+      </header>
+
+      {loadError && <div role="alert" className="mx-3 mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-[color:var(--ar-amber)]">{loadError}</div>}
+
+      {/* ===== Split panes ===== */}
+      <div className="flex-1 min-h-0 grid lg:grid-cols-[minmax(380px,0.85fr)_1.15fr] gap-3 p-3">
+        {/* ---- Left: problem ---- */}
+        <section className="flex flex-col min-h-0 rounded-3xl border border-[color:var(--ar-line)] bg-[var(--ar-panel)] overflow-hidden">
+          <div className="flex items-center gap-1 px-3 py-2.5 border-b border-[color:var(--ar-line)] shrink-0">
+            {LEFT_TABS.map((t) => (
+              <button
+                key={t}
+                onClick={() => setLeftTab(t)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm transition-colors ${leftTab === t ? "bg-[var(--ar-accent-bg)] text-[color:var(--ar-blue)] border border-[color:var(--ar-accent-line)]" : "text-[color:var(--ar-muted)] hover:text-[color:var(--ar-strong)] border border-transparent"}`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-5">
+            {problemLoading ? (
+              <p className="text-slate-500">Loading problem...</p>
+            ) : !problem ? (
+              <p className="text-slate-500">Select a challenge.</p>
+            ) : leftTab === "Description" ? (
+              <>
+                <div className="flex flex-wrap items-center gap-3 text-xs">
+                  <span className={`px-2.5 py-1 rounded-md font-semibold capitalize ${diffStyle[diffKey] || "bg-slate-500/15 text-[color:var(--ar-body)]"}`}>{diffKey || "n/a"}</span>
+                  {problem.likes != null && <span className="text-[color:var(--ar-muted)] flex items-center gap-1.5"><Icon d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" className="w-3.5 h-3.5" />{problem.likes}</span>}
+                  {problem.acceptanceRate != null && <span className="text-[color:var(--ar-muted)]">Acceptance Rate: <b className="text-[color:var(--ar-text)]">{problem.acceptanceRate}%</b></span>}
+                  <span className="text-slate-500">~{problem.estimatedTimeMinutes || 30} min</span>
+                </div>
+
+                <h2 className="text-2xl font-bold text-[color:var(--ar-strong)] mt-4">{problem.title}</h2>
+
+                {problem.topic && (
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {String(problem.topic).split(",").map((t) => (
+                      <span key={t} className="px-2.5 py-1 rounded-md bg-[var(--ar-tag)] border border-[color:var(--ar-line)] text-xs text-[color:var(--ar-body)]">{t.trim()}</span>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-[15px] leading-7 text-[color:var(--ar-body)] mt-5 whitespace-pre-wrap">{problem.description}</p>
+
+                {problem.constraints && (
+                  <>
+                    <h3 className="text-sm font-semibold text-[color:var(--ar-strong)] mt-6 mb-2">Constraints</h3>
+                    <pre className="text-xs leading-6 whitespace-pre-wrap text-[color:var(--ar-muted)] font-mono">{problem.constraints}</pre>
+                  </>
+                )}
+
+                <h3 className="flex items-center gap-2 text-sm font-semibold tracking-wide text-[color:var(--ar-body)] mt-7 mb-3">
+                  <Icon d="M4 17l6-6-6-6M12 19h8" className="w-4 h-4 text-[color:var(--ar-blue)]" /> EXAMPLES
+                </h3>
+                <div className="space-y-3">
+                  {cases.map((tc, i) => (
+                    <div key={i} className="rounded-xl border border-[color:var(--ar-line2)] bg-[var(--ar-card)] p-4 text-sm font-mono">
+                      <p className="text-[color:var(--ar-muted)] text-xs mb-2">Example {i + 1}:</p>
+                      <p className="text-xs text-[color:var(--ar-muted)]">Input:</p>
+                      <pre className="text-[color:var(--ar-text)] whitespace-pre-wrap overflow-x-auto mb-2">{tc.input}</pre>
+                      <p className="text-xs text-[color:var(--ar-muted)]">Output:</p>
+                      <pre className="text-[color:var(--ar-green)] whitespace-pre-wrap overflow-x-auto">{tc.expectedOutput}</pre>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : leftTab === "Instructions" ? (
+              <ul className="space-y-3 text-sm text-[color:var(--ar-body)]">
+                <li>â€¢ 45 minute timed session</li>
+                <li>â€¢ Run visible tests as often as you like</li>
+                <li>â€¢ Submit to check against hidden tests</li>
+                <li>â€¢ Your draft is saved automatically</li>
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-500">
+                {submitted ? "Your last submission passed all tests." : "No submissions yet. Submit your solution to see it here."}
+              </p>
+            )}
+          </div>
+        </section>
+
+        {/* ---- Right: editor + tests ---- */}
+        <section className="flex flex-col min-h-0 min-w-0 rounded-3xl border border-[color:var(--ar-line)] bg-[var(--ar-panel)] overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-3 py-2.5 border-b border-[color:var(--ar-line)] shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <select className="appearance-none h-10 pl-4 pr-9 rounded-2xl bg-[var(--ar-control)] border border-[color:var(--ar-line2)] text-sm text-[color:var(--ar-text)] outline-none">
+                  {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+                </select>
+                <Icon d="M6 9l6 6 6-6" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--ar-muted)] pointer-events-none" />
+              </div>
+              <span className="text-sm text-slate-500 font-mono hidden sm:inline">{LANGUAGES[0].file}</span>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-[color:var(--ar-muted)]">
+              <button onClick={formatCode} className="flex items-center gap-1.5 hover:text-[color:var(--ar-strong)]"><Icon d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" className="w-4 h-4 text-[color:var(--ar-blue)]" />Format</button>
+              <button onClick={copyCode} className="flex items-center gap-1.5 hover:text-[color:var(--ar-strong)]"><Icon d="M9 9h11v11H9zM5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1" />{copied ? "Copied" : "Copy"}</button>
+              <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-mono ${saved ? "border-emerald-500/30 bg-emerald-500/10 text-[color:var(--ar-green)]" : "border-[color:var(--ar-line2)] text-[color:var(--ar-muted)]"}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${saved ? "bg-emerald-400" : "bg-slate-400"}`} />
+                {saved ? "Auto-saved" : "Saving..."}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex-1 min-h-[240px]">
+            <CodeEditor
+              height="100%"
+              language="java"
+              theme={isDark ? "vs-dark" : "light"}
+              value={code}
+              onChange={(v) => setCode(v || "")}
+              onMount={(editor) => { editorRef.current = editor }}
+              options={{ minimap: { enabled: false }, fontSize: 14, automaticLayout: true, scrollBeyondLastLine: false, wordWrap: "on", padding: { top: 12 }, tabSize: 4 }}
+            />
+          </div>
+
+          {/* Bottom console */}
+          <div className="border-t border-[color:var(--ar-line)] shrink-0 flex flex-col h-[300px]">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-[color:var(--ar-line)]">
+              <div className="flex items-center gap-1">
+                {[["Testcase", "M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"], ["Test Result", "M4 17l6-6-6-6M12 19h8"]].map(([t, d]) => (
+                  <button
+                    key={t}
+                    onClick={() => setBottomTab(t)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${bottomTab === t ? "bg-[var(--ar-accent-bg)] text-[color:var(--ar-blue)] border border-[color:var(--ar-accent-line)]" : "text-[color:var(--ar-muted)] hover:text-[color:var(--ar-strong)] border border-transparent"}`}
+                  >
+                    <Icon d={d} className="w-3.5 h-3.5" />{t}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={busy || !problem}
+                  onClick={() => run(false)}
+                  className="flex items-center gap-2 h-9 px-5 rounded-xl border border-[color:var(--ar-line2)] bg-[var(--ar-control)] text-sm text-[color:var(--ar-text)] hover:bg-[var(--ar-hover)] disabled:opacity-50"
+                >
+                  <Icon d="M5 3l14 9-14 9V3z" className="w-3.5 h-3.5" />{busy ? "Running..." : "Run"}
+                </button>
+                <button
+                  disabled={busy || !problem || submitted}
+                  onClick={() => run(true)}
+                  className="flex items-center gap-2 h-9 px-5 rounded-xl bg-[image:var(--ar-primary)] hover:brightness-110 text-sm font-semibold text-white disabled:opacity-60 transition"
+                >
+                  <Icon d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" className="w-3.5 h-3.5" />{submitted ? "Submitted" : "Submit"}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {bottomTab === "Testcase" ? (
+                cases.length === 0 ? (
+                  <p className="text-sm text-slate-500">No visible test cases for this problem.</p>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      {cases.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setActiveCase(i)}
+                          className={`px-3.5 py-1.5 rounded-lg text-sm font-mono border ${activeCase === i ? "bg-[var(--ar-accent-bg)] border-[color:var(--ar-accent-line)] text-[color:var(--ar-blue)]" : "border-[color:var(--ar-line2)] text-[color:var(--ar-muted)] hover:text-[color:var(--ar-strong)]"}`}
+                        >
+                          Case {i + 1}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-3 rounded-xl border border-[color:var(--ar-line2)] bg-[var(--ar-card)] p-4">
+                      <div className="flex justify-between text-xs font-mono text-[color:var(--ar-muted)] mb-2">
+                        <span>Input Parameters:</span>
+                        <span className="text-slate-500">Editable for custom testing</span>
+                      </div>
+                      <textarea
+                        value={customInputs[activeCase] ?? currentCase?.input ?? ""}
+                        onChange={(e) => setCustomInputs((c) => ({ ...c, [activeCase]: e.target.value }))}
+                        rows={3}
+                        spellCheck={false}
+                        className="w-full resize-none rounded-lg bg-[var(--ar-panel)] border border-[color:var(--ar-line2)] px-3 py-2 text-sm font-mono text-[color:var(--ar-text)] outline-none focus:border-[color:var(--ar-accent-line)]"
+                      />
+                      <p className="text-xs font-mono text-[color:var(--ar-muted)] mt-3">Expected Output:</p>
+                      <pre className="text-sm font-mono text-[color:var(--ar-green)] mt-1 whitespace-pre-wrap">{currentCase?.expectedOutput}</pre>
+                    </div>
+                  </>
+                )
+              ) : !result ? (
+                <p className="text-sm text-slate-500">Run your code to see results here.</p>
+              ) : result.compileError ? (
+                <pre className="text-xs text-[color:var(--ar-red)] whitespace-pre-wrap font-mono">{result.compileError}</pre>
+              ) : (
+                <>
+                  <p className={`font-semibold ${result.status === "PASSED" ? "text-[color:var(--ar-green)]" : "text-[color:var(--ar-red)]"}`}>
+                    {result.status === "PASSED" ? "âœ“ All tests passed" : "âœ— Tests need attention"}
+                  </p>
+                  <p className="text-xs text-[color:var(--ar-muted)] mt-1">{result.passedTestCount}/{result.totalTestCount} tests Â· {result.runtimeMs}ms</p>
+                  <div className="mt-3 space-y-2">
+                    {result.testResults?.map((tr) => (
+                      <div key={tr.testNumber} className={`rounded-lg border px-3 py-2 text-xs ${tr.passed ? "border-emerald-500/20 bg-emerald-500/5" : "border-rose-500/20 bg-rose-500/5"}`}>
+                        <span className={tr.passed ? "text-[color:var(--ar-green)]" : "text-[color:var(--ar-red)]"}>{tr.passed ? "âœ“" : "âœ—"}</span> Test {tr.testNumber} {tr.hidden ? "ðŸ”’ Hidden test" : ""}
+                        {tr.errorMessage && <span className="block text-[color:var(--ar-red)] mt-1">{tr.errorMessage}</span>}
+                        {tr.actualOutput != null && !tr.passed && !tr.hidden && <span className="block text-[color:var(--ar-muted)] mt-1 font-mono">Your output: {tr.actualOutput}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  )
+}

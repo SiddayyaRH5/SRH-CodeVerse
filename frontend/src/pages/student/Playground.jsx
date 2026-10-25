@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
+import CodeEditor from "../../components/editor/CodeEditor"
 
 const starter = `public class Main {
     public static void main(String[] args) {
@@ -98,7 +99,7 @@ export default function Playground() {
             onClick={reset}
             className="cv-secondary-btn"
           >
-            ↺ Reset
+            â†º Reset
           </button>
 
           <button
@@ -125,7 +126,7 @@ export default function Playground() {
           <p className="text-xs text-[var(--color-text-secondary)]">
             LANGUAGE
           </p>
-          <p className="mt-2 text-sm font-semibold">☕ Java</p>
+          <p className="mt-2 text-sm font-semibold">â˜• Java</p>
         </div>
 
         <div className="rounded-xl border border-[var(--cv-border)] bg-[var(--color-bg-secondary)] p-4">
@@ -170,29 +171,28 @@ export default function Playground() {
           </button>
         </div>
 
-        <div className="relative">
-          <textarea
-            aria-label="Java code editor"
+        <div className="relative min-h-[480px]">
+          <CodeEditor
+            height="480px"
             value={code}
-            onChange={(event) => {
-              setCode(event.target.value)
+            theme="vs-dark"
+            onChange={(value) => {
+              setCode(value)
               setSaved(false)
               setStatus("")
             }}
-            spellCheck={false}
-            autoCapitalize="off"
-            autoCorrect="off"
-            autoComplete="off"
-            wrap="off"
-            placeholder="Start writing your Java code..."
-            className="block min-h-[480px] w-full resize-y overflow-x-auto bg-transparent p-5 font-mono text-sm leading-7 text-[var(--cv-text)] outline-none sm:p-6"
-            style={{ tabSize: 4 }}
+            options={{
+              fontSize: 14,
+              wordWrap: "off",
+              scrollBeyondLastLine: false,
+              tabSize: 4,
+            }}
           />
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--cv-border)] px-4 py-3 text-xs text-[var(--cv-muted)] sm:px-5">
-          <span>Java source · Main.java</span>
-          <span>{lineCount} lines · {characterCount} characters</span>
+          <span>Java source Â· Main.java</span>
+          <span>{lineCount} lines Â· {characterCount} characters</span>
         </div>
       </section>
 
@@ -209,7 +209,7 @@ export default function Playground() {
 
       <div className="rounded-2xl border border-[var(--cv-border)] bg-[var(--color-bg-secondary)] p-4 sm:p-5">
         <div className="flex items-start gap-3">
-          <span className="text-xl" aria-hidden="true">💡</span>
+          <span className="text-xl" aria-hidden="true">ðŸ’¡</span>
           <div>
             <h2 className="text-sm font-semibold">Your personal coding space</h2>
             <p className="mt-1 text-sm leading-6 text-[var(--color-text-secondary)]">
@@ -224,3 +224,4 @@ export default function Playground() {
     </div>
   )
 }
+

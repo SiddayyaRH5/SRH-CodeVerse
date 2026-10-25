@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import Editor from "@monaco-editor/react"
+﻿import { useEffect, useMemo, useRef, useState } from "react"
+import CodeEditor from "../../components/editor/CodeEditor"
 import { getProblemDetail, getProblems, runCode, submitCode } from "../../api/problemApi"
 
 const START_SECONDS = 45 * 60
@@ -340,7 +340,7 @@ export default function LiveCodingArena() {
           </div>
 
           <div className="flex-1 min-h-[240px]">
-            <Editor
+            <CodeEditor
               height="100%"
               language="java"
               theme={isDark ? "vs-dark" : "light"}
@@ -430,7 +430,7 @@ export default function LiveCodingArena() {
                   <div className="mt-3 space-y-2">
                     {result.testResults?.map((tr) => (
                       <div key={tr.testNumber} className={`rounded-lg border px-3 py-2 text-xs ${tr.passed ? "border-emerald-500/20 bg-emerald-500/5" : "border-rose-500/20 bg-rose-500/5"}`}>
-                        <span className={tr.passed ? "text-[color:var(--ar-green)]" : "text-[color:var(--ar-red)]"}>{tr.passed ? "✓" : "✗"}</span> Test {tr.testNumber} {tr.hidden ? "🔒 Hidden test" : ""}
+                        <span className={tr.passed ? "text-[color:var(--ar-green)]" : "text-[color:var(--ar-red)]"}>{tr.passed ? "✓" : "✗"}</span> Test {tr.testNumber} {tr.hidden ? "ðŸ”’ Hidden test" : ""}
                         {tr.errorMessage && <span className="block text-[color:var(--ar-red)] mt-1">{tr.errorMessage}</span>}
                         {tr.actualOutput != null && !tr.passed && !tr.hidden && <span className="block text-[color:var(--ar-muted)] mt-1 font-mono">Your output: {tr.actualOutput}</span>}
                       </div>
@@ -445,3 +445,4 @@ export default function LiveCodingArena() {
     </div>
   )
 }
+

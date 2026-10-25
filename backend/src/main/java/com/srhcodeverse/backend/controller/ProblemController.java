@@ -6,10 +6,12 @@ import com.srhcodeverse.backend.dto.ProblemDetailResponse;
 import com.srhcodeverse.backend.dto.ProblemRequest;
 import com.srhcodeverse.backend.dto.ProblemResponse;
 import com.srhcodeverse.backend.dto.ProblemSummaryResponse;
+import com.srhcodeverse.backend.dto.RunCodeRequest;
 import com.srhcodeverse.backend.entity.User;
 import com.srhcodeverse.backend.repository.SubmissionRepository;
 import com.srhcodeverse.backend.repository.UserRepository;
 import com.srhcodeverse.backend.service.DashboardService;
+import com.srhcodeverse.backend.service.ExecutionService;
 import com.srhcodeverse.backend.service.ProblemService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -26,17 +28,20 @@ import java.util.Map;
 public class ProblemController {
 
     private final ProblemService problemService;
+    private final ExecutionService executionService;
     private final DashboardService dashboardService;
     private final UserRepository userRepository;
     private final SubmissionRepository submissionRepository;
 
     public ProblemController(
             ProblemService problemService,
+            ExecutionService executionService,
             DashboardService dashboardService,
             UserRepository userRepository,
             SubmissionRepository submissionRepository) {
 
         this.problemService = problemService;
+        this.executionService = executionService;
         this.dashboardService = dashboardService;
         this.userRepository = userRepository;
         this.submissionRepository = submissionRepository;
@@ -169,4 +174,6 @@ public class ProblemController {
 
         return auth.getName();
     }
+
+
 }
