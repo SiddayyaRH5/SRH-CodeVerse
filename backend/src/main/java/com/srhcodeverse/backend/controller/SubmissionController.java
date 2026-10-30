@@ -21,13 +21,13 @@ public class SubmissionController {
 
     @PostMapping("/problems/{id}/run")
     public SubmissionResponse run(@PathVariable Long id, @RequestBody SubmissionRequest request) {
-        return submissionService.runCode(id, request.getCode());
+        return submissionService.runCode(id, request.getCode(), request.getLanguage());
     }
 
     @PostMapping("/problems/{id}/submit")
     public SubmissionResponse submit(@PathVariable Long id, @RequestBody SubmissionRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        return submissionService.submitCode(id, request.getCode(), username);
+        return submissionService.submitCode(id, request.getCode(), username, request.getLanguage());
     }
 
     @GetMapping("/submissions/my")

@@ -44,7 +44,7 @@ public class SubmissionService {
     }
 
     // "Run" - visible test cases only, nothing saved to DB
-    public SubmissionResponse runCode(Long problemId, String code) {
+    public SubmissionResponse runCode(Long problemId, String code, String language) {
 
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() ->
@@ -54,14 +54,15 @@ public class SubmissionService {
                 .filter(tc -> !tc.isHidden())
                 .toList();
 
-        return execute(code, visibleTests, false);
+        return execute(code, visibleTests, false, language);
     }
 
     // "Submit" - ALL test cases, result saved to DB
     public SubmissionResponse submitCode(
             Long problemId,
             String code,
-            String username) {
+            String username,
+            String language) {
 
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() ->
@@ -72,7 +73,7 @@ public class SubmissionService {
                         new IllegalArgumentException("User not found"));
 
         SubmissionResponse response =
-                execute(code, problem.getTestCases(), true);
+                execute(code, problem.getTestCases(), true, language);
 
         Submission submission = Submission.builder()
                 .student(student)
@@ -154,7 +155,8 @@ public class SubmissionService {
     private SubmissionResponse execute(
             String code,
             List<TestCase> testCases,
-            boolean maskHidden) {
+            boolean maskHidden,
+            String language) {
 
         List<String> inputs = testCases.stream()
                 .map(TestCase::getInput)
@@ -168,7 +170,8 @@ public class SubmissionService {
                 executionService.runAgainstTestCases(
                         code,
                         inputs,
-                        expected
+                        expected,
+                        language
                 );
 
         // Compilation failed

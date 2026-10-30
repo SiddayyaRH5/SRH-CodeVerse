@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { useParams } from "react-router-dom"
 import CodeEditor from "../../components/editor/CodeEditor"
 import confetti from "canvas-confetti"
@@ -9,6 +9,32 @@ import { invalidate } from "../../utils/cache"
 import { useAuth } from "../../context/AuthContext"
 import { isBookmarked, toggleBookmark, getNote, saveNote } from "../../utils/srhStudy"
 import AICodeMentor from "../../components/common/AICodeMentor"
+
+const LANGUAGE_STARTERS = {
+  java: "",
+  python: `import sys
+
+def main():
+    data = sys.stdin.read().strip()
+    # Write your solution here
+    print(data)
+
+if __name__ == "__main__":
+    main()
+`,
+  javascript: `const fs = require("fs");
+
+const input = fs.readFileSync(0, "utf8").trim();
+
+// Write your solution here
+console.log(input);
+`,
+}
+
+function getLanguageStarter(language, problem) {
+  if (language === "java") return problem?.starterCode || ""
+  return LANGUAGE_STARTERS[language] || ""
+}
 
 function fireConfetti() {
   confetti({
@@ -24,6 +50,8 @@ function ProblemDetail() {
   const { user } = useAuth()
   const [problem, setProblem] = useState(null)
   const [code, setCode] = useState("")
+  const [language, setLanguage] = useState("java")
+  const [languageCodes, setLanguageCodes] = useState({})
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
   const [revealedHints, setRevealedHints] = useState([])
@@ -44,7 +72,9 @@ function ProblemDetail() {
         setProblem(problemRes.data)
         setBookmarked(isBookmarked(id))
         setNote(getNote(id))
-        setCode(codeRes.data.code || problemRes.data.starterCode || "")
+        const initialCode = codeRes.data.code || problemRes.data.starterCode || ""
+        setCode(initialCode)
+        setLanguageCodes({ java: initialCode })
       })
       .catch((err) => setError(err.response?.data?.message || "Failed to load problem"))
       .finally(() => setLoading(false))
@@ -65,16 +95,39 @@ function ProblemDetail() {
     localStorage.setItem("srhcodeverse_editor_theme", theme)
   }
 
+  const handleLanguageChange = (nextLanguage) => {
+    if (nextLanguage === language) return
+
+    setLanguageCodes((prev) => ({
+      ...prev,
+      [language]: code,
+    }))
+
+    setLanguage(nextLanguage)
+    setCode(
+      languageCodes[nextLanguage] ??
+      getLanguageStarter(nextLanguage, problem)
+    )
+    setResult(null)
+  }
+
   const handleReset = () => {
-    if (!window.confirm("Reset to starter code? Your current changes will be lost.")) return
-    setCode(problem.starterCode || "")
+    if (!window.confirm("Reset this language to its starter code? Your current changes will be lost.")) return
+
+    const starter = getLanguageStarter(language, problem)
+    setCode(starter)
+    setLanguageCodes((prev) => ({
+      ...prev,
+      [language]: starter,
+    }))
+    setResult(null)
   }
 
   const handleRun = async () => {
     setRunning(true)
     setResult(null)
     try {
-      const res = await runCode(id, code)
+      const res = await runCode(id, code, language)
       setResult(res.data)
     } catch (err) {
       setResult({ status: "ERROR", compileError: err.response?.data?.message || "Failed to run code" })
@@ -87,7 +140,7 @@ function ProblemDetail() {
     setSubmitting(true)
     setResult(null)
     try {
-      const res = await submitCode(id, code)
+      const res = await submitCode(id, code, language)
       setResult(res.data)
       if (res.data.status === "PASSED") {
         fireConfetti()
@@ -144,11 +197,11 @@ function ProblemDetail() {
                 onClick={() => { const next = toggleBookmark(problem); setBookmarked(next) }}
                 className="text-lg"
                 title={bookmarked ? "Remove bookmark" : "Save problem"}
-              >{bookmarked ? "â˜…" : "â˜†"}</button>
+              >{bookmarked ? "★" : "☆"}</button>
               <button
                 onClick={() => setNoteOpen((v) => !v)}
                 className="text-xs px-2 py-1 rounded bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]"
-              >ðŸ“ Notes</button>
+              >📝 Notes</button>
             </div>
             <p className="text-sm text-[var(--color-text-secondary)] mb-4">
               {problem.topic} . {problem.estimatedTimeMinutes} min
@@ -192,7 +245,7 @@ function ProblemDetail() {
 
             {/* Hints section */}
             <div className="mt-6 border-t border-[var(--color-border)] pt-4">
-              <h3 className="font-semibold text-sm mb-2">Forge Hints ðŸ”¥</h3>
+              <h3 className="font-semibold text-sm mb-2">Forge Hints 🔥</h3>
               {revealedHints.map((h) => (
                 <div key={h.hintNumber} className="mb-2 text-sm p-2 rounded bg-[var(--color-bg-tertiary)]">
                   <span className="text-[var(--color-forge-500)] font-medium">Hint {h.hintNumber}: </span>
@@ -218,7 +271,17 @@ function ProblemDetail() {
         >
           <div className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-[var(--color-border)] gap-2 flex-wrap">
             <div className="flex items-center gap-2 sm:gap-3">
-              <span className="text-sm text-[var(--color-text-secondary)]">Java</span>
+              <select
+                value={language}
+                onChange={(e) => handleLanguageChange(e.target.value)}
+                disabled={running || submitting}
+                aria-label="Programming language"
+                className="text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text-secondary)] disabled:opacity-50"
+              >
+                <option value="java">Java 21</option>
+                <option value="python">Python 3.12</option>
+                <option value="javascript">JavaScript (Node.js 22)</option>
+              </select>
               <select
                 value={editorTheme}
                 onChange={(e) => handleThemeChange(e.target.value)}
@@ -257,17 +320,24 @@ function ProblemDetail() {
 
           {showPasteWarning && (
             <div className="bg-[var(--color-forge-500)]/10 border-b border-[var(--color-forge-500)] text-[var(--color-forge-500)] text-xs sm:text-sm px-4 py-2">
-              Pasting is disabled in SRH CodeVerse. Write every line yourself. Keep forging. ðŸ”¥
+              Pasting is disabled in SRH CodeVerse. Write every line yourself. Keep forging. 🔥
             </div>
           )}
 
           <div className="flex-1 min-h-0">
             <CodeEditor
               height="100%"
-              language="java"
+              language={language}
               theme={editorTheme}
               value={code}
-              onChange={(value) => setCode(value ?? "")}
+              onChange={(value) => {
+                const nextCode = value ?? ""
+                setCode(nextCode)
+                setLanguageCodes((prev) => ({
+                  ...prev,
+                  [language]: nextCode,
+                }))
+              }}
               onMount={(editor, monaco) => {
                 editor.onDidPaste(() => {
                   editor.trigger("source", "undo")
@@ -324,7 +394,7 @@ function ProblemDetail() {
             <div className="border-t border-[var(--color-border)] p-3 sm:p-4 max-h-48 sm:max-h-64 overflow-y-auto">
               {result.compileError ? (
                 <div>
-                  <p className="text-[var(--color-danger)] font-semibold mb-2 text-sm">âš’ Compile Error</p>
+                  <p className="text-[var(--color-danger)] font-semibold mb-2 text-sm">⚠ Compile Error</p>
                   <pre className="text-xs text-[var(--color-danger)] whitespace-pre-wrap">{result.compileError}</pre>
                 </div>
               ) : (
@@ -334,7 +404,7 @@ function ProblemDetail() {
                       result.status === "PASSED" ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"
                     }`}
                   >
-                    {result.status === "PASSED" ? "ðŸ”¥ Solution Forged Successfully" : "âš’ Still Forging..."}
+                    {result.status === "PASSED" ? "🔥 Solution Forged Successfully" : "⚠ Still Forging..."}
                   </p>
                   <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] mb-3">
                     {result.passedTestCount}/{result.totalTestCount} test cases passed . {result.runtimeMs}ms
@@ -342,7 +412,7 @@ function ProblemDetail() {
                   {result.testResults?.map((tr) => (
                     <div key={tr.testNumber} className="mb-2 text-xs sm:text-sm p-2 rounded bg-[var(--color-bg-tertiary)]">
                       <span className={tr.passed ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}>
-                        {tr.passed ? "✓" : "✗—"} Test {tr.testNumber} {tr.hidden ? "ðŸ”’" : ""}
+                        {tr.passed ? "✓" : "✗"} Test {tr.testNumber} {tr.hidden ? "🔒" : ""}
                       </span>
                       {!tr.hidden && !tr.passed && (
                         <div className="mt-1 text-xs text-[var(--color-text-secondary)]">

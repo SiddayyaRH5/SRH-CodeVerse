@@ -1,9 +1,37 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import CodeEditor from "../../components/editor/CodeEditor"
 import { getProblemDetail, getProblems, runCode, submitCode } from "../../api/problemApi"
 
 const START_SECONDS = 45 * 60
-const LANGUAGES = [{ id: "java", label: "Java", file: "Main.java" }]
+const LANGUAGES = [
+  { id: "java", label: "Java 21", file: "Main.java" },
+  { id: "python", label: "Python 3.12", file: "Main.py" },
+  { id: "javascript", label: "JavaScript (Node.js 22)", file: "Main.js" },
+]
+
+const LANGUAGE_STARTERS = {
+  python: `import sys
+
+def main():
+    data = sys.stdin.read().strip()
+    # Write your solution here
+
+if __name__ == "__main__":
+    main()
+`,
+  javascript: `const fs = require("fs");
+
+const input = fs.readFileSync(0, "utf8").trim();
+
+// Write your solution here
+`,
+}
+
+function getLanguageStarter(language, problem) {
+  if (language === "java") return problem?.starterCode || ""
+  return LANGUAGE_STARTERS[language] || ""
+}
+
 const LEFT_TABS = ["Description", "Instructions", "Submissions"]
 
 const diffStyle = {
@@ -84,6 +112,7 @@ export default function LiveCodingArena() {
   const [selectedId, setSelectedId] = useState("")
   const [problem, setProblem] = useState(null)
   const [code, setCode] = useState("")
+  const [language, setLanguage] = useState("java")
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState("")
@@ -122,8 +151,16 @@ export default function LiveCodingArena() {
       .then((res) => {
         setProblem(res.data)
         let draft = null
-        try { draft = localStorage.getItem(`arena-code-${selectedId}`) } catch {}
-        setCode(draft ?? (res.data.starterCode || ""))
+        try {
+          draft = localStorage.getItem(`arena-code-${selectedId}-${language}`)
+
+          // Restore the previous Java draft for backward compatibility.
+          if (draft == null && language === "java") {
+            draft = localStorage.getItem(`arena-code-${selectedId}`)
+          }
+        } catch {}
+
+        setCode(draft ?? getLanguageStarter(language, res.data))
         setLoadError("")
       })
       .catch((err) => {
@@ -133,16 +170,41 @@ export default function LiveCodingArena() {
       .finally(() => setProblemLoading(false))
   }, [selectedId])
 
+  const handleLanguageChange = (nextLanguage) => {
+    if (nextLanguage === language || busy || problemLoading) return
+
+    // Save the current editor contents before switching.
+    try {
+      if (selectedId) {
+        localStorage.setItem(`arena-code-${selectedId}-${language}`, code)
+      }
+    } catch {}
+
+    // Restore the selected language draft or load its starter template.
+    let nextCode = null
+
+    try {
+      if (selectedId) {
+        nextCode = localStorage.getItem(`arena-code-${selectedId}-${nextLanguage}`)
+      }
+    } catch {}
+
+    setLanguage(nextLanguage)
+    setCode(nextCode ?? getLanguageStarter(nextLanguage, problem))
+    setResult(null)
+    setBottomTab("Testcase")
+  }
+
   // Auto-save draft
   useEffect(() => {
     if (!selectedId || problemLoading) return
     setSaved(false)
     const t = setTimeout(() => {
-      try { localStorage.setItem(`arena-code-${selectedId}`, code) } catch {}
+      try { localStorage.setItem(`arena-code-${selectedId}-${language}`, code) } catch {}
       setSaved(true)
     }, 600)
     return () => clearTimeout(t)
-  }, [code, selectedId, problemLoading])
+  }, [code, selectedId, problemLoading, language])
 
   useEffect(() => {
     if (!started || submitted || seconds <= 0) return
@@ -161,7 +223,7 @@ export default function LiveCodingArena() {
     setBusy(true)
     setBottomTab("Test Result")
     try {
-      const res = await (isSubmit ? submitCode(problem.id, code) : runCode(problem.id, code))
+      const res = await (isSubmit ? submitCode(problem.id, code, language) : runCode(problem.id, code, language))
       setResult(res.data)
       if (isSubmit && res.data.status === "PASSED") setSubmitted(true)
     } catch (err) {
@@ -173,7 +235,7 @@ export default function LiveCodingArena() {
 
   const resetArena = () => {
     setStarted(false); setSubmitted(false); setSeconds(START_SECONDS); setResult(null)
-    setCode(problem?.starterCode || ""); setBottomTab("Testcase")
+    setCode(getLanguageStarter(language, problem)); setBottomTab("Testcase")
   }
 
   const copyCode = async () => {
@@ -322,12 +384,20 @@ export default function LiveCodingArena() {
           <div className="flex items-center justify-between gap-3 px-3 py-2.5 border-b border-[color:var(--ar-line)] shrink-0">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <select className="appearance-none h-10 pl-4 pr-9 rounded-2xl bg-[var(--ar-control)] border border-[color:var(--ar-line2)] text-sm text-[color:var(--ar-text)] outline-none">
-                  {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+                <select
+                  value={language}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
+                  disabled={busy || problemLoading}
+                  aria-label="Programming language"
+                  className="appearance-none h-10 pl-4 pr-9 rounded-2xl bg-[var(--ar-control)] border border-[color:var(--ar-line2)] text-sm text-[color:var(--ar-text)] outline-none disabled:opacity-50"
+                >
+                  {LANGUAGES.map((l) => (
+                    <option key={l.id} value={l.id}>{l.label}</option>
+                  ))}
                 </select>
                 <Icon d="M6 9l6 6 6-6" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--ar-muted)] pointer-events-none" />
               </div>
-              <span className="text-sm text-slate-500 font-mono hidden sm:inline">{LANGUAGES[0].file}</span>
+              <span className="text-sm text-slate-500 font-mono hidden sm:inline">{LANGUAGES.find((l) => l.id === language)?.file || "Main.java"}</span>
             </div>
             <div className="flex items-center gap-4 text-sm text-[color:var(--ar-muted)]">
               <button onClick={formatCode} className="flex items-center gap-1.5 hover:text-[color:var(--ar-strong)]"><Icon d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" className="w-4 h-4 text-[color:var(--ar-blue)]" />Format</button>
@@ -342,7 +412,7 @@ export default function LiveCodingArena() {
           <div className="flex-1 min-h-[240px]">
             <CodeEditor
               height="100%"
-              language="java"
+              language={language}
               theme={isDark ? "vs-dark" : "light"}
               value={code}
               onChange={(v) => setCode(v || "")}
@@ -430,7 +500,7 @@ export default function LiveCodingArena() {
                   <div className="mt-3 space-y-2">
                     {result.testResults?.map((tr) => (
                       <div key={tr.testNumber} className={`rounded-lg border px-3 py-2 text-xs ${tr.passed ? "border-emerald-500/20 bg-emerald-500/5" : "border-rose-500/20 bg-rose-500/5"}`}>
-                        <span className={tr.passed ? "text-[color:var(--ar-green)]" : "text-[color:var(--ar-red)]"}>{tr.passed ? "✓" : "✗"}</span> Test {tr.testNumber} {tr.hidden ? "ðŸ”’ Hidden test" : ""}
+                        <span className={tr.passed ? "text-[color:var(--ar-green)]" : "text-[color:var(--ar-red)]"}>{tr.passed ? "✓" : "✗"}</span> Test {tr.testNumber} {tr.hidden ? "🔒 Hidden test" : ""}
                         {tr.errorMessage && <span className="block text-[color:var(--ar-red)] mt-1">{tr.errorMessage}</span>}
                         {tr.actualOutput != null && !tr.passed && !tr.hidden && <span className="block text-[color:var(--ar-muted)] mt-1 font-mono">Your output: {tr.actualOutput}</span>}
                       </div>

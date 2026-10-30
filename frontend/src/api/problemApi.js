@@ -12,6 +12,6 @@ export const updateProblem = (id, data) => axiosInstance.put(`/trainer/problems/
 export const deleteProblem = (id) => axiosInstance.delete(`/trainer/problems/${id}`)
 export const getProblemDetail = (id) => axiosInstance.get(`/problems/${id}`)
 export const getHint = (id, hintNumber) => axiosInstance.get(`/problems/${id}/hints/${hintNumber}`)
-export const runCode = (id, code) => axiosInstance.post(`/problems/${id}/run`, { code })
-export const submitCode = (id, code) => axiosInstance.post(`/problems/${id}/submit`, { code })
+export const runCode = (id, code, language = "java") => axiosInstance.post(`/problems/${id}/run`, { code, language })
+export const submitCode = (id, code, language = "java") => axiosInstance.post(`/problems/${id}/submit`, { code, language })
 export const getMyLastCode = (id) => axiosInstance.get(`/problems/${id}/my-code`)

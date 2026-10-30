@@ -27,32 +27,94 @@ public class ExecutionService {
     public record ExecutionOutcome(boolean compiled, String compileError, List<TestResult> results, long runtimeMs) {
     }
 
+    // Backward compatibility: existing callers continue using Java.
     public ExecutionOutcome runAgainstTestCases(
             String code,
             List<String> inputs,
             List<String> expectedOutputs) {
 
-        String sourceToRun;
-        try {
-            sourceToRun = wrapIfNeeded(code);
-        } catch (IllegalArgumentException e) {
-            return new ExecutionOutcome(false, e.getMessage(), List.of(), 0);
-        }
+        return runAgainstTestCases(code, inputs, expectedOutputs, "java");
+    }
 
-        if (inputs == null || expectedOutputs == null || inputs.size() != expectedOutputs.size()) {
-            return new ExecutionOutcome(false, "Invalid test cases: inputs and expected outputs must match.", List.of(),
+    // Multi-language execution entry point.
+    public ExecutionOutcome runAgainstTestCases(
+            String code,
+            List<String> inputs,
+            List<String> expectedOutputs,
+            String language) {
+
+        String selectedLanguage = language == null || language.isBlank()
+                ? "java"
+                : language.trim().toLowerCase(Locale.ROOT);
+
+        if (!Set.of("java", "python", "javascript").contains(selectedLanguage)) {
+            return new ExecutionOutcome(
+                    false,
+                    "Unsupported language: " + selectedLanguage,
+                    List.of(),
                     0);
         }
 
-        List<TestResult> results = new ArrayList<>();
+        if (code == null || code.isBlank()) {
+            return new ExecutionOutcome(
+                    false, "Source code cannot be empty.", List.of(), 0);
+        }
+
+        String sourceToRun = code;
+
+        if ("java".equals(selectedLanguage)) {
+            try {
+                sourceToRun = wrapIfNeeded(code);
+            } catch (IllegalArgumentException e) {
+                return new ExecutionOutcome(false, e.getMessage(), List.of(), 0);
+            }
+        }
+
+        if (inputs == null || expectedOutputs == null
+                || inputs.size() != expectedOutputs.size()) {
+            return new ExecutionOutcome(
+                    false,
+                    "Invalid test cases: inputs and expected outputs must match.",
+                    List.of(),
+                    0);
+        }
+
+        if (inputs.isEmpty()) {
+            return new ExecutionOutcome(
+                    false, "No test cases provided.", List.of(), 0);
+        }
+
         long start = System.currentTimeMillis();
 
+        DockerExecutionService.BatchDockerResult batch =
+                dockerExecutionService.executeBatch(sourceToRun, inputs, selectedLanguage);
+
+        if (!batch.compiled()) {
+            return new ExecutionOutcome(
+                    false,
+                    batch.compileError(),
+                    List.of(),
+                    System.currentTimeMillis() - start);
+        }
+
+        List<TestResult> results = new ArrayList<>();
+
         for (int i = 0; i < inputs.size(); i++) {
-            DockerExecutionService.DockerResult dockerResult = dockerExecutionService.execute(sourceToRun,
-                    inputs.get(i));
+
+            if (i >= batch.results().size()) {
+                results.add(new TestResult(
+                        false, "", "Execution result missing."));
+                continue;
+            }
+
+            DockerExecutionService.DockerResult dockerResult =
+                    batch.results().get(i);
 
             if (dockerResult.timedOut()) {
-                results.add(new TestResult(false, dockerResult.output(), "Time Limit Exceeded"));
+                results.add(new TestResult(
+                        false,
+                        dockerResult.output(),
+                        "Time Limit Exceeded"));
                 continue;
             }
 
@@ -61,23 +123,33 @@ public class ExecutionService {
                         ? "Execution failed."
                         : dockerResult.error();
 
-                if (error.contains("error:") || error.contains("cannot find symbol")
-                        || error.contains("';' expected") || error.contains("illegal start")) {
-                    return new ExecutionOutcome(false, error, List.of(),
-                            System.currentTimeMillis() - start);
-                }
+                results.add(new TestResult(
+                        false,
+                        dockerResult.output(),
+                        "Runtime Error: " + error));
 
-                results.add(new TestResult(false, dockerResult.output(), "Runtime Error: " + error));
                 continue;
             }
 
-            String actualOutput = dockerResult.output() == null ? "" : dockerResult.output().trim();
-            String expectedOutput = expectedOutputs.get(i) == null ? "" : expectedOutputs.get(i).trim();
+            String actualOutput = dockerResult.output() == null
+                    ? ""
+                    : dockerResult.output().trim();
 
-            results.add(new TestResult(actualOutput.equals(expectedOutput), actualOutput, null));
+            String expectedOutput = expectedOutputs.get(i) == null
+                    ? ""
+                    : expectedOutputs.get(i).trim();
+
+            results.add(new TestResult(
+                    actualOutput.equals(expectedOutput),
+                    actualOutput,
+                    null));
         }
 
-        return new ExecutionOutcome(true, null, results, System.currentTimeMillis() - start);
+        return new ExecutionOutcome(
+                true,
+                null,
+                results,
+                System.currentTimeMillis() - start);
     }
 
     // ===================== MODE DETECTION =====================

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import CodeEditor from "../../components/editor/CodeEditor"
 
 const starter = `public class Main {
@@ -99,7 +99,7 @@ export default function Playground() {
             onClick={reset}
             className="cv-secondary-btn"
           >
-            â†º Reset
+            ↺ Reset
           </button>
 
           <button
@@ -126,7 +126,7 @@ export default function Playground() {
           <p className="text-xs text-[var(--color-text-secondary)]">
             LANGUAGE
           </p>
-          <p className="mt-2 text-sm font-semibold">â˜• Java</p>
+          <p className="mt-2 text-sm font-semibold">☕ Java</p>
         </div>
 
         <div className="rounded-xl border border-[var(--cv-border)] bg-[var(--color-bg-secondary)] p-4">
@@ -191,8 +191,8 @@ export default function Playground() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--cv-border)] px-4 py-3 text-xs text-[var(--cv-muted)] sm:px-5">
-          <span>Java source Â· Main.java</span>
-          <span>{lineCount} lines Â· {characterCount} characters</span>
+          <span>Java source · Main.java</span>
+          <span>{lineCount} lines · {characterCount} characters</span>
         </div>
       </section>
 
@@ -209,7 +209,7 @@ export default function Playground() {
 
       <div className="rounded-2xl border border-[var(--cv-border)] bg-[var(--color-bg-secondary)] p-4 sm:p-5">
         <div className="flex items-start gap-3">
-          <span className="text-xl" aria-hidden="true">ðŸ’¡</span>
+          <span className="text-xl" aria-hidden="true">💡</span>
           <div>
             <h2 className="text-sm font-semibold">Your personal coding space</h2>
             <p className="mt-1 text-sm leading-6 text-[var(--color-text-secondary)]">
