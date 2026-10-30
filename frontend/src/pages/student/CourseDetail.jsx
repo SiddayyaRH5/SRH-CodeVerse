@@ -147,7 +147,7 @@ function CourseDetail() {
           to="/courses"
           className="text-xs font-bold text-violet-600"
         >
-          ← All Courses
+          ← All Courses
         </Link>
 
         <div className="flex flex-col lg:flex-row justify-between gap-8 mt-5">
@@ -300,7 +300,12 @@ function CourseDetail() {
                         </button>
 
                         <div className="flex-1 min-w-0">
-                          <b className="text-sm">{lesson.title}</b>
+                          <Link
+  to={`/courses/${slug}/lessons/${lesson.id}`}
+  className="text-sm font-bold hover:text-violet-600 transition-colors"
+>
+  {lesson.title}
+</Link>
                           <p className="text-xs text-[var(--cv-muted)] mt-1">
                             {lesson.description}
                           </p>
@@ -361,7 +366,7 @@ function CourseDetail() {
                 </p>
 
                 <span className="block mt-4 text-xs font-bold text-violet-600">
-                  View project details →
+                  View project details ←’
                 </span>
               </button>
             ))
@@ -379,7 +384,7 @@ function CourseDetail() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="project-dialog-title"
-            className="cv-section-panel w-full max-w-lg rounded-2xl p-6 shadow-2xl"
+            className="cv-section-panel w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl p-8 sm:p-9 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">
@@ -417,6 +422,110 @@ function CourseDetail() {
             <p className="text-sm text-[var(--cv-muted)] mt-3">
               <b>Expected outcome:</b> {selectedProject.outcome}
             </p>
+            {/* Project learning videos */}
+            <section className="mt-6 border-t border-[var(--cv-border)] pt-5">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-red-500 text-xl">▶</span>
+                <h3 className="text-lg font-black">
+                  Project Learning Videos
+                </h3>
+              </div>
+
+              <p className="text-xs text-[var(--cv-muted)] mb-4">
+                Learn how to build {selectedProject.title} with practical tutorials.
+              </p>
+
+              <div className="grid sm:grid-cols-2 gap-5">
+                {[
+                  {
+                    label: "BUILD THE PROJECT",
+                    title: "Complete project tutorial",
+                    query: `${selectedProject.title} ${selectedProject.technologies || course.title} full project tutorial`,
+                    symbol: "</>",
+                    tag: "PROJECT OVERVIEW"
+                  },
+                  {
+                    label: "STEP BY STEP",
+                    title: "Implementation guide",
+                    query: `${selectedProject.title} ${selectedProject.technologies || course.title} step by step coding`,
+                    symbol: "{ }",
+                    tag: "PRACTICAL BUILD"
+                  }
+                ].map((video, videoIndex) => (
+                  <a
+                    key={video.label}
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(video.query)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group overflow-hidden rounded-xl border border-[var(--cv-border)] hover:border-violet-500 transition-all"
+                  >
+                    <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-[#071b46] via-[#160b48] to-[#080d20] p-4">
+                      <div
+                        className="absolute inset-0 opacity-40"
+                        style={{
+                          backgroundImage:
+                            "radial-gradient(circle at 80% 20%, #7c3aed 0, transparent 45%), radial-gradient(circle at 10% 90%, #0284c7 0, transparent 45%)"
+                        }}
+                      />
+
+                      <div className="relative h-full flex flex-col justify-between">
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-xs font-bold text-white">
+                            <span className="text-sky-400">◆</span> SRH CodeVerse
+                          </span>
+                          <span className="text-[9px] font-bold text-violet-300">
+                            {videoIndex === 0 ? "BUILD" : "IMPLEMENT"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-end justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[9px] uppercase tracking-widest text-sky-300 font-bold">
+                              {course.title}
+                            </p>
+
+                            <h4 className="text-sm sm:text-base font-black text-white leading-tight line-clamp-2 mt-1">
+                              {selectedProject.title}
+                            </h4>
+
+                            <span className="inline-block mt-2 rounded bg-violet-600 px-2 py-1 text-[8px] font-bold text-white">
+                              {video.tag}
+                            </span>
+                          </div>
+
+                          <span className="text-3xl sm:text-4xl font-black text-sky-400">
+                            {video.symbol}
+                          </span>
+                        </div>
+
+                        <span className="absolute right-3 bottom-3 w-8 h-8 rounded-full border-2 border-white/80 bg-violet-600 flex items-center justify-center text-white">
+                          ▶
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-3">
+                      <span className="text-[9px] font-black text-violet-600">
+                        VIDEO {videoIndex + 1}
+                      </span>
+
+                      <h4 className="text-sm font-bold mt-1">
+                        {video.title}
+                      </h4>
+
+                      <p className="text-[10px] text-[var(--cv-muted)] mt-1 line-clamp-2">
+                        {video.query}
+                      </p>
+
+                      <span className="inline-block mt-3 text-xs font-bold text-violet-600 group-hover:translate-x-1 transition-transform">
+                        Find tutorials →
+                      </span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </section>
+
 
             <button
               type="button"
@@ -473,7 +582,7 @@ function CourseDetail() {
                 </p>
 
                 <span className="inline-block mt-4 text-xs font-bold text-violet-600">
-                  Open resource ↗
+                  Open resource ←—
                 </span>
               </a>
             ))
@@ -630,7 +739,7 @@ function CourseProblems({ slug }) {
               </div>
 
               <span className="block mt-4 text-xs font-bold text-violet-600">
-                Solve problem →
+                Solve problem ←’
               </span>
             </button>
           ))}
@@ -641,3 +750,5 @@ function CourseProblems({ slug }) {
 }
 
 export default CourseDetail
+
+
