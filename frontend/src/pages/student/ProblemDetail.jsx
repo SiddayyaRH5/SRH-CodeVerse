@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { useParams } from "react-router-dom"
 import CodeEditor from "../../components/editor/CodeEditor"
 import confetti from "canvas-confetti"
-import { getProblemDetail, getHint, runCode, submitCode, getMyLastCode } from "../../api/problemApi"
+import { getProblemDetail, getHint, runCode, submitCode, getMyLastCode, getImportedProblemData } from "../../api/problemApi"
 import DifficultyBadge from "../../components/common/DifficultyBadge"
 import ProtectedContent from "../../components/common/ProtectedContent"
 import { invalidate } from "../../utils/cache"
@@ -31,7 +31,9 @@ console.log(input);
 `,
 }
 
-function getLanguageStarter(language, problem) {
+function getLanguageStarter(language, problem, importedStarterCodes = {}) {
+  const imported = importedStarterCodes?.[language]
+  if (imported) return imported
   if (language === "java") return problem?.starterCode || ""
   return LANGUAGE_STARTERS[language] || ""
 }
@@ -52,6 +54,9 @@ function ProblemDetail() {
   const [code, setCode] = useState("")
   const [language, setLanguage] = useState("java")
   const [languageCodes, setLanguageCodes] = useState({})
+  const [importedStarterCodes, setImportedStarterCodes] = useState({})
+  const [importedExamples, setImportedExamples] = useState([])
+  const [evaluationInfo, setEvaluationInfo] = useState(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
   const [revealedHints, setRevealedHints] = useState([])
@@ -67,12 +72,21 @@ function ProblemDetail() {
   const [note, setNote] = useState("")
 
   useEffect(() => {
-    Promise.all([getProblemDetail(id), getMyLastCode(id).catch(() => ({ data: {} }))])
-      .then(([problemRes, codeRes]) => {
+    Promise.all([
+      getProblemDetail(id),
+      getMyLastCode(id).catch(() => ({ data: {} })),
+      getImportedProblemData(id).catch(() => ({ data: {} })),
+    ])
+      .then(([problemRes, codeRes, importedRes]) => {
         setProblem(problemRes.data)
+        const imported = importedRes.data || {}
+        const starters = imported.starterCodes || {}
+        setImportedStarterCodes(starters)
+        setImportedExamples(imported.examples || [])
+        setEvaluationInfo(imported.evaluation || null)
         setBookmarked(isBookmarked(id))
         setNote(getNote(id))
-        const initialCode = codeRes.data.code || problemRes.data.starterCode || ""
+        const initialCode = codeRes.data.code || starters.java || problemRes.data.starterCode || ""
         setCode(initialCode)
         setLanguageCodes({ java: initialCode })
       })
@@ -106,7 +120,7 @@ function ProblemDetail() {
     setLanguage(nextLanguage)
     setCode(
       languageCodes[nextLanguage] ??
-      getLanguageStarter(nextLanguage, problem)
+      getLanguageStarter(nextLanguage, problem, importedStarterCodes)
     )
     setResult(null)
   }
@@ -114,7 +128,7 @@ function ProblemDetail() {
   const handleReset = () => {
     if (!window.confirm("Reset this language to its starter code? Your current changes will be lost.")) return
 
-    const starter = getLanguageStarter(language, problem)
+    const starter = getLanguageStarter(language, problem, importedStarterCodes)
     setCode(starter)
     setLanguageCodes((prev) => ({
       ...prev,

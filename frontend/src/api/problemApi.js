@@ -15,3 +15,6 @@ export const getHint = (id, hintNumber) => axiosInstance.get(`/problems/${id}/hi
 export const runCode = (id, code, language = "java") => axiosInstance.post(`/problems/${id}/run`, { code, language })
 export const submitCode = (id, code, language = "java") => axiosInstance.post(`/problems/${id}/submit`, { code, language })
 export const getMyLastCode = (id) => axiosInstance.get(`/problems/${id}/my-code`)
+
+// Imported LeetCode starter snippets, visible examples, and judge readiness.
+export const getImportedProblemData = (id) => axiosInstance.get(`/problems/${id}/imported-data`)
