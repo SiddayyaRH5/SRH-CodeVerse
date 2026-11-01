@@ -78,6 +78,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/courses/*/progress").authenticated()
                         .requestMatchers("/api/courses/**").permitAll()
                         .requestMatchers("/api/problems/*/imported-data")
