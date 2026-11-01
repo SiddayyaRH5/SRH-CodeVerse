@@ -248,44 +248,14 @@ function ProblemDetail() {
             )}
 
             <h3 className="font-semibold text-sm mb-2">Examples</h3>
-            {(() => {
-              // Imported LeetCode examples are stored separately from the legacy
-              // test_cases relation. Prefer those examples, then fall back to the
-              // problem API's visibleTestCases for trainer-created problems.
-              const examples = importedExamples.length
-                ? importedExamples
-                : (problem.visibleTestCases || [])
-
-              if (!examples.length) {
-                return (
-                  <p className="text-sm text-[var(--color-text-secondary)]">
-                    Examples are not available for this problem yet.
-                  </p>
-                )
-              }
-
-              return examples.map((example, index) => {
-                const rawExample = example.raw_example ?? example.rawExample
-                const input = example.input ?? example.input_json ?? example.inputJson
-                const output = example.expectedOutput ?? example.expected_output_json ?? example.expectedOutputJson
-
-                return (
-                  <div key={example.id ?? example.example_order ?? example.exampleOrder ?? index} className="mb-4 text-sm">
-                    <p className="font-medium mb-2">Example {index + 1}</p>
-                    {rawExample ? (
-                      <pre className="whitespace-pre-wrap break-words bg-[var(--color-bg-tertiary)] rounded p-3 overflow-x-auto">{rawExample}</pre>
-                    ) : (
-                      <>
-                        <p className="text-[var(--color-text-secondary)]">Input:</p>
-                        <pre className="bg-[var(--color-bg-tertiary)] rounded p-2 mb-2 overflow-x-auto">{typeof input === "string" ? input : JSON.stringify(input, null, 2)}</pre>
-                        <p className="text-[var(--color-text-secondary)]">Output:</p>
-                        <pre className="bg-[var(--color-bg-tertiary)] rounded p-2 overflow-x-auto">{typeof output === "string" ? output : JSON.stringify(output, null, 2)}</pre>
-                      </>
-                    )}
-                  </div>
-                )
-              })
-            })()}
+            {problem.visibleTestCases.map((tc, i) => (
+              <div key={i} className="mb-3 text-sm">
+                <p className="text-[var(--color-text-secondary)]">Input:</p>
+                <pre className="bg-[var(--color-bg-tertiary)] rounded p-2 mb-1 overflow-x-auto">{tc.input}</pre>
+                <p className="text-[var(--color-text-secondary)]">Output:</p>
+                <pre className="bg-[var(--color-bg-tertiary)] rounded p-2 overflow-x-auto">{tc.expectedOutput}</pre>
+              </div>
+            ))}
 
             {/* Hints section */}
             <div className="mt-6 border-t border-[var(--color-border)] pt-4">
