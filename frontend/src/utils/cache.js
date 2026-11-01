@@ -52,38 +52,3 @@ export function clearCache() {
   inFlight.clear()
   activeUserToken = null
 }
-
-// Fetch data using cache and prevent duplicate requests.
-export async function cachedFetch(key, fetcher, ttlMs = DEFAULT_TTL_MS) {
-  const cached = getCachedResponse(key)
-
-  if (cached !== null) {
-    return cached
-  }
-
-  const existingRequest = getInFlight(key)
-
-  if (existingRequest) {
-    return existingRequest
-  }
-
-  const requestVersion = getCacheVersion()
-
-  const request = Promise.resolve()
-    .then(fetcher)
-    .then((data) => {
-      setCachedResponse(key, data, ttlMs, requestVersion)
-      return data
-    })
-    .finally(() => {
-      clearInFlight(key)
-    })
-
-  setInFlight(key, request)
-  return request
-}
-
-// Compatibility alias used by ProblemDetail.jsx.
-export function invalidate(key) {
-  invalidateCache(key)
-}
