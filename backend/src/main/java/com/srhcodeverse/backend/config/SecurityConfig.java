@@ -2,10 +2,12 @@
 package com.srhcodeverse.backend.config;
 
 import com.srhcodeverse.backend.security.JwtAuthFilter;
+
 import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -29,19 +31,24 @@ public class SecurityConfig {
                 this.jwtAuthFilter = jwtAuthFilter;
         }
 
+        // Password encoder
         @Bean
         public PasswordEncoder passwordEncoder() {
                 return new BCryptPasswordEncoder();
         }
 
+        // Authentication manager
         @Bean
         public AuthenticationManager authenticationManager(
                         AuthenticationConfiguration config) throws Exception {
+
                 return config.getAuthenticationManager();
         }
 
+        // CORS configuration
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
+
                 CorsConfiguration configuration = new CorsConfiguration();
 
                 configuration.setAllowedOrigins(List.of(
@@ -54,11 +61,17 @@ public class SecurityConfig {
                                 "https://frontend-cpt6iyad4-siddus-projects-0ae5cf1a.vercel.app"));
 
                 configuration.setAllowedMethods(List.of(
-                                "GET", "POST", "PUT", "PATCH",
-                                "DELETE", "OPTIONS"));
+                                "GET",
+                                "POST",
+                                "PUT",
+                                "PATCH",
+                                "DELETE",
+                                "OPTIONS"));
 
                 configuration.setAllowedHeaders(List.of("*"));
+
                 configuration.setAllowCredentials(true);
+
                 configuration.setMaxAge(3600L);
 
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -68,27 +81,50 @@ public class SecurityConfig {
                 return source;
         }
 
+        // Security filter chain
         @Bean
-public SecurityFilterChain securityFilterChain(HttpSecurity http)
-                throws Exception {
+        public SecurityFilterChain securityFilterChain(HttpSecurity http)
+                        throws Exception {
 
-        http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/courses/*/progress").authenticated()
-                        .requestMatchers("/api/courses/**").permitAll()
-                        .requestMatchers("/api/problems/*/imported-data")
-                                .hasAnyRole("STUDENT", "TRAINER", "ADMIN")
-                        .anyRequest().authenticated())
-                .addFilterBefore(
-                        jwtAuthFilter,
-                        UsernamePasswordAuthenticationFilter.class);
+                http
+                                // CORS
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-        return http.build();
+                                // Disable CSRF for stateless JWT authentication
+                                .csrf(csrf -> csrf.disable())
+
+                                // Stateless session management
+                                .sessionManagement(session -> session.sessionCreationPolicy(
+                                                SessionCreationPolicy.STATELESS))
+
+                                // Authorization rules
+                                .authorizeHttpRequests(auth -> auth
+
+                                                // Allow CORS preflight requests
+                                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                                                // Public authentication endpoints
+                                                .requestMatchers("/api/auth/**").permitAll()
+
+                                                // Course progress requires authentication
+                                                .requestMatchers("/api/courses/*/progress")
+                                                .authenticated()
+
+                                                // Public course browsing
+                                                .requestMatchers("/api/courses/**").permitAll()
+
+                                                // Imported problem data: authorized roles only
+                                                .requestMatchers("/api/problems/*/imported-data")
+                                                .hasAnyRole("STUDENT", "TRAINER", "ADMIN")
+
+                                                // All other endpoints require authentication
+                                                .anyRequest().authenticated())
+
+                                // JWT authentication filter
+                                .addFilterBefore(
+                                                jwtAuthFilter,
+                                                UsernamePasswordAuthenticationFilter.class);
+
+                return http.build();
+        }
 }
-}
-
-
