@@ -1,2 +1,3 @@
 import axiosInstance from "./axiosInstance"
-export const getActivity = () => axiosInstance.get("/student/activity")
+import { cachedGet } from "../utils/cache"
+export const getActivity = () => cachedGet(axiosInstance, "/student/activity")

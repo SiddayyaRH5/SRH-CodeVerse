@@ -1,2 +1,3 @@
 import axiosInstance from "./axiosInstance"
-export const getAnalytics = () => axiosInstance.get("/trainer/analytics")
+import { cachedGet } from "../utils/cache"
+export const getAnalytics = () => cachedGet(axiosInstance, "/trainer/analytics")

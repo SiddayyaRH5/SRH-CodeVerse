@@ -1,20 +1,46 @@
 import axiosInstance from "./axiosInstance"
+import { cachedGet, invalidateApiCache } from "../utils/cache"
 
 
 // Student-facing
-export const getProblems = () => axiosInstance.get("/problems")
+export const getProblems = () => cachedGet(axiosInstance, "/problems")
 
 // Trainer-facing
-export const getTrainerProblems = () => axiosInstance.get("/trainer/problems")
-export const getTrainerProblem = (id) => axiosInstance.get(`/trainer/problems/${id}`)
-export const createProblem = (data) => axiosInstance.post("/trainer/problems", data)
-export const updateProblem = (id, data) => axiosInstance.put(`/trainer/problems/${id}`, data)
-export const deleteProblem = (id) => axiosInstance.delete(`/trainer/problems/${id}`)
-export const getProblemDetail = (id) => axiosInstance.get(`/problems/${id}`)
-export const getHint = (id, hintNumber) => axiosInstance.get(`/problems/${id}/hints/${hintNumber}`)
+export const getTrainerProblems = () => cachedGet(axiosInstance, "/trainer/problems")
+export const getTrainerProblem = (id) => cachedGet(axiosInstance, `/trainer/problems/${id}`)
+export const createProblem = async (data) => {
+  const response = await axiosInstance.post("/trainer/problems", data)
+  invalidateApiCache(["/problems", "/courses", "/trainer/problems", "/trainer/dashboard", "/trainer/analytics"])
+  return response
+}
+export const updateProblem = async (id, data) => {
+  const response = await axiosInstance.put(`/trainer/problems/${id}`, data)
+  invalidateApiCache(["/problems", "/courses", "/trainer/problems", "/trainer/dashboard", "/trainer/analytics"])
+  return response
+}
+export const deleteProblem = async (id) => {
+  const response = await axiosInstance.delete(`/trainer/problems/${id}`)
+  invalidateApiCache(["/problems", "/courses", "/trainer/problems", "/trainer/dashboard", "/trainer/analytics"])
+  return response
+}
+export const getProblemDetail = (id) => cachedGet(axiosInstance, `/problems/${id}`)
+export const getHint = (id, hintNumber) => cachedGet(axiosInstance, `/problems/${id}/hints/${hintNumber}`)
 export const runCode = (id, code, language = "java") => axiosInstance.post(`/problems/${id}/run`, { code, language })
-export const submitCode = (id, code, language = "java") => axiosInstance.post(`/problems/${id}/submit`, { code, language })
-export const getMyLastCode = (id) => axiosInstance.get(`/problems/${id}/my-code`)
+export const submitCode = async (id, code, language = "java") => {
+  const response = await axiosInstance.post(`/problems/${id}/submit`, { code, language })
+  invalidateApiCache([
+    "/problems",
+    "/student/dashboard",
+    "/student/activity",
+    "/student/achievements",
+    "/leaderboard",
+    "/submissions/my",
+    "/trainer/dashboard",
+    "/trainer/analytics",
+  ])
+  return response
+}
+export const getMyLastCode = (id) => cachedGet(axiosInstance, `/problems/${id}/my-code`)
 
 // Imported LeetCode starter snippets, visible examples, and judge readiness.
-export const getImportedProblemData = (id) => axiosInstance.get(`/problems/${id}/imported-data`)
+export const getImportedProblemData = (id) => cachedGet(axiosInstance, `/problems/${id}/imported-data`)

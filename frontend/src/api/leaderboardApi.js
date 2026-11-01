@@ -1,2 +1,3 @@
 import axiosInstance from "./axiosInstance"
-export const getLeaderboard = () => axiosInstance.get("/leaderboard")
+import { cachedGet } from "../utils/cache"
+export const getLeaderboard = () => cachedGet(axiosInstance, "/leaderboard")
