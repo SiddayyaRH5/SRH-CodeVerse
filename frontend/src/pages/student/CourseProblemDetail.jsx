@@ -1,10 +1,9 @@
-
+﻿
 import { useEffect, useState } from 'react'
 import CodeEditor from '../../components/editor/CodeEditor'
 import { Link, useParams } from 'react-router-dom'
 import { getCourseProblem } from '../../api/courseApi'
 
-import axiosInstance from "../../api/axiosInstance"
 export default function CourseProblemDetail() {
   const { slug, problemId } = useParams()
 
@@ -60,16 +59,34 @@ export default function CourseProblemDetail() {
 
     try {
       // These endpoints must be implemented by the backend.
-      const response = await axiosInstance.post(
-        `/courses/${slug}/problems/${problemId}/${type === 'run' ? 'run' : 'submit'}`,
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/courses/${slug}/problems/${problemId}/${type === 'run' ? 'run' : 'submit'}`,
         {
-          code,
-          language: 'java',
-          input: customInput,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(localStorage.getItem('srhcodeverse_token')
+              ? {
+                  Authorization: `Bearer ${localStorage.getItem('srhcodeverse_token')}`,
+                }
+              : {}),
+          },
+          body: JSON.stringify({
+            code,
+            language: 'java',
+            input: customInput,
+          }),
         }
       )
 
-      const data = response.data || {}
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            `The ${type === 'run' ? 'Run Code' : 'Submit'} request failed.`
+        )
+      }
 
       setResult(data)
       setOutput(
