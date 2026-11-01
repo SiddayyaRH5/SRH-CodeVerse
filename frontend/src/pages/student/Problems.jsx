@@ -1,6 +1,6 @@
 
 import { useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { getProblems } from "../../api/problemApi"
 import DifficultyBadge from "../../components/common/DifficultyBadge"
 import { cachedFetch } from "../../utils/cache"
@@ -11,7 +11,12 @@ function Problems() {
   const [problems, setProblems] = useState([])
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
-  const [difficultyFilter, setDifficultyFilter] = useState("ALL")
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedDifficulty = searchParams.get("difficulty")?.toUpperCase()
+  const initialDifficulty = ["EASY", "MEDIUM", "HARD"].includes(requestedDifficulty)
+    ? requestedDifficulty
+    : "ALL"
+  const [difficultyFilter, setDifficultyFilter] = useState(initialDifficulty)
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [topicFilter, setTopicFilter] = useState("ALL")
   const [searchQuery, setSearchQuery] = useState("")
@@ -222,7 +227,15 @@ function Problems() {
                 key={difficulty}
                 type="button"
                 aria-pressed={difficultyFilter === difficulty}
-                onClick={() => setDifficultyFilter(difficulty)}
+                onClick={() => {
+                  setDifficultyFilter(difficulty)
+                  setSearchParams((current) => {
+                    const next = new URLSearchParams(current)
+                    if (difficulty === "ALL") next.delete("difficulty")
+                    else next.set("difficulty", difficulty)
+                    return next
+                  })
+                }}
                 className={filterButton(difficultyFilter === difficulty)}
               >
                 {difficulty === "ALL" ? "All difficulties" : difficulty}
