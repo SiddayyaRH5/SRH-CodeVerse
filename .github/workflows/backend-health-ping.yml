@@ -1,0 +1,19 @@
+name: SRH CodeVerse backend health ping
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping Render backend health endpoint
+        run: |
+          curl --fail --silent --show-error --max-time 45 \
+            https://srh-codeverse-backend.onrender.com/actuator/health
