@@ -1,22 +1,11 @@
-import axiosInstance from './axiosInstance'
-import { cachedGet, invalidateApiCache } from "../utils/cache"
-export const getCourses = () => cachedGet(axiosInstance, '/courses')
-export const getCourse = (slug) => cachedGet(axiosInstance, `/courses/${slug}`)
-export const getCourseProblems = (slug) => cachedGet(axiosInstance, `/courses/${slug}/problems`)
-export const updateCourseProgress = async (slug, lessonId, completed) => {
-  const response = await axiosInstance.post(`/courses/${slug}/progress`, { lessonId, completed })
-  invalidateApiCache([
-    "/courses",
-    "/student/dashboard",
-    "/student/activity",
-    "/student/achievements",
-    "/leaderboard",
-  ])
-  return response
-}
+﻿import axiosInstance from './axiosInstance'
+export const getCourses = () => axiosInstance.get('/courses')
+export const getCourse = (slug) => axiosInstance.get(`/courses/${slug}`)
+export const getCourseProblems = (slug) => axiosInstance.get(`/courses/${slug}/problems`)
+export const updateCourseProgress = (slug, lessonId, completed) => axiosInstance.post(`/courses/${slug}/progress`, { lessonId, completed })
 export const getCourseProblem = (slug, problemId) =>
-    cachedGet(axiosInstance, `/courses/${slug}/problems/${problemId}`)
+    axiosInstance.get(`/courses/${slug}/problems/${problemId}`)
 
-export const getCourseLessons = (slug) => cachedGet(axiosInstance, `/courses/${slug}/lessons`)
+export const getCourseLessons = (slug) => axiosInstance.get(`/courses/${slug}/lessons`)
 
 

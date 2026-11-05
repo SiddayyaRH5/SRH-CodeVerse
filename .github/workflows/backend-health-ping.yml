@@ -1,29 +1,38 @@
 name: SRH CodeVerse backend health ping
 
 on:
+  # Run every five minutes with an offset from the top of the hour. GitHub
+  # scheduled workflows can be delayed, so this is best-effort keep-alive only.
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "2-59/5 * * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: srh-codeverse-render-health-ping
+  cancel-in-progress: false
 
 jobs:
   health-check:
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
-      - name: Ping Render backend liveness endpoint
+      - name: Wake/check Render backend liveness endpoint
+        shell: bash
         run: |
+          set -euo pipefail
           URL="https://srh-codeverse-backend.onrender.com/api/health/live"
-          for attempt in 1 2 3; do
-            echo "Liveness check attempt $attempt of 3"
-            if curl --fail --silent --show-error --connect-timeout 15 --max-time 90 "$URL"; then
-              echo
-              echo "Backend liveness endpoint responded."
-              exit 0
-            fi
-            if [ "$attempt" -lt 3 ]; then sleep 10; fi
-          done
-          echo "Backend did not respond after 3 bounded attempts."
-          exit 1
+          echo "Checking SRH CodeVerse Render backend: ${URL}"
+          # The first request can wake a sleeping Render Free instance. Keep
+          # the request bounded so a failed wake-up does not consume the runner.
+          curl --fail --show-error --silent \
+            --connect-timeout 15 \
+            --max-time 210 \
+            --retry 1 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            "$URL"
+          echo
+          echo "Backend liveness endpoint responded successfully."

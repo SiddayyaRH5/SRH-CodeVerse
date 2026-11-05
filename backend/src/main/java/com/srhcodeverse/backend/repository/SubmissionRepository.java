@@ -49,7 +49,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     List<Object[]> countSubmissionsByDay(
             @Param("since") LocalDateTime since);
 
-    @Query("SELECT FUNCTION('DATE', s.submittedAt), COUNT(s) " +
+    @Query("SELECT COUNT(s), FUNCTION('DATE', s.submittedAt) " +
            "FROM Submission s WHERE s.student = :student " +
            "AND s.submittedAt >= :since " +
            "GROUP BY FUNCTION('DATE', s.submittedAt)")

@@ -1,5 +1,4 @@
-import axiosInstance from "./axiosInstance"
-import { cachedGet } from "../utils/cache"
+﻿import axiosInstance from "./axiosInstance"
 
 export const getMySubmissions = () =>
-  cachedGet(axiosInstance, "/submissions/my")
+  axiosInstance.get("/submissions/my")
