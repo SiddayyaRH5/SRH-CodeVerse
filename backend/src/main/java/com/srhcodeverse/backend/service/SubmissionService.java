@@ -9,6 +9,7 @@ import com.srhcodeverse.backend.repository.ProblemRepository;
 import com.srhcodeverse.backend.repository.SubmissionRepository;
 import com.srhcodeverse.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +45,7 @@ public class SubmissionService {
     }
 
     // "Run" - visible test cases only, nothing saved to DB
+    @Transactional(readOnly = true)
     public SubmissionResponse runCode(Long problemId, String code, String language) {
 
         Problem problem = problemRepository.findById(problemId)
@@ -58,6 +60,7 @@ public class SubmissionService {
     }
 
     // "Submit" - ALL test cases, result saved to DB
+    @Transactional
     public SubmissionResponse submitCode(
             Long problemId,
             String code,

@@ -8,6 +8,7 @@ import com.srhcodeverse.backend.entity.User;
 import com.srhcodeverse.backend.repository.ProblemRepository;
 import com.srhcodeverse.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.srhcodeverse.backend.repository.SubmissionRepository;
 
 import java.util.List;
@@ -30,11 +31,12 @@ public class ProblemService {
     
     
  // ---------- READ (student - detail view) ----------
+    @Transactional(readOnly = true)
     public ProblemDetailResponse getProblemDetailForStudent(Long id) {
         Problem problem = problemRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Problem not found"));
 
-        List<VisibleTestCaseResponse> visibleTestCases = problem.getTestCases().stream()
+        List<VisibleTestCaseResponse> visibleTestCases = (problem.getTestCases() == null ? List.<TestCase>of() : problem.getTestCases()).stream()
                 .filter(tc -> !tc.isHidden())
                 .sorted((a, b) -> {
                     Integer aIdx = a.getOrderIndex() != null ? a.getOrderIndex() : 0;
@@ -80,6 +82,7 @@ public class ProblemService {
     }
 
     // ---------- CREATE ----------
+    @Transactional
     public ProblemResponse createProblem(ProblemRequest request, String creatorUsername) {
         User creator = userRepository.findByUsername(creatorUsername)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -116,6 +119,7 @@ public class ProblemService {
     }
 
     // ---------- READ (trainer - full detail) ----------
+    @Transactional(readOnly = true)
     public ProblemResponse getProblemForTrainer(Long id) {
         Problem problem = problemRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Problem not found"));
@@ -123,6 +127,7 @@ public class ProblemService {
     }
 
     // ---------- READ (trainer - list) ----------
+    @Transactional(readOnly = true)
     public List<ProblemResponse> getAllProblemsForTrainer() {
         return problemRepository.findAll().stream()
                 .map(this::toProblemResponse)
@@ -130,6 +135,7 @@ public class ProblemService {
     }
 
     // ---------- READ (student - summary list) ----------
+    @Transactional(readOnly = true)
     public List<ProblemSummaryResponse> getAllProblemsForStudent(String username) {
         User student = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -152,6 +158,7 @@ public class ProblemService {
     }
 
     // ---------- UPDATE ----------
+    @Transactional
     public ProblemResponse updateProblem(Long id, ProblemRequest request) {
         Problem problem = problemRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Problem not found"));
@@ -187,6 +194,7 @@ public class ProblemService {
     }
 
     // ---------- DELETE ----------
+    @Transactional
     public void deleteProblem(Long id) {
         if (!problemRepository.existsById(id)) {
             throw new IllegalArgumentException("Problem not found");
