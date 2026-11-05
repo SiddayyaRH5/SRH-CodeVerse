@@ -137,3 +137,90 @@ The seed is safe to run repeatedly: it exits when the course catalog already exi
 - `POST /api/courses/{slug}/progress`
 
 Course browsing is public; progress updates require authentication.
+
+---
+
+## Health endpoints
+
+- `GET /api/health/live`: process liveness only; no database call. Use this for Render keep-warm monitoring.
+- `GET /api/health/ready`: short database connection validation; returns 200 when the DB is reachable and 503 otherwise.
+- `GET /api/health`: retained as a backward-compatible alias for liveness.
+
+These routes and `/api/auth/**` are public. All other routes continue through the existing authorization rules. Do not expose database exception messages in health responses.
+
+## Render deployment
+
+Use the existing backend service and repository; do not create a new database.
+
+- Root directory: `backend`
+- Runtime: Docker (uses `backend/Dockerfile`) or the existing Maven build configuration
+- Java: 21
+- Port: Render supplies `PORT`; the application honors it.
+- Set environment variables from `backend/.env.example` in Render:
+  - `DB_URL`: Aiven JDBC URL, including host, port, database name and SSL parameters required by your Aiven service.
+  - `DB_USERNAME`, `DB_PASSWORD`
+  - `JWT_SECRET`: long random secret; changing it invalidates existing JWTs.
+  - `TRAINER_SEED_PASSWORD`: optional; if omitted, initial trainer creation is skipped.
+  - Optional `DB_POOL_MAX_SIZE=3`, `DB_POOL_MIN_IDLE=1`.
+
+Never paste credentials into source code, GitHub, screenshots, or chat. Do not use the sample placeholders literally.
+
+## Vercel deployment
+
+- Root directory: `frontend`
+- Build command: `npm run build`
+- Output directory: `dist`
+- Add `VITE_API_URL=https://srh-codeverse-backend.onrender.com/api`
+- Add `VITE_API_TIMEOUT_MS=90000`
+- Redeploy after changing Vite environment variables.
+
+## 10-minute GitHub Actions monitor
+
+The repository workflow `.github/workflows/backend-health-ping.yml` sends a lightweight GET to `/api/health/live` every 10 minutes and retries a few times. Enable GitHub Actions for the repository and confirm the workflow is enabled. A successful run proves only that the liveness URL responded for that run.
+
+It does not prove MySQL is ready, keep Render Free continuously awake, or prevent Aiven free-tier suspension. Use `/api/health/ready` separately when diagnosing database availability. Avoid frequent database-heavy monitoring.
+
+## Performance configuration
+
+- Hikari pool defaults: maximum 3, minimum idle 1; connection timeout 10 seconds; validation timeout 3 seconds.
+- Public leaderboard cache: Caffeine, 45 seconds, maximum one entry.
+- User-specific data, credentials, and tokens are not cached.
+- Axios timeout defaults to 90 seconds for cold-start tolerance; POSTs are never retried automatically.
+- Identical concurrent GET requests are coalesced.
+- SQL logging is disabled by default.
+
+Tune pool settings only after checking Aiven's connection limits and observed connection usage. A larger pool can make a small database slower.
+
+## Verification checklist
+
+```powershell
+# Backend
+cd backend
+.\mvnw.cmd clean test
+
+# Frontend
+cd ..\frontend
+npm ci
+npm run build
+```
+
+After deployment, test:
+- `GET /api/health/live` (expect 200 and `UP`)
+- `GET /api/health/ready` (expect 200/`READY` if Aiven is reachable; otherwise 503/`NOT_READY`)
+- Signup with a new test email/username
+- Login with that test account
+- Student dashboard and trainer workflows with their respective roles
+- Public courses, problems, leaderboard, and existing submission flows
+- First request after 15–30 minutes idle, then a warm request
+
+Do not repeat a signup POST after a timeout until checking whether the account was created. A network timeout does not prove the server did not commit the transaction.
+
+## Performance report
+
+See [PERFORMANCE-OPTIMIZATION-REPORT.md](PERFORMANCE-OPTIMIZATION-REPORT.md) for changes, limitations, and a measurement plan. No production latency improvement is claimed without before/after measurements.
+
+## Project identity
+
+- Project: SRH CodeVerse
+- Developer: Siddayya Rudrayya Hiremath
+- Tagline: Learn. Practice. Build. Grow.

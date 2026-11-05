@@ -7,6 +7,7 @@ import com.srhcodeverse.backend.repository.RoleRepository;
 import com.srhcodeverse.backend.repository.SubmissionRepository;
 import com.srhcodeverse.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -25,6 +26,7 @@ public class LeaderboardService {
         this.submissionRepository = submissionRepository;
     }
 
+    @Cacheable("publicLeaderboard")
     public List<LeaderboardEntry> getLeaderboard() {
         Role studentRole = roleRepository.findByName("STUDENT")
                 .orElseThrow(() -> new IllegalStateException("STUDENT role not seeded"));

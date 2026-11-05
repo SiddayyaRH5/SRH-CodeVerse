@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { registerUser } from "../../api/authApi"
 import { useAuth } from "../../context/AuthContext"
@@ -8,15 +8,19 @@ function Register() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const submittingRef = useRef(false)
   const navigate = useNavigate()
   const { login } = useAuth()
   const strength = form.password.length >= 10 ? "Strong" : form.password.length >= 6 ? "Good" : form.password.length ? "Weak" : ""
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); setError(""); setLoading(true)
+    e.preventDefault()
+    if (submittingRef.current) return
+    submittingRef.current = true
+    setError(""); setLoading(true)
     try { const response = await registerUser(form); login(response.data); navigate(response.data.role === "TRAINER" ? "/trainer/dashboard" : "/dashboard") }
-    catch (err) { setError(err.response?.data?.message || "Registration failed") }
-    finally { setLoading(false) }
+    catch (err) { setError(err.response?.data?.message || (err.code === "ECONNABORTED" ? "The server is taking longer than expected. Check your account status before trying signup again." : "Registration failed")) }
+    finally { submittingRef.current = false; setLoading(false) }
   }
 
   return <main className="cv-auth-page">

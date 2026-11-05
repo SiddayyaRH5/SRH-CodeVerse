@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { loginUser } from "../../api/authApi"
 import { useAuth } from "../../context/AuthContext"
@@ -12,6 +12,7 @@ function Login() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const submittingRef = useRef(false)
 
   const navigate = useNavigate()
   const { login } = useAuth()
@@ -27,6 +28,8 @@ function Login() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    if (submittingRef.current) return
+    submittingRef.current = true
     setError("")
     setLoading(true)
 
@@ -42,9 +45,12 @@ function Login() {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          "Login failed. Please check your credentials."
+          (err.code === "ECONNABORTED"
+            ? "The server is taking longer than expected to wake up. Please try again."
+            : "Login failed. Please check your credentials.")
       )
     } finally {
+      submittingRef.current = false
       setLoading(false)
     }
   }

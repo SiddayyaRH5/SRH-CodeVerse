@@ -78,12 +78,11 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/health/live", "/api/health/ready").permitAll()
                         .requestMatchers("/api/courses/*/progress").authenticated()
                         .requestMatchers("/api/courses/**").permitAll()
                         .requestMatchers("/api/problems/*/imported-data")
                                 .hasAnyRole("STUDENT", "TRAINER", "ADMIN")
-                                .requestMatchers("/actuator/health").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(
                         jwtAuthFilter,

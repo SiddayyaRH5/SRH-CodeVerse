@@ -19,7 +19,7 @@ public class DataSeeder implements CommandLineRunner {
     private final AchievementRepository achievementRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Value("${trainer.seed.password}")
+    @Value("${trainer.seed.password:}")
     private String trainerSeedPassword;
 
     public DataSeeder(
@@ -39,7 +39,11 @@ public class DataSeeder implements CommandLineRunner {
         seedRole("STUDENT");
         seedRole("TRAINER");
 
-        seedTrainerAccount();
+        if (trainerSeedPassword != null && !trainerSeedPassword.isBlank()) {
+            seedTrainerAccount();
+        } else {
+            System.out.println("Trainer seed account skipped: TRAINER_SEED_PASSWORD is not configured.");
+        }
 
         seedAchievements();
     }
