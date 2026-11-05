@@ -43,7 +43,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
            "WHERE s.student = :student AND s.status = 'PASSED'")
     long countDistinctSolvedProblems(@Param("student") User student);
 
-    @Query("SELECT COUNT(s), FUNCTION('DATE', s.submittedAt) " +
+    @Query("SELECT FUNCTION('DATE', s.submittedAt), COUNT(s) " +
            "FROM Submission s WHERE s.submittedAt >= :since " +
            "GROUP BY FUNCTION('DATE', s.submittedAt)")
     List<Object[]> countSubmissionsByDay(
