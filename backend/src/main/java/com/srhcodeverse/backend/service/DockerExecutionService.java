@@ -215,4 +215,15 @@ public class DockerExecutionService {
             });
         } catch (Exception ignored) {}
     }
+
+    public DockerResult execute(String sourceCode, String input) {
+        BatchDockerResult batch = executeBatch(sourceCode, List.of(input));
+        if (!batch.compiled()) {
+            return new DockerResult(false, "", batch.compileError(), 0, false);
+        }
+        if (batch.results().isEmpty()) {
+            return new DockerResult(false, "", "No execution result returned.", 0, false);
+        }
+        return batch.results().get(0);
+    }
 }
