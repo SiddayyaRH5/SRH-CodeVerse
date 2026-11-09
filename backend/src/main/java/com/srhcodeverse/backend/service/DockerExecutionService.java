@@ -117,117 +117,76 @@ public class DockerExecutionService {
         }
     }
 
+    
+    private BatchDockerResult executeHostProcessBatch(String sourceCode, List<String> inputs, long start) {
+        return executeHostProcessBatch(sourceCode, inputs, "java", start);
+    }
+
     private BatchDockerResult executeHostProcessBatch(String sourceCode, List<String> inputs, String language, long start) {
         Path tempDir = null;
+        String lang = language == null ? "java" : language.toLowerCase(Locale.ROOT);
         try {
             tempDir = Files.createTempDirectory("srh_host_exec_");
-            Path srcFile = tempDir.resolve("Main.java");
-            Files.writeString(srcFile, sourceCode);
+            String fileName = switch (lang) {
+                case "python" -> "Main.py";
+                case "javascript" -> "Main.js";
+                default -> "Main.java";
+            };
+            Files.writeString(tempDir.resolve(fileName), sourceCode, StandardCharsets.UTF_8);
 
-            Process compileProcess = new ProcessBuilder("javac", "Main.java")
-                    .directory(tempDir.toFile())
-                    .redirectErrorStream(true)
-                    .start();
+            for (int i = 0; i < inputs.size(); i++) {
+                Files.writeString(tempDir.resolve("input-" + i + ".txt"), inputs.get(i) == null ? "" : inputs.get(i), StandardCharsets.UTF_8);
+            }
 
-            String compileOutput = new String(compileProcess.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            if (!compileProcess.waitFor(10, TimeUnit.SECONDS) || compileProcess.exitValue() != 0) {
-                compileProcess.destroyForcibly();
-                return new BatchDockerResult(false, compileOutput.isBlank() ? "Compilation Failed" : compileOutput.trim(), List.of(), elapsed(start));
+            if ("java".equals(lang)) {
+                Process compileProcess = new ProcessBuilder("javac", "-proc:none", "Main.java")
+                        .directory(tempDir.toFile())
+                        .redirectErrorStream(true)
+                        .start();
+                String compileOutput = new String(compileProcess.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                if (!compileProcess.waitFor(10, TimeUnit.SECONDS) || compileProcess.exitValue() != 0) {
+                    compileProcess.destroyForcibly();
+                    return new BatchDockerResult(false, compileOutput.isBlank() ? "Compilation Failed" : compileOutput.trim(), List.of(), elapsedMs(start));
+                }
             }
 
             List<DockerResult> results = new ArrayList<>();
-            for (String input : inputs) {
-                Process runProcess = new ProcessBuilder("java", "-Xms16m", "-Xmx64m", "-cp", ".", "Main")
-                        .directory(tempDir.toFile())
-                        .start();
+            for (int i = 0; i < inputs.size(); i++) {
+                List<String> command = switch (lang) {
+                    case "python" -> List.of("python3", "Main.py");
+                    case "javascript" -> List.of("node", "Main.js");
+                    default -> List.of("java", "-Xms16m", "-Xmx64m", "-cp", ".", "Main");
+                };
 
-                try (OutputStream os = runProcess.getOutputStream()) {
-                    if (input != null && !input.isEmpty()) {
-                        os.write(input.getBytes(StandardCharsets.UTF_8));
-                        os.flush();
-                    }
+                ProcessBuilder pb = new ProcessBuilder(command);
+                pb.directory(tempDir.toFile());
+                Process runProcess = pb.start();
+
+                Path inputFile = tempDir.resolve("input-" + i + ".txt");
+                if (Files.exists(inputFile) && Files.size(inputFile) > 0) {
+                    Files.copy(inputFile, runProcess.getOutputStream());
+                    runProcess.getOutputStream().close();
                 }
 
-                boolean finished = runProcess.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                boolean finished = runProcess.waitFor(10, TimeUnit.SECONDS);
                 if (!finished) {
                     runProcess.destroyForcibly();
-                    results.add(new DockerResult(false, "", "Time Limit Exceeded", TIMEOUT_SECONDS * 1000, true));
+                    results.add(new DockerResult(false, "", "Time Limit Exceeded", 10000, true));
                     continue;
                 }
 
                 String stdout = new String(runProcess.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
                 String stderr = new String(runProcess.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
                 boolean success = runProcess.exitValue() == 0;
-                results.add(new DockerResult(success, stdout, success ? null : "Runtime Error: " + stderr, elapsed(start), false));
+                results.add(new DockerResult(success, stdout, success ? null : "Runtime Error: " + stderr, elapsedMs(start), false));
             }
 
-            return new BatchDockerResult(true, null, results, elapsed(start));
+            return new BatchDockerResult(true, null, results, elapsedMs(start));
 
         } catch (Exception e) {
-            return new BatchDockerResult(false, "System Execution Error: " + e.getMessage(), List.of(), elapsed(start));
+            return new BatchDockerResult(false, "System Execution Error: " + e.getMessage(), List.of(), elapsedMs(start));
         } finally {
-            if (tempDir != null) deleteDir(tempDir);
+            if (tempDir != null) deleteDirectory(tempDir);
         }
-    }
-
-    private BatchDockerResult parseBatchMarkers(String output, String token, int count, long start) {
-        String firstMarker = "__SRH_" + token + "_0_BEGIN__";
-        if (!output.contains(firstMarker)) {
-            return new BatchDockerResult(false, output.trim(), List.of(), elapsed(start));
-        }
-
-        List<DockerResult> results = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
-            String beginMarker = "__SRH_" + token + "_" + i + "_BEGIN__";
-            String endPrefix = "__SRH_" + token + "_" + i + "_EXIT_";
-
-            int beginIdx = output.indexOf(beginMarker);
-            int endIdx = output.indexOf(endPrefix);
-
-            if (beginIdx != -1 && endIdx != -1) {
-                String testOut = output.substring(beginIdx + beginMarker.length(), endIdx).trim();
-                int exitStatusEnd = output.indexOf("__", endIdx + endPrefix.length());
-                String exitStr = output.substring(endIdx + endPrefix.length(), exitStatusEnd);
-                int exitCode = Integer.parseInt(exitStr.trim());
-
-                boolean timedOut = exitCode == 124 || exitCode == 137;
-                String err = timedOut ? "Time Limit Exceeded" : (exitCode != 0 ? "Runtime Error (exit code " + exitCode + ")" : null);
-                results.add(new DockerResult(exitCode == 0, testOut, err, elapsed(start), timedOut));
-            } else {
-                results.add(new DockerResult(false, "", "Execution terminated prematurely", elapsed(start), false));
-            }
-        }
-        return new BatchDockerResult(true, null, results, elapsed(start));
-    }
-
-    private BatchDockerResult timeoutBatchResult(int count, long start) {
-        List<DockerResult> r = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
-            r.add(new DockerResult(false, "", "Time Limit Exceeded", TIMEOUT_SECONDS * 1000, true));
-        }
-        return new BatchDockerResult(true, null, r, elapsed(start));
-    }
-
-    private long elapsed(long start) {
-        return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
-    }
-
-    private void deleteDir(Path path) {
-        try (var walk = Files.walk(path)) {
-            walk.sorted(Comparator.reverseOrder()).forEach(p -> {
-                try { Files.deleteIfExists(p); } catch (Exception ignored) {}
-            });
-        } catch (Exception ignored) {}
-    }
-
-    public DockerResult execute(String sourceCode, String input) {
-        BatchDockerResult batch = executeBatch(sourceCode, List.of(input));
-        if (!batch.compiled()) {
-            return new DockerResult(false, "", batch.compileError(), 0, false);
-        }
-        if (batch.results().isEmpty()) {
-            return new DockerResult(false, "", "No execution result returned.", 0, false);
-        }
-        return batch.results().get(0);
     }
 }
