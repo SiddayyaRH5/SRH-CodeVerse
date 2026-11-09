@@ -1,0 +1,322 @@
+[
+  {
+    "id": 42,
+    "title": "Python syntax and indentation",
+    "lessonContent": "# Python syntax and indentation\n\nPython uses indentation to define blocks. Use four spaces consistently. A colon introduces the body of functions, classes, loops and conditional statements. Python is case-sensitive; comments begin with #.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "def calculate_total(price, quantity):\n    subtotal = price * quantity\n    return subtotal * 1.05\n\nprint(f\"Total: {calculate_total(200, 3):.2f}\")",
+    "exercise": "Write a greet() function and a rectangle_area(width, height) function. Call both and add comments. Then deliberately change indentation and observe the error.",
+    "quiz": "1. What defines a Python block? Indentation. 2. Which character begins a comment? #. 3. Is Python case-sensitive? Yes."
+  },
+  {
+    "id": 43,
+    "title": "Variables and built-in types",
+    "lessonContent": "# Variables and built-in types\n\nVariables are names bound to objects. Common types include int, float, str, bool and NoneType. Use type() to inspect a value and int(), float() or str() for conversions. Strings and numbers are immutable; lists and dictionaries are mutable.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "name = \"Asha\"\nage = 21\nheight = 1.68\nactive = True\nprint(type(name).__name__)\nprint(f\"{name}: next year age {age + 1}\")\nquantity = int(\"12\")\nprint(quantity)",
+    "exercise": "Create product_name, price, quantity and in_stock variables. Calculate the total, print each variable's type and safely handle an invalid numeric string.",
+    "quiz": "1. What is type(3.5)? float. 2. What does type() return? A value's type. 3. Is a string mutable? No."
+  },
+  {
+    "id": 44,
+    "title": "Input and formatted output",
+    "lessonContent": "# Input and formatted output\n\ninput() reads text and always returns a string. Convert input before numeric calculations. Use f-strings for readable output and format values with specifications such as :.2f. Catch ValueError when conversion may fail.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "name = input(\"Name: \").strip()\nraw_age = input(\"Age: \").strip()\ntry:\n    age = int(raw_age)\nexcept ValueError:\n    print(\"Enter a whole number\")\nelse:\n    print(f\"Hello {name}; next year: {age + 1}\")\nprint(f\"Price: ₹{49.987:.2f}\")",
+    "exercise": "Build a bill calculator that reads an item, price and quantity, validates numeric input and prints a subtotal to two decimal places.",
+    "quiz": "1. What type does input() return? str. 2. Which prefix creates an f-string? f. 3. Which exception can int('abc') raise? ValueError."
+  },
+  {
+    "id": 45,
+    "title": "Boolean logic and comparisons",
+    "lessonContent": "# Boolean logic and comparisons\n\nComparisons such as ==, !=, < and >= produce Boolean values. Combine conditions with and, or and not. Empty collections, zero and None are falsey. Use is None for identity checks and == for value equality.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "score = 82\nattendance = 0.91\nsubmitted = True\neligible = 0 <= score <= 100 and attendance >= 0.75 and submitted\nprint(\"Eligible:\", eligible)\nresult = None\nprint(result is None)",
+    "exercise": "Write an eligibility checker requiring a score from 0–100, attendance of at least 75%, and a submitted assignment. Test boundary values.",
+    "quiz": "1. Which operator checks equality? ==. 2. What type do comparisons return? bool. 3. How should None be tested? is None."
+  },
+  {
+    "id": 46,
+    "title": "if/elif/else",
+    "lessonContent": "# if/elif/else\n\nConditional statements select which block executes. Python checks if first, then elif branches in order, and else runs only if none matched. Put specific conditions first and validate values before classifying them.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "score = 86\nif score >= 90:\n    grade = \"A\"\nelif score >= 80:\n    grade = \"B\"\nelif score >= 70:\n    grade = \"C\"\nelse:\n    grade = \"Needs improvement\"\nprint(grade)",
+    "exercise": "Create a grade classifier for A (90+), B (80–89), C (70–79), D (60–69), F (below 60). Reject scores outside 0–100.",
+    "quiz": "1. When does else run? When no earlier condition matches. 2. Are elif branches checked after a match? No. 3. Can there be several elif branches? Yes."
+  },
+  {
+    "id": 47,
+    "title": "for loops and range",
+    "lessonContent": "# for loops and range\n\nA for loop iterates over an iterable. range(stop) starts at zero and excludes stop; range(start, stop, step) controls the sequence. break exits a loop and continue skips to its next iteration.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "scores = [72, 88, 91, 64]\ntotal = 0\nfor score in scores:\n    total += score\nprint(\"Average:\", total / len(scores))\nfor number in range(1, 6):\n    print(number)",
+    "exercise": "Calculate the sum, count and average of positive values in a list. Print a multiplication table using range().",
+    "quiz": "1. Is range's stop included? No. 2. What does break do? Exits the loop. 3. What does continue do? Skips to the next iteration."
+  },
+  {
+    "id": 48,
+    "title": "while loops",
+    "lessonContent": "# while loops\n\nA while loop repeats while its condition is true. Update the state used by the condition so the loop can finish. Use attempt limits for repeated input and break for an explicit exit.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "attempts = 0\nsecret = 7\nwhile attempts < 3:\n    guess = int(input(\"Guess: \"))\n    attempts += 1\n    if guess == secret:\n        print(\"Correct\")\n        break\nelse:\n    print(\"No attempts left\")",
+    "exercise": "Build a menu-driven calculator that repeats until Exit. Support four arithmetic operations and handle invalid choices and division by zero.",
+    "quiz": "1. When does while stop? When its condition becomes false or break runs. 2. What causes an infinite loop? A condition that never becomes false. 3. What does continue do? Skips the current iteration."
+  },
+  {
+    "id": 49,
+    "title": "Strings and slicing",
+    "lessonContent": "# Strings and slicing\n\nStrings are immutable Unicode sequences. Indexing gets one character; slicing uses text[start:stop:step] and excludes stop. Negative indexes count from the end. Common methods include strip, lower, replace, split and join.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "text = \"Python Programming\"\nprint(text[0], text[-1])\nprint(text[:6])\nprint(text[::-1])\nwords = [\"learn\", \"by\", \"building\"]\nprint(\" \".join(words))",
+    "exercise": "Ask for a sentence and display character count, word count, first and last word, and reversed text. Normalize whitespace before counting words.",
+    "quiz": "1. Are strings mutable? No. 2. Is slice stop included? No. 3. What does [::-1] do? Reverses a sequence."
+  },
+  {
+    "id": 50,
+    "title": "Lists and list comprehensions",
+    "lessonContent": "# Lists and list comprehensions\n\nLists are ordered, mutable collections. append adds one item; extend adds items from an iterable. A comprehension creates a list using [expression for item in iterable if condition]. Assignment creates another reference, while copy() creates a shallow copy.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "prices = [120, 80, 250, 60]\ndiscounted = [p * 0.9 for p in prices if p >= 100]\nprices.append(175)\ncopy_prices = prices.copy()\ncopy_prices[0] = 0\nprint(prices, discounted, copy_prices)",
+    "exercise": "Create a task list with add, remove and display operations. Create a second list containing tasks longer than five characters. Demonstrate assignment versus copy().",
+    "quiz": "1. Are lists mutable? Yes. 2. Which method appends one item? append(). 3. Does b = a copy a list? No."
+  },
+  {
+    "id": 51,
+    "title": "Tuples",
+    "lessonContent": "# Tuples\n\nTuples are ordered, immutable collections. They support indexing, iteration and unpacking. A one-item tuple needs a trailing comma. Tuples can contain mutable objects, but tuple positions cannot be reassigned.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "point = (12, 8)\nx, y = point\nsingle = (\"Python\",)\ndef min_max(values):\n    return min(values), max(values)\nprint(x, y, min_max([7, 2, 9]))",
+    "exercise": "Represent a student's name, USN and semester in a tuple. Unpack it. Write a function returning minimum and maximum; handle an empty input.",
+    "quiz": "1. Are tuples mutable? No. 2. What makes a one-item tuple? A trailing comma. 3. What is unpacking? Assigning elements to multiple variables."
+  },
+  {
+    "id": 52,
+    "title": "Sets",
+    "lessonContent": "# Sets\n\nSets contain unique hashable elements and do not support indexing. They are useful for removing duplicates and membership checks. Union is |, intersection &, difference -, and symmetric difference ^.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "python_students = {\"Asha\", \"Ravi\", \"Mina\"}\njava_students = {\"Ravi\", \"Kiran\", \"Mina\"}\nprint(python_students | java_students)\nprint(python_students & java_students)\nprint(python_students - java_students)",
+    "exercise": "Given two course participant lists, find unique participants, those in both courses and those only in the first. Display results in sorted order.",
+    "quiz": "1. Do sets allow duplicates? No. 2. Which operator is intersection? &. 3. Can a set be indexed? No."
+  },
+  {
+    "id": 53,
+    "title": "Dictionaries",
+    "lessonContent": "# Dictionaries\n\nDictionaries store unique hashable keys and associated values. Use square brackets for required keys and get(key, default) for safe optional lookup. items() iterates over key-value pairs. Dictionaries preserve insertion order.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "student = {\"name\": \"Asha\", \"marks\": 86}\nprint(student.get(\"email\", \"Not provided\"))\nstudent[\"marks\"] += 4\nfor key, value in student.items():\n    print(key, value)",
+    "exercise": "Build an inventory mapping product codes to quantities. Support adding and selling stock, prevent selling more than available, and handle unknown product codes.",
+    "quiz": "1. Must keys be unique? Yes. 2. What does get() provide? Safe lookup with a default. 3. Which method returns key-value pairs? items()."
+  },
+  {
+    "id": 54,
+    "title": "Functions and parameters",
+    "lessonContent": "# Functions and parameters\n\nDefine functions with def. Parameters are names in a definition; arguments are values passed in a call. return sends a result to the caller. Without return, a function returns None. Keep functions focused and document them with docstrings.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "def rectangle_area(width, height):\n    \"\"\"Return rectangle area.\"\"\"\n    if width < 0 or height < 0:\n        raise ValueError(\"Dimensions must be non-negative\")\n    return width * height\nprint(rectangle_area(5, 3))",
+    "exercise": "Write functions for simple interest, Celsius-to-Fahrenheit conversion and even-number checking. Each should accept parameters and return a result.",
+    "quiz": "1. Which keyword defines a function? def. 2. Which keyword returns a result? return. 3. What is returned implicitly? None."
+  },
+  {
+    "id": 55,
+    "title": "Default and keyword arguments",
+    "lessonContent": "# Default and keyword arguments\n\nDefault values make function arguments optional. Parameters without defaults must come first. Keyword arguments identify parameters by name. Avoid mutable defaults such as []; use None and create a fresh list inside the function.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "def profile(name, city=\"Bengaluru\", skills=None):\n    if skills is None:\n        skills = []\n    return {\"name\": name, \"city\": city, \"skills\": skills}\nprint(profile(\"Asha\"))\nprint(profile(name=\"Ravi\", city=\"Mysuru\", skills=[\"Python\"]))",
+    "exercise": "Create book_ticket(destination, seat_class='Economy', passengers=None). Call it positionally and by keyword. Ensure separate calls do not share a passenger list.",
+    "quiz": "1. Where do default parameters appear? After required parameters. 2. What is a keyword argument? One passed by parameter name. 3. Why avoid mutable defaults? The same object is reused."
+  },
+  {
+    "id": 56,
+    "title": "Modules and imports",
+    "lessonContent": "# Modules and imports\n\nA module is a Python file containing reusable definitions. Import modules with import or from ... import. Use if __name__ == '__main__' to run command-line behavior only when a file is executed directly. Packages group related modules.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "# geometry.py\nimport math\n\ndef circle_area(radius):\n    if radius < 0:\n        raise ValueError(\"Radius cannot be negative\")\n    return math.pi * radius ** 2\n\nif __name__ == \"__main__\":\n    print(circle_area(3))",
+    "exercise": "Create conversions.py with km-to-miles and Celsius-to-Fahrenheit functions. Import them in main.py. Ensure importing the module does not print output.",
+    "quiz": "1. What is a module? A reusable Python file. 2. What does import math do? Makes math available. 3. Why use the main guard? Prevents execution on import."
+  },
+  {
+    "id": 57,
+    "title": "Virtual environments",
+    "lessonContent": "# Virtual environments\n\nA virtual environment isolates a project's Python interpreter and installed packages. Create one with python -m venv .venv. Install packages using python -m pip. Record dependencies in requirements.txt. Do not commit the environment directory.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "# Run in a terminal:\n# python -m venv .venv\n# Windows PowerShell:\n# .venv\\Scripts\\Activate.ps1\n# python -m pip install requests\n# python -m pip freeze > requirements.txt\n# python -m pip install -r requirements.txt",
+    "exercise": "Create a virtual environment, install a package, export requirements.txt, deactivate it and describe how a teammate can recreate the environment. Exclude .venv from Git.",
+    "quiz": "1. Why use venv? Dependency isolation. 2. Which command creates it? python -m venv .venv. 3. Should .venv be committed? No."
+  },
+  {
+    "id": 58,
+    "title": "Reading text files",
+    "lessonContent": "# Reading text files\n\nUse open() with a with statement so files close automatically. Specify UTF-8 for text. read() loads all remaining text; readline() reads one line; iterating over a file is memory-efficient. Handle FileNotFoundError.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "from pathlib import Path\npath = Path(\"notes.txt\")\ntry:\n    with path.open(encoding=\"utf-8\") as file:\n        for number, line in enumerate(file, 1):\n            print(number, line.rstrip())\nexcept FileNotFoundError:\n    print(\"File not found:\", path.resolve())",
+    "exercise": "Create a text file with five tasks. Read it line by line, number non-empty tasks and count them. Handle a missing file with a useful message.",
+    "quiz": "1. Which statement closes a file automatically? with. 2. What encoding is commonly used? UTF-8. 3. Which exception means file missing? FileNotFoundError."
+  },
+  {
+    "id": 59,
+    "title": "Writing CSV and JSON",
+    "lessonContent": "# Writing CSV and JSON\n\nUse csv module for tabular files and json for structured data. DictWriter writes dictionaries to CSV. json.dump writes an object to a file; json.load reads it. Use UTF-8 and validate data read from external files.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "import csv, json\nstudents = [{\"name\": \"Asha\", \"score\": 91}, {\"name\": \"Ravi\", \"score\": 84}]\nwith open(\"students.csv\", \"w\", newline=\"\", encoding=\"utf-8\") as f:\n    writer = csv.DictWriter(f, fieldnames=[\"name\", \"score\"])\n    writer.writeheader(); writer.writerows(students)\nwith open(\"students.json\", \"w\", encoding=\"utf-8\") as f:\n    json.dump(students, f, indent=2)",
+    "exercise": "Store books with title, author and year. Export CSV and JSON, read JSON back and display books after a chosen year. Handle missing files and malformed JSON.",
+    "quiz": "1. Which module handles CSV? csv. 2. Which function writes JSON to a file? json.dump(). 3. Which function reads JSON from a file? json.load()."
+  },
+  {
+    "id": 60,
+    "title": "Exception handling",
+    "lessonContent": "# Exception handling\n\nUse try for risky operations, except for specific errors, else for success and finally for cleanup. Catch specific exception types rather than hiding unrelated bugs. Common exceptions include ValueError, TypeError, KeyError and FileNotFoundError.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "def positive_integer(text):\n    try:\n        value = int(text)\n    except ValueError:\n        print(\"Enter a whole number\")\n        return None\n    else:\n        return value if value > 0 else None\n    finally:\n        print(\"Validation finished\")\nprint(positive_integer(\"12\"))",
+    "exercise": "Build a division program that handles non-numeric input and division by zero separately. Use else for successful calculation and display helpful messages.",
+    "quiz": "1. Which block handles an exception? except. 2. When does try-else run? When try succeeds. 3. Does finally run after an exception? Normally yes."
+  },
+  {
+    "id": 61,
+    "title": "Custom exceptions",
+    "lessonContent": "# Custom exceptions\n\nCreate domain-specific errors by subclassing Exception. Raise them when a business rule is violated and catch them where the application can respond. Use built-in exceptions for common errors such as invalid conversions.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "class InsufficientBalanceError(Exception):\n    pass\n\ndef withdraw(balance, amount):\n    if amount <= 0:\n        raise ValueError(\"Amount must be positive\")\n    if amount > balance:\n        raise InsufficientBalanceError(\"Insufficient balance\")\n    return balance - amount\n\ntry:\n    print(withdraw(500, 700))\nexcept InsufficientBalanceError as error:\n    print(error)",
+    "exercise": "Create InvalidAgeError and a registration function that rejects ages below 18. Test valid age, underage input and non-integer input.",
+    "quiz": "1. What should custom exceptions inherit from? Exception. 2. Which keyword raises an exception? raise. 3. Why create a custom exception? Clear domain-specific error meaning."
+  },
+  {
+    "id": 62,
+    "title": "Classes and objects",
+    "lessonContent": "# Classes and objects\n\nA class defines a type; an object is an instance. __init__ initializes instance attributes and self refers to the current instance. Instance attributes belong to each object; class attributes are shared unless shadowed.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "class Student:\n    school = \"SRH CodeVerse\"\n    def __init__(self, name, usn):\n        self.name = name\n        self.usn = usn\n    def introduce(self):\n        return f\"{self.name} ({self.usn}) at {self.school}\"\n\nstudent = Student(\"Asha\", \"1JT22CS001\")\nprint(student.introduce())",
+    "exercise": "Create BankAccount with holder and balance, plus deposit and display_balance methods. Reject non-positive deposits and show two objects have independent balances.",
+    "quiz": "1. What is an object? An instance of a class. 2. What does self refer to? Current instance. 3. Which method initializes attributes? __init__."
+  },
+  {
+    "id": 63,
+    "title": "Inheritance and composition",
+    "lessonContent": "# Inheritance and composition\n\nInheritance models an is-a relationship and allows a subclass to specialize a base class. Override methods when needed and use super() to call parent behavior. Composition models has-a relationships by storing collaborator objects.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "class Notification:\n    def send(self, message):\n        raise NotImplementedError\n\nclass EmailNotification(Notification):\n    def __init__(self, address): self.address = address\n    def send(self, message): return f\"Email to {self.address}: {message}\"\n\nclass AlertService:\n    def __init__(self, notifier): self.notifier = notifier\n    def alert(self, message): return self.notifier.send(message)\n\nprint(AlertService(EmailNotification(\"a@example.com\")).alert(\"Ready\"))",
+    "exercise": "Create Employee and Developer classes using inheritance. Create a Team class containing employee objects using composition. Explain both relationships.",
+    "quiz": "1. Inheritance represents which relationship? Is-a. 2. What does super() access? Parent behavior. 3. Composition represents? Has-a."
+  },
+  {
+    "id": 64,
+    "title": "Properties and dataclasses",
+    "lessonContent": "# Properties and dataclasses\n\n@property provides attribute-style access to a method and can validate assignments with a setter. @dataclass generates common data methods. Use field(default_factory=list) for independent mutable collections per instance.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "from dataclasses import dataclass, field\n\n@dataclass\nclass Course:\n    title: str\n    tags: list[str] = field(default_factory=list)\n    @property\n    def tag_count(self):\n        return len(self.tags)\n\ncourse = Course(\"Python\", [\"beginner\", \"backend\"])\nprint(course.tag_count)",
+    "exercise": "Create a Product dataclass with name, price and labels. Add a property returning price including 18% tax. Reject negative prices and verify each product has its own labels list.",
+    "quiz": "1. What does @property provide? Attribute-style method access. 2. What does @dataclass generate? Common methods such as __init__. 3. Why use default_factory? Separate mutable defaults."
+  },
+  {
+    "id": 65,
+    "title": "Iterators",
+    "lessonContent": "# Iterators\n\nAn iterable can produce an iterator. iter() obtains an iterator and next() retrieves its next item. An exhausted iterator raises StopIteration. Iterators can process data lazily without creating a full collection.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "names = [\"Asha\", \"Ravi\", \"Mina\"]\niterator = iter(names)\nprint(next(iterator))\nprint(next(iterator))\nfor name in iter(names):\n    print(name)",
+    "exercise": "Write a function accepting any iterable and returning its first three items without assuming it is a list. Handle fewer than three values and test with a tuple and generator expression.",
+    "quiz": "1. Which function obtains an iterator? iter(). 2. Which exception signals exhaustion? StopIteration. 3. Can a list create a fresh iterator? Yes."
+  },
+  {
+    "id": 66,
+    "title": "Generators",
+    "lessonContent": "# Generators\n\nA generator function uses yield to produce values lazily. Calling it returns a generator iterator; execution pauses at yield and resumes when another value is requested. Generators can save memory for large sequences.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "def countdown(start):\n    while start > 0:\n        yield start\n        start -= 1\n\nfor value in countdown(3):\n    print(value)\nsquares = (n * n for n in range(1, 5))\nprint(list(squares))",
+    "exercise": "Create a generator yielding non-empty lines from a file and another yielding even numbers up to a limit. Explain why generators can use less memory than lists.",
+    "quiz": "1. Which keyword creates a generator function? yield. 2. What does calling it return? Generator iterator. 3. Are values produced immediately? No, lazily."
+  },
+  {
+    "id": 67,
+    "title": "Decorators basics",
+    "lessonContent": "# Decorators basics\n\nA decorator takes a callable and returns a replacement or wrapper. @ syntax applies it at definition time. functools.wraps preserves metadata. Decorators can add logging, timing or authorization checks around a function.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "from functools import wraps\n\ndef announce(func):\n    @wraps(func)\n    def wrapper(*args, **kwargs):\n        print(\"Calling\", func.__name__)\n        result = func(*args, **kwargs)\n        return result\n    return wrapper\n\n@announce\ndef add(a, b): return a + b\nprint(add(4, 5))",
+    "exercise": "Write a log_call decorator that prints the function name and returns its result. Apply it to a multiplication function and test positional and keyword arguments.",
+    "quiz": "1. What does a decorator receive? A callable. 2. What does @ syntax do? Applies the decorator. 3. Why use wraps? Preserves wrapped function metadata."
+  },
+  {
+    "id": 68,
+    "title": "Lambda and higher-order functions",
+    "lessonContent": "# Lambda and higher-order functions\n\nA lambda creates a small anonymous function with one expression. Higher-order functions accept or return functions. map transforms items; filter selects items; sorted accepts a key function. Use named functions for complex logic.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "numbers = [1, 2, 3, 4, 5, 6]\nsquares = list(map(lambda n: n*n, numbers))\nevens = list(filter(lambda n: n % 2 == 0, numbers))\nprint(squares, evens)",
+    "exercise": "Sort product dictionaries by price using a lambda key. Filter products below a budget and compare a filter() version with a list comprehension.",
+    "quiz": "1. How many expressions can lambda contain? One. 2. What makes a function higher-order? It accepts or returns functions. 3. What does filter do? Selects items matching a predicate."
+  },
+  {
+    "id": 69,
+    "title": "Sorting with key functions",
+    "lessonContent": "# Sorting with key functions\n\nsorted() returns a new sorted list; list.sort() modifies a list in place and returns None. Both accept key and reverse. Python sorting is stable, preserving relative order for equal keys. Tuple keys support multiple criteria.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "students = [{\"name\":\"Ravi\", \"score\":82}, {\"name\":\"Asha\", \"score\":91}, {\"name\":\"Mina\", \"score\":91}]\nranked = sorted(students, key=lambda s: (-s[\"score\"], s[\"name\"]))\nfor student in ranked:\n    print(student[\"name\"], student[\"score\"])",
+    "exercise": "Sort employee dictionaries by department, salary descending and name ascending. Keep the original list unchanged and print both lists.",
+    "quiz": "1. Does sorted modify input? No. 2. What does list.sort return? None. 3. What does stable sorting preserve? Relative order of equal-key items."
+  },
+  {
+    "id": 70,
+    "title": "Searching and complexity",
+    "lessonContent": "# Searching and complexity\n\nLinear search checks elements one by one and is O(n). Binary search halves a sorted search interval and is O(log n). Big-O describes growth of resource use with input size. Binary search requires sorted data.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "def linear_search(values, target):\n    for i, value in enumerate(values):\n        if value == target: return i\n    return -1\n\ndef binary_search(values, target):\n    low, high = 0, len(values)-1\n    while low <= high:\n        mid = (low+high)//2\n        if values[mid] == target: return mid\n        if values[mid] < target: low = mid+1\n        else: high = mid-1\n    return -1\n\nprint(binary_search([2,4,7,9,12], 9))",
+    "exercise": "Implement both searches. Test present, absent and empty inputs. Explain why binary search requires sorted input and compare growth in comparisons.",
+    "quiz": "1. Linear search worst-case complexity? O(n). 2. Binary search prerequisite? Sorted input. 3. Binary search complexity? O(log n)."
+  },
+  {
+    "id": 71,
+    "title": "Unit testing basics",
+    "lessonContent": "# Unit testing basics\n\nA unit test checks a small behavior in isolation. unittest provides TestCase and assertions. Test normal, boundary and invalid cases. Test methods begin with test. Run tests using python -m unittest.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "import unittest\n\ndef add(a, b): return a + b\n\nclass TestAdd(unittest.TestCase):\n    def test_positive(self): self.assertEqual(add(2, 3), 5)\n    def test_negative(self): self.assertEqual(add(-2, 3), 1)\n\nif __name__ == \"__main__\":\n    unittest.main()",
+    "exercise": "Write tests for Celsius-to-Fahrenheit conversion at freezing point, boiling point and a negative temperature. Run python -m unittest and add validation tests if needed.",
+    "quiz": "1. What does a unit test check? Small behavior unit. 2. Which module provides TestCase? unittest. 3. What prefix do test methods use? test."
+  },
+  {
+    "id": 72,
+    "title": "Debugging with tracebacks",
+    "lessonContent": "# Debugging with tracebacks\n\nA traceback shows the call path leading to an exception. Read the exception type and message near the bottom, inspect the reported source line and trace callers. Reproduce with small input, inspect assumptions, fix root cause and add a regression test.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "def average(values):\n    if not values:\n        raise ValueError(\"At least one value is required\")\n    return sum(values) / len(values)\n\ntry:\n    print(average([]))\nexcept ValueError as error:\n    print(\"Input problem:\", error)",
+    "exercise": "Create a program with a type-conversion bug and an off-by-one bug. Reproduce, diagnose, fix both and describe a test that prevents each regression.",
+    "quiz": "1. Where is the exception message usually found? Near the bottom. 2. What does traceback show? Call stack. 3. What is a regression test? A test preventing a fixed bug from returning."
+  },
+  {
+    "id": 73,
+    "title": "Regular expressions basics",
+    "lessonContent": "# Regular expressions basics\n\nThe re module matches text patterns. search finds a match anywhere; fullmatch requires the entire string to match; findall returns matches; sub replaces matches. Use raw strings for patterns. Common tokens include \\d, \\w, +, *, ^ and $.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "import re\ntext = \"Order IDs: 1042, 1043 and 2088\"\nprint(re.findall(r\"\\b\\d{4}\\b\", text))\npattern = r\"^[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+$\"\nprint(bool(re.fullmatch(pattern, \"learner@example.com\")))",
+    "exercise": "Extract all three-digit numbers from text. Use re.sub() to collapse repeated whitespace. Test valid and invalid examples and explain limitations of a simple email pattern.",
+    "quiz": "1. Which module handles regex? re. 2. What does \\d match? A digit. 3. What does fullmatch require? Entire string matches."
+  },
+  {
+    "id": 74,
+    "title": "Working with JSON APIs",
+    "lessonContent": "# Working with JSON APIs\n\nJSON objects decode to dictionaries and arrays to lists. Use json.dumps/loads for strings and dump/load for files. For API responses, check HTTP status, parse JSON and validate expected fields and types. Treat remote data as untrusted.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "import json\npayload = {\"course\":\"Python\", \"lessons\":40, \"active\":True}\ntext = json.dumps(payload, indent=2)\nrestored = json.loads(text)\nprint(restored[\"course\"], restored[\"lessons\"])",
+    "exercise": "Create a course JSON object with title, difficulty, lesson count and topic list. Serialize and deserialize it, then validate the decoded field types and non-negative lesson count.",
+    "quiz": "1. JSON object becomes which Python type? dict. 2. JSON array becomes? list. 3. What does json.loads accept? JSON text."
+  },
+  {
+    "id": 75,
+    "title": "Requests and HTTP concepts",
+    "lessonContent": "# Requests and HTTP concepts\n\nHTTP uses request-response messages. GET retrieves data, POST submits data, PUT replaces a resource, PATCH partially updates and DELETE requests removal. 2xx indicates success, 4xx client error and 5xx server error. Requests supports timeouts and raise_for_status().\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "# Install with: python -m pip install requests\nimport requests\ntry:\n    response = requests.get(\"https://httpbin.org/json\", timeout=10)\n    response.raise_for_status()\n    print(response.status_code, list(response.json().keys()))\nexcept requests.RequestException as error:\n    print(\"Request failed:\", error)",
+    "exercise": "Call a public test API or local mock with a timeout. Print status and one validated JSON field. Handle timeout, connection and unsuccessful HTTP responses.",
+    "quiz": "1. Which method retrieves data? GET. 2. What does 404 mean? Resource not found. 3. Why set timeout? Avoid waiting indefinitely."
+  },
+  {
+    "id": 76,
+    "title": "Environment variables",
+    "lessonContent": "# Environment variables\n\nEnvironment variables keep configuration outside source code. Read them with os.environ or os.getenv. Do not hard-code or commit secrets. Python does not automatically load .env files; a library or explicit loading step is required. Use placeholder values in .env.example.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "import os\napi_url = os.getenv(\"API_BASE_URL\", \"http://localhost:8080\")\napi_token = os.getenv(\"API_TOKEN\")\nprint(\"API URL:\", api_url)\nif not api_token:\n    print(\"API_TOKEN is not configured\")\nelse:\n    print(\"API token is configured\")",
+    "exercise": "Configure APP_ENV and DATA_DIRECTORY with defaults. Read a required token without printing it. Document names in .env.example with placeholders only.",
+    "quiz": "1. Which module reads environment variables? os. 2. What does getenv default do? Supplies a fallback. 3. Does Python auto-load .env? No."
+  },
+  {
+    "id": 77,
+    "title": "Command-line scripts",
+    "lessonContent": "# Command-line scripts\n\nargparse parses command-line arguments, validates basic types and generates help. Put reusable logic in functions and use main() with the __main__ guard. Provide clear help and predictable error messages.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "import argparse\n\ndef main():\n    parser = argparse.ArgumentParser(description=\"Greet a learner\")\n    parser.add_argument(\"name\")\n    parser.add_argument(\"--times\", type=int, default=1)\n    args = parser.parse_args()\n    if args.times < 1: parser.error(\"--times must be positive\")\n    for _ in range(args.times): print(f\"Hello, {args.name}!\")\n\nif __name__ == \"__main__\": main()",
+    "exercise": "Create a CLI that accepts a filename and --count integer. Report non-empty lines, validate positive count, show --help and handle a missing file.",
+    "quiz": "1. Which module parses CLI arguments? argparse. 2. How show help? --help. 3. Why use main()? Separates entry logic from reusable code."
+  },
+  {
+    "id": 78,
+    "title": "Recursion",
+    "lessonContent": "# Recursion\n\nA recursive function calls itself on a smaller problem. Every recursive design needs a base case and a recursive case that progresses toward it. Deep recursion can raise RecursionError; Python does not generally optimize tail recursion.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "def factorial(number):\n    if number < 0:\n        raise ValueError(\"Must be non-negative\")\n    if number <= 1:\n        return 1\n    return number * factorial(number - 1)\n\nprint(factorial(5))",
+    "exercise": "Write recursive sum_to_n(n), with zero as a base case and negative input rejected. Compare it with an iterative loop and explain progress toward the base case.",
+    "quiz": "1. What stops recursion? Base case. 2. What must recursive case do? Move toward base case. 3. Which exception can deep recursion raise? RecursionError."
+  },
+  {
+    "id": 79,
+    "title": "Stacks and queues with Python",
+    "lessonContent": "# Stacks and queues with Python\n\nA stack is last-in, first-out and can use list append/pop. A queue is first-in, first-out; collections.deque provides efficient append and popleft. Stacks support undo history; queues support task scheduling.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "from collections import deque\nstack = []\nstack.append(\"open\")\nstack.append(\"edit\")\nprint(\"Undo:\", stack.pop())\nqueue = deque([\"task-1\", \"task-2\"])\nqueue.append(\"task-3\")\nprint(\"Next:\", queue.popleft())",
+    "exercise": "Simulate browser back history using a stack and a print queue using deque. Add at least three entries and process them in the correct order.",
+    "quiz": "1. Stack order? LIFO. 2. Queue order? FIFO. 3. Which deque method removes leftmost item? popleft()."
+  },
+  {
+    "id": 80,
+    "title": "Project structure",
+    "lessonContent": "# Project structure\n\nA maintainable project separates application modules, tests, configuration and documentation. Keep reusable code in packages, add README setup instructions, record dependencies and ignore generated files and secrets. Avoid circular imports and document the project root.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "# study_tracker/\n#   README.md\n#   requirements.txt\n#   .gitignore\n#   study_tracker/\n#       __init__.py\n#       models.py\n#       storage.py\n#       cli.py\n#   tests/\n#       test_storage.py\n\ndef normalize_title(title):\n    return \" \".join(title.split()).title()",
+    "exercise": "Create study_tracker with separate model, storage and CLI modules, tests, README and .gitignore excluding .venv/, __pycache__/ and secrets. Demonstrate importing a function across modules.",
+    "quiz": "1. What belongs in README? Setup and usage. 2. What belongs in tests? Automated tests. 3. Why use .gitignore? Exclude generated/local files."
+  },
+  {
+    "id": 81,
+    "title": "Build a Python utility",
+    "lessonContent": "# Build a Python utility\n\nCapstone: build a personal expense tracker using functions, collections, JSON persistence, validation, exceptions and tests. Separate input, business logic and storage. Support adding, listing and summarizing expenses. Handle missing or malformed data files.\n\n## Practice notes\nRun the example, inspect its output, and change the inputs to test the behavior. Prefer clear names, small functions and explicit validation.",
+    "codeExample": "import json\nfrom pathlib import Path\nDATA_FILE = Path(\"expenses.json\")\ndef load_expenses():\n    if not DATA_FILE.exists(): return []\n    with DATA_FILE.open(encoding=\"utf-8\") as file:\n        data = json.load(file)\n    if not isinstance(data, list): raise ValueError(\"Expected a JSON list\")\n    return data\ndef save_expenses(items):\n    with DATA_FILE.open(\"w\", encoding=\"utf-8\") as file:\n        json.dump(items, file, indent=2)\ndef total_expenses(items):\n    return sum(float(item[\"amount\"]) for item in items)\nif __name__ == \"__main__\":\n    items = load_expenses()\n    print(f\"Total: {total_expenses(items):.2f}\")",
+    "exercise": "Complete the expense tracker with add, list, total and category summary commands. Validate positive amounts, handle malformed JSON, write at least five unit tests and document setup and examples in README.",
+    "quiz": "1. Which format stores data in the starter? JSON. 2. Why separate storage and calculation? Single responsibility and easier tests. 3. What should happen when file is missing? Start with an empty list."
+  }
+]
