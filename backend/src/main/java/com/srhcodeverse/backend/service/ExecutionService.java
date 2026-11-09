@@ -1,4 +1,4 @@
-package com.srhcodeverse.backend.service;
+﻿package com.srhcodeverse.backend.service;
 
 import org.springframework.stereotype.Service;
 
@@ -86,8 +86,8 @@ public class ExecutionService {
 
         long start = System.currentTimeMillis();
 
-        DockerExecutionService.BatchDockerResult batch =
-                dockerExecutionService.executeBatch(sourceToRun, inputs, selectedLanguage);
+        DockerExecutionService.BatchDockerResult batch = dockerExecutionService.executeBatch(sourceToRun, inputs,
+                selectedLanguage);
 
         if (!batch.compiled()) {
             return new ExecutionOutcome(
@@ -107,8 +107,7 @@ public class ExecutionService {
                 continue;
             }
 
-            DockerExecutionService.DockerResult dockerResult =
-                    batch.results().get(i);
+            DockerExecutionService.DockerResult dockerResult = batch.results().get(i);
 
             if (dockerResult.timedOut()) {
                 results.add(new TestResult(
@@ -139,10 +138,7 @@ public class ExecutionService {
                     ? ""
                     : expectedOutputs.get(i).trim();
 
-            results.add(new TestResult(
-                    actualOutput.equals(expectedOutput),
-                    actualOutput,
-                    null));
+            boolean passed = compareOutputs(actualOutput, expectedOutput);`n            results.add(new TestResult(passed, actualOutput.trim(), null));
         }
 
         return new ExecutionOutcome(
@@ -650,5 +646,23 @@ public class ExecutionService {
             return new DockerExecutionService.DockerResult(false, "", e.getMessage(), 0, false);
         }
         return dockerExecutionService.execute(source, input);
+    }
+
+    public static boolean compareOutputs(String actual, String expected) {
+        if (actual == null && expected == null) return true;
+        if (actual == null || expected == null) return false;
+        return normalizeOutput(actual).equals(normalizeOutput(expected));
+    }
+
+    private static String normalizeOutput(String str) {
+        if (str == null) return "";
+        return str.replace("\r\n", "\n")
+                  .replace("\r", "\n")
+                  .lines()
+                  .map(String::stripTrailing)
+                  .filter(s -> !s.isEmpty())
+                  .reduce((a, b) -> a + "\n" + b)
+                  .orElse("")
+                  .trim();
     }
 }
