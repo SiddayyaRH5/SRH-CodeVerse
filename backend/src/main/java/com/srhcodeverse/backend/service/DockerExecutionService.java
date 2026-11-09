@@ -1,28 +1,361 @@
 package com.srhcodeverse.backend.service;
 
-import java.util.Locale;
 import org.springframework.stereotype.Service;
-import java.io.*;
+
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
-import java.util.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Service
 public class DockerExecutionService {
 
     private static final String JAVA_IMAGE = "eclipse-temurin:21-jdk";
-    private static final long TIMEOUT_SECONDS = 5;
+    private static final long TIMEOUT_SECONDS = 25;
     private static final long MEMORY_LIMIT_MB = 128;
     private static final int CPU_LIMIT = 1;
-    private static final int MAX_OUTPUT_CHARS = 32_000;
+    private static final int MAX_OUTPUT_CHARS = 16_000;
+    private static final int MAX_BATCH_OUTPUT_CHARS = 128_000;
 
-    public record DockerResult(boolean success, String output, String error, long runtimeMs, boolean timedOut) {}
-    public record BatchDockerResult(boolean compiled, String compileError, List<DockerResult> results, long runtimeMs) {}
+    public record DockerResult(
+            boolean success,
+            String output,
+            String error,
+            long runtimeMs,
+            boolean timedOut) {
+    }
 
-    /**
-     * Checks if the Docker daemon is responsive within 2 seconds.
-     */
+    public record BatchDockerResult(
+            boolean compiled,
+            String compileError,
+            List<DockerResult> results,
+            long runtimeMs) {
+    }
+
+    public DockerResult execute(String sourceCode, String input) {
+        if (sourceCode == null || sourceCode.isBlank()) {
+            return failure("Java source code cannot be empty.");
+        }
+
+        Path hostSourceDir = null;
+        Process dockerProcess = null;
+        long start = System.nanoTime();
+
+        try {
+            hostSourceDir = Files.createTempDirectory("srh-codeverse-");
+            Files.writeString(hostSourceDir.resolve("Main.java"), sourceCode, StandardCharsets.UTF_8);
+
+            ProcessBuilder builder = new ProcessBuilder(
+                    "docker", "run", "--rm", "-i",
+                    "--network", "none",
+                    "--memory", MEMORY_LIMIT_MB + "m",
+                    "--memory-swap", MEMORY_LIMIT_MB + "m",
+                    "--cpus", String.valueOf(CPU_LIMIT),
+                    "--pids-limit", "32",
+                    "--read-only",
+                    "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m",
+                    "--tmpfs", "/workspace:rw,exec,nosuid,size=32m,uid=10001,gid=10001,mode=700",
+                    "--cap-drop", "ALL",
+                    "--security-opt", "no-new-privileges",
+                    "--user", "10001:10001",
+                    "--mount", "type=bind,source=" + hostSourceDir.toAbsolutePath() + ",target=/input,readonly",
+                    "--workdir", "/workspace",
+                    JAVA_IMAGE,
+                    "sh", "-c",
+                    "cp /input/Main.java /workspace/Main.java && javac -proc:none Main.java && java -Xms16m -Xmx64m Main");
+
+            builder.redirectErrorStream(true);
+            dockerProcess = builder.start();
+
+            try (var stdin = dockerProcess.getOutputStream()) {
+                if (input != null && !input.isEmpty()) {
+                    stdin.write(input.getBytes(StandardCharsets.UTF_8));
+                    stdin.flush();
+                }
+            }
+
+            Process process = dockerProcess;
+            StringBuilder captured = new StringBuilder();
+
+            Thread reader = new Thread(() -> {
+                try (var stream = process.getInputStream()) {
+                    byte[] buffer = new byte[1024];
+                    int count;
+                    while ((count = stream.read(buffer)) != -1) {
+                        synchronized (captured) {
+                            int remaining = MAX_OUTPUT_CHARS - captured.length();
+                            if (remaining > 0) {
+                                captured.append(new String(buffer, 0, Math.min(count, remaining), StandardCharsets.UTF_8));
+                            }
+                        }
+                    }
+                } catch (IOException ignored) {}
+            }, "docker-output-reader");
+
+            reader.setDaemon(true);
+            reader.start();
+
+            boolean finished = dockerProcess.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            if (!finished) {
+                dockerProcess.destroyForcibly();
+                dockerProcess.waitFor(1, TimeUnit.SECONDS);
+                reader.join(500);
+                return new DockerResult(false, getCaptured(captured), "Time Limit Exceeded", elapsedMs(start), true);
+            }
+
+            reader.join(1000);
+            String output = getCaptured(captured).trim();
+
+            if (output.length() >= MAX_OUTPUT_CHARS) {
+                return new DockerResult(false, output, "Output limit exceeded", elapsedMs(start), false);
+            }
+
+            if (dockerProcess.exitValue() != 0) {
+                String error = output.isBlank() ? "Compilation or execution failed." : output;
+                return new DockerResult(false, output, error, elapsedMs(start), false);
+            }
+
+            return new DockerResult(true, output, null, elapsedMs(start), false);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            if (dockerProcess != null) dockerProcess.destroyForcibly();
+            return failure("Execution was interrupted.");
+        } catch (IOException e) {
+            return failure("Could not start Docker. Ensure Docker Desktop is running. " + e.getMessage());
+        } finally {
+            if (dockerProcess != null && dockerProcess.isAlive()) {
+                dockerProcess.destroyForcibly();
+            }
+            if (hostSourceDir != null) {
+                deleteDirectory(hostSourceDir);
+            }
+        }
+    }
+
+    public BatchDockerResult executeBatch(String sourceCode, List<String> inputs) {
+        return executeBatch(sourceCode, inputs, "java");
+    }
+
+    public BatchDockerResult executeBatchJavaInternal(String sourceCode, List<String> inputs) {
+        long start = System.nanoTime();
+        if (!isDockerAvailable()) {
+            return executeHostProcessBatch(sourceCode, inputs, "java", start);
+        }
+
+        if (sourceCode == null || sourceCode.isBlank()) {
+            return new BatchDockerResult(false, "Java source code cannot be empty.", List.of(), 0);
+        }
+
+        if (inputs == null || inputs.isEmpty()) {
+            return new BatchDockerResult(false, "No test cases provided.", List.of(), 0);
+        }
+
+        Path hostDir = null;
+        Process dockerProcess = null;
+        String token = UUID.randomUUID().toString().replace("-", "");
+        int outputLimit = (int) Math.min(MAX_BATCH_OUTPUT_CHARS, (long) MAX_OUTPUT_CHARS * inputs.size() + 4096L);
+
+        try {
+            hostDir = Files.createTempDirectory("srh-codeverse-batch-");
+            Files.writeString(hostDir.resolve("Main.java"), sourceCode, StandardCharsets.UTF_8);
+
+            for (int i = 0; i < inputs.size(); i++) {
+                Files.writeString(hostDir.resolve("input-" + i + ".txt"), inputs.get(i) == null ? "" : inputs.get(i), StandardCharsets.UTF_8);
+            }
+
+            String cmd = "cp /input/Main.java /workspace/Main.java && javac -proc:none Main.java";
+            for (int i = 0; i < inputs.size(); i++) {
+                cmd += " && java -Xms16m -Xmx64m Main < /input/input-" + i + ".txt > /workspace/out-" + i + ".txt 2>&1 || true";
+            }
+
+            ProcessBuilder builder = new ProcessBuilder(
+                    "docker", "run", "--rm", "-i",
+                    "--network", "none",
+                    "--memory", MEMORY_LIMIT_MB + "m",
+                    "--memory-swap", MEMORY_LIMIT_MB + "m",
+                    "--cpus", String.valueOf(CPU_LIMIT),
+                    "--pids-limit", "64",
+                    "--read-only",
+                    "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m",
+                    "--tmpfs", "/workspace:rw,exec,nosuid,size=64m,uid=10001,gid=10001,mode=700",
+                    "--cap-drop", "ALL",
+                    "--security-opt", "no-new-privileges",
+                    "--user", "10001:10001",
+                    "--mount", "type=bind,source=" + hostDir.toAbsolutePath() + ",target=/input,readonly",
+                    "--workdir", "/workspace",
+                    JAVA_IMAGE,
+                    "sh", "-c", cmd);
+
+            builder.redirectErrorStream(true);
+            dockerProcess = builder.start();
+
+            boolean finished = dockerProcess.waitFor(TIMEOUT_SECONDS * 2, TimeUnit.SECONDS);
+            if (!finished) {
+                dockerProcess.destroyForcibly();
+                List<DockerResult> timeoutResults = new ArrayList<>();
+                for (int i = 0; i < inputs.size(); i++) {
+                    timeoutResults.add(new DockerResult(false, "", "Time Limit Exceeded", TIMEOUT_SECONDS * 1000, true));
+                }
+                return new BatchDockerResult(true, null, timeoutResults, elapsedMs(start));
+            }
+
+            Path compileOutPath = hostDir.resolve("compile-out.txt");
+            String compileError = "";
+            List<DockerResult> results = new ArrayList<>();
+
+            for (int i = 0; i < inputs.size(); i++) {
+                Path outFilePath = hostDir.resolve("out-" + i + ".txt");
+                String stdout = Files.exists(outFilePath) ? Files.readString(outFilePath, StandardCharsets.UTF_8) : "";
+                boolean success = !stdout.contains("Exception") && !stdout.contains("Error");
+                results.add(new DockerResult(success, stdout.trim(), success ? null : "Runtime Error", elapsedMs(start), false));
+            }
+
+            return new BatchDockerResult(true, null, results, elapsedMs(start));
+
+        } catch (Exception e) {
+            return new BatchDockerResult(false, "System Execution Error: " + e.getMessage(), List.of(), elapsedMs(start));
+        } finally {
+            if (dockerProcess != null && dockerProcess.isAlive()) {
+                dockerProcess.destroyForcibly();
+            }
+            if (hostDir != null) {
+                deleteDirectory(hostDir);
+            }
+        }
+    }
+
+    public BatchDockerResult executeBatch(String sourceCode, List<String> inputs, String language) {
+        long start = System.nanoTime();
+        String selected = language == null ? "java" : language.trim().toLowerCase(Locale.ROOT);
+
+        if (!isDockerAvailable()) {
+            return executeHostProcessBatch(sourceCode, inputs, selected, start);
+        }
+
+        if ("java".equals(selected)) {
+            return executeBatchJavaInternal(sourceCode, inputs);
+        }
+
+        if (!"python".equals(selected) && !"javascript".equals(selected)) {
+            return new BatchDockerResult(false, "Unsupported language: " + selected, List.of(), 0);
+        }
+
+        return executeInterpretedBatch(sourceCode, inputs, selected);
+    }
+
+    private BatchDockerResult executeInterpretedBatch(String sourceCode, List<String> inputs, String language) {
+        long start = System.nanoTime();
+        if (sourceCode == null || sourceCode.isBlank()) {
+            return new BatchDockerResult(false, "Source code cannot be empty.", List.of(), 0);
+        }
+        if (inputs == null || inputs.isEmpty()) {
+            return new BatchDockerResult(false, "No test cases provided.", List.of(), 0);
+        }
+
+        String image = "python".equals(language) ? "python:3.12-slim" : "node:22-slim";
+        String sourceFile = "python".equals(language) ? "Main.py" : "Main.js";
+
+        Path hostDir = null;
+        Process dockerProcess = null;
+
+        try {
+            hostDir = Files.createTempDirectory("srh-codeverse-interpreted-");
+            Files.writeString(hostDir.resolve(sourceFile), sourceCode, StandardCharsets.UTF_8);
+
+            for (int i = 0; i < inputs.size(); i++) {
+                Files.writeString(hostDir.resolve("input-" + i + ".txt"), inputs.get(i) == null ? "" : inputs.get(i), StandardCharsets.UTF_8);
+            }
+
+            String interpreter = "python".equals(language) ? "python3" : "node";
+            String cmd = "";
+            for (int i = 0; i < inputs.size(); i++) {
+                cmd += (i == 0 ? "" : " && ") + interpreter + " " + sourceFile + " < /input/input-" + i + ".txt > /workspace/out-" + i + ".txt 2>&1 || true";
+            }
+
+            ProcessBuilder builder = new ProcessBuilder(
+                    "docker", "run", "--rm", "-i",
+                    "--network", "none",
+                    "--memory", MEMORY_LIMIT_MB + "m",
+                    "--memory-swap", MEMORY_LIMIT_MB + "m",
+                    "--cpus", String.valueOf(CPU_LIMIT),
+                    "--pids-limit", "64",
+                    "--read-only",
+                    "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m",
+                    "--tmpfs", "/workspace:rw,exec,nosuid,size=64m,uid=10001,gid=10001,mode=700",
+                    "--cap-drop", "ALL",
+                    "--security-opt", "no-new-privileges",
+                    "--user", "10001:10001",
+                    "--mount", "type=bind,source=" + hostDir.toAbsolutePath() + ",target=/input,readonly",
+                    "--workdir", "/workspace",
+                    image,
+                    "sh", "-c", cmd);
+
+            builder.redirectErrorStream(true);
+            dockerProcess = builder.start();
+
+            boolean finished = dockerProcess.waitFor(TIMEOUT_SECONDS * 2, TimeUnit.SECONDS);
+            if (!finished) {
+                dockerProcess.destroyForcibly();
+                List<DockerResult> timeoutResults = new ArrayList<>();
+                for (int i = 0; i < inputs.size(); i++) {
+                    timeoutResults.add(new DockerResult(false, "", "Time Limit Exceeded", TIMEOUT_SECONDS * 1000, true));
+                }
+                return new BatchDockerResult(true, null, timeoutResults, elapsedMs(start));
+            }
+
+            List<DockerResult> results = new ArrayList<>();
+            for (int i = 0; i < inputs.size(); i++) {
+                Path outFilePath = hostDir.resolve("out-" + i + ".txt");
+                String stdout = Files.exists(outFilePath) ? Files.readString(outFilePath, StandardCharsets.UTF_8) : "";
+                boolean success = !stdout.contains("Traceback") && !stdout.contains("Error:");
+                results.add(new DockerResult(success, stdout.trim(), success ? null : "Runtime Error", elapsedMs(start), false));
+            }
+
+            return new BatchDockerResult(true, null, results, elapsedMs(start));
+
+        } catch (Exception e) {
+            return new BatchDockerResult(false, "System Execution Error: " + e.getMessage(), List.of(), elapsedMs(start));
+        } finally {
+            if (dockerProcess != null && dockerProcess.isAlive()) {
+                dockerProcess.destroyForcibly();
+            }
+            if (hostDir != null) {
+                deleteDirectory(hostDir);
+            }
+        }
+    }
+
+    private DockerResult failure(String message) {
+        return new DockerResult(false, "", message, 0, false);
+    }
+
+    private long elapsedMs(long start) {
+        return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+    }
+
+    private String getCaptured(StringBuilder captured) {
+        synchronized (captured) {
+            return captured.toString();
+        }
+    }
+
+    private void deleteDirectory(Path directory) {
+        try (var paths = Files.walk(directory)) {
+            paths.sorted(Comparator.reverseOrder()).forEach(path -> {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException ignored) {}
+            });
+        } catch (IOException ignored) {}
+    }
+
     public boolean isDockerAvailable() {
         try {
             Process process = new ProcessBuilder("docker", "version", "--format", "{{.Server.Version}}")
@@ -33,94 +366,6 @@ public class DockerExecutionService {
         } catch (Exception e) {
             return false;
         }
-    }
-
-    
-    public BatchDockerResult executeBatch(String sourceCode, List<String> inputs) {
-        return executeBatch(sourceCode, inputs, "java");
-    }
-    public BatchDockerResult executeBatch(String sourceCode, List<String> inputs, String language) {
-        long start = System.nanoTime();
-
-        if (sourceCode == null || sourceCode.isBlank()) {
-            return new BatchDockerResult(false, "Source code cannot be empty.", List.of(), 0);
-        }
-
-        if (!isDockerAvailable()) {
-            // Graceful fallback to secure Host Process Engine when running on Render or Docker Desktop is off
-            return executeHostProcessBatch(sourceCode, inputs, language, start);
-        }
-
-        return executeDockerContainerBatch(sourceCode, inputs, language, start);
-    }
-
-    private BatchDockerResult executeDockerContainerBatch(String sourceCode, List<String> inputs, String language, long start) {
-        Path hostDir = null;
-        Process dockerProcess = null;
-        String token = UUID.randomUUID().toString().replace("-", "");
-
-        try {
-            hostDir = Files.createTempDirectory("srh-exec-");
-            Path srcFile = hostDir.resolve("Main.java");
-            Files.writeString(srcFile, sourceCode, StandardCharsets.UTF_8);
-
-            for (int i = 0; i < inputs.size(); i++) {
-                Files.writeString(hostDir.resolve("input-" + i + ".txt"), inputs.get(i) == null ? "" : inputs.get(i), StandardCharsets.UTF_8);
-            }
-
-            StringBuilder script = new StringBuilder();
-            script.append("cp /input/Main.java /workspace/Main.java && ");
-            script.append("javac -proc:none /workspace/Main.java; ");
-            script.append("compile_status=$?; ");
-            script.append("if [ \"$compile_status\" -ne 0 ]; then exit \"$compile_status\"; fi; ");
-
-            for (int i = 0; i < inputs.size(); i++) {
-                script.append("printf '\\n__SRH_").append(token).append("_").append(i).append("_BEGIN__\\n'; ");
-                script.append("timeout ").append(TIMEOUT_SECONDS).append("s java -Xms16m -Xmx64m -cp /workspace Main < /input/input-").append(i).append(".txt; ");
-                script.append("test_status=$?; ");
-                script.append("printf '\\n__SRH_").append(token).append("_").append(i).append("_EXIT_%s__\\n' \"$test_status\"; ");
-            }
-
-            // Cross-platform container mounts with non-root security boundaries
-            ProcessBuilder pb = new ProcessBuilder(
-                    "docker", "run", "--rm", "-i",
-                    "--network", "none",
-                    "--memory", MEMORY_LIMIT_MB + "m",
-                    "--memory-swap", MEMORY_LIMIT_MB + "m",
-                    "--cpus", String.valueOf(CPU_LIMIT),
-                    "--pids-limit", "32",
-                    "--cap-drop", "ALL",
-                    "--tmpfs", "/workspace:rw,exec,nosuid,size=64m",
-                    "--mount", "type=bind,source=" + hostDir.toAbsolutePath().toString().replace("\\", "/") + ",target=/input,readonly",
-                    JAVA_IMAGE,
-                    "sh", "-c", script.toString()
-            );
-
-            pb.redirectErrorStream(true);
-            dockerProcess = pb.start();
-            dockerProcess.getOutputStream().close();
-
-            String output = new String(dockerProcess.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            boolean finished = dockerProcess.waitFor(TIMEOUT_SECONDS * inputs.size() + 10, TimeUnit.SECONDS);
-
-            if (!finished) {
-                dockerProcess.destroyForcibly();
-                return timeoutBatchResult(inputs.size(), start);
-            }
-
-            return parseBatchMarkers(output, token, inputs.size(), start);
-
-        } catch (Exception e) {
-            return executeHostProcessBatch(sourceCode, inputs, language, start);
-        } finally {
-            if (dockerProcess != null && dockerProcess.isAlive()) dockerProcess.destroyForcibly();
-            if (hostDir != null) deleteDir(hostDir);
-        }
-    }
-
-    
-    private BatchDockerResult executeHostProcessBatch(String sourceCode, List<String> inputs, long start) {
-        return executeHostProcessBatch(sourceCode, inputs, "java", start);
     }
 
     private BatchDockerResult executeHostProcessBatch(String sourceCode, List<String> inputs, String language, long start) {
@@ -145,7 +390,7 @@ public class DockerExecutionService {
                         .redirectErrorStream(true)
                         .start();
                 String compileOutput = new String(compileProcess.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-                if (!compileProcess.waitFor(10, TimeUnit.SECONDS) || compileProcess.exitValue() != 0) {
+                if (!compileProcess.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS) || compileProcess.exitValue() != 0) {
                     compileProcess.destroyForcibly();
                     return new BatchDockerResult(false, compileOutput.isBlank() ? "Compilation Failed" : compileOutput.trim(), List.of(), elapsedMs(start));
                 }
@@ -169,10 +414,10 @@ public class DockerExecutionService {
                     runProcess.getOutputStream().close();
                 }
 
-                boolean finished = runProcess.waitFor(10, TimeUnit.SECONDS);
+                boolean finished = runProcess.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS);
                 if (!finished) {
                     runProcess.destroyForcibly();
-                    results.add(new DockerResult(false, "", "Time Limit Exceeded", 10000, true));
+                    results.add(new DockerResult(false, "", "Time Limit Exceeded", TIMEOUT_SECONDS * 1000, true));
                     continue;
                 }
 
