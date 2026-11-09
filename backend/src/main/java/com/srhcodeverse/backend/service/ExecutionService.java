@@ -404,25 +404,118 @@ public class ExecutionService {
     private String buildClassModeHelpers() {
         StringBuilder sb = new StringBuilder();
 
-        sb.append("        private static List<String> splitTopLevel(String s) {
-        List<String> result = new ArrayList<>();
-        int depth = 0;
-        StringBuilder current = new StringBuilder();
-        for (char c : s.toCharArray()) {
-            if (c == '(' || c == '[') depth++;
-            if (c == ')' || c == ']') depth--;
-            if (c == ',' && depth == 0) {
-                result.add(current.toString().trim());
-                current = new StringBuilder();
-            } else {
-                current.append(c);
-            }
-        }
-        if (current.length() > 0 || !result.isEmpty()) {
-            String last = current.toString().trim();
-            if (!last.isEmpty()) result.add(last);
-        }
-        return result;
+        sb.append("    private static List<String> splitTopLevel(String s) {\n")
+                .append("        List<String> result = new ArrayList<>();\n")
+                .append("        int depth = 0;\n")
+                .append("        StringBuilder current = new StringBuilder();\n")
+                .append("        for (char c : s.toCharArray()) {\n")
+                .append("            if (c == '(' || c == '[') depth++;\n")
+                .append("            if (c == ')' || c == ']') depth--;\n")
+                .append("            if (c == ',' && depth == 0) {\n")
+                .append("                result.add(current.toString().trim());\n")
+                .append("                current = new StringBuilder();\n")
+                .append("            } else {\n")
+                .append("                current.append(c);\n")
+                .append("            }\n")
+                .append("        }\n")
+                .append("        if (current.length() > 0 || !result.isEmpty()) {\n")
+                .append("            String last = current.toString().trim();\n")
+                .append("            if (!last.isEmpty()) result.add(last);\n")
+                .append("        }\n")
+                .append("        return result;\n")
+                .append("    }\n\n");
+
+        sb.append("    private static boolean looksLikeCall(String token) {\n")
+                .append("        return token.trim().matches(\"\\\\w+\\\\(.*\\\\)\");\n")
+                .append("    }\n\n");
+
+        sb.append("    private static Object construct(Class<?> clazz, List<String> rawArgs) throws Exception {\n")
+                .append("        for (Constructor<?> ctor : clazz.getDeclaredConstructors()) {\n")
+                .append("            if (ctor.getParameterCount() != rawArgs.size()) continue;\n")
+                .append("            try {\n")
+                .append("                Class<?>[] paramTypes = ctor.getParameterTypes();\n")
+                .append("                Object[] parsed = new Object[rawArgs.size()];\n")
+                .append("                for (int j = 0; j < rawArgs.size(); j++) {\n")
+                .append("                    parsed[j] = parseValue(rawArgs.get(j), paramTypes[j]);\n")
+                .append("                }\n")
+                .append("                ctor.setAccessible(true);\n")
+                .append("                return ctor.newInstance(parsed);\n")
+                .append("            } catch (Exception e) { /* try next candidate */ }\n")
+                .append("        }\n")
+                .append("        throw new RuntimeException(\"No matching constructor found for \" + rawArgs.size() + \" argument(s)\");\n")
+                .append("    }\n\n");
+
+        sb.append(
+                "    private static Object invokeMethod(Object instance, String methodName, List<String> rawArgs) throws Exception {\n")
+                .append("        List<Method> candidates = new ArrayList<>();\n")
+                .append("        for (Method m : instance.getClass().getDeclaredMethods()) {\n")
+                .append("            if (m.getName().equals(methodName) && m.getParameterCount() == rawArgs.size()) {\n")
+                .append("                candidates.add(m);\n")
+                .append("            }\n")
+                .append("        }\n")
+                .append("        candidates.sort((a, b) -> Integer.compare(specificity(a), specificity(b)));\n")
+                .append("        for (Method m : candidates) {\n")
+                .append("            try {\n")
+                .append("                Class<?>[] paramTypes = m.getParameterTypes();\n")
+                .append("                Object[] parsed = new Object[rawArgs.size()];\n")
+                .append("                for (int j = 0; j < rawArgs.size(); j++) {\n")
+                .append("                    parsed[j] = parseValue(rawArgs.get(j), paramTypes[j]);\n")
+                .append("                }\n")
+                .append("                m.setAccessible(true);\n")
+                .append("                return m.invoke(instance, parsed);\n")
+                .append("            } catch (Exception e) { /* try next candidate */ }\n")
+                .append("        }\n")
+                .append("        throw new RuntimeException(\"No matching method found: \" + methodName + \"(\" + rawArgs.size() + \" args)\");\n")
+                .append("    }\n\n");
+
+        sb.append("    private static int specificity(Method m) {\n")
+                .append("        int score = 0;\n")
+                .append("        for (Class<?> t : m.getParameterTypes()) {\n")
+                .append("            if (t == int.class || t == long.class || t == Integer.class || t == Long.class) score += 0;\n")
+                .append("            else if (t == double.class || t == Double.class) score += 1;\n")
+                .append("            else score += 0;\n")
+                .append("        }\n")
+                .append("        return score;\n")
+                .append("    }\n\n");
+
+        sb.append("    private static Object parseValue(String raw, Class<?> type) {\n")
+                .append("        raw = raw.trim();\n")
+                .append("        if (type.isArray()) {\n")
+                .append("            Class<?> comp = type.getComponentType();\n")
+                .append("            String inner = stripBrackets(raw);\n")
+                .append("            String[] parts = inner.isEmpty() ? new String[0] : inner.split(\",\");\n")
+                .append("            int n = parts.length;\n")
+                .append("            if (comp == int.class) { int[] a = new int[n]; for (int k=0;k<n;k++) a[k]=Integer.parseInt(parts[k].trim()); return a; }\n")
+                .append("            if (comp == long.class) { long[] a = new long[n]; for (int k=0;k<n;k++) a[k]=Long.parseLong(parts[k].trim()); return a; }\n")
+                .append("            if (comp == double.class) { double[] a = new double[n]; for (int k=0;k<n;k++) a[k]=Double.parseDouble(parts[k].trim()); return a; }\n")
+                .append("            if (comp == boolean.class) { boolean[] a = new boolean[n]; for (int k=0;k<n;k++) a[k]=Boolean.parseBoolean(parts[k].trim()); return a; }\n")
+                .append("            if (comp == char.class) { char[] a = new char[n]; for (int k=0;k<n;k++) a[k]=parseCharScalar(parts[k]); return a; }\n")
+                .append("            if (comp == String.class) { String[] a = new String[n]; for (int k=0;k<n;k++) a[k]=parseStringScalar(parts[k]); return a; }\n")
+                .append("            throw new RuntimeException(\"Unsupported array component type: \" + comp);\n")
+                .append("        }\n")
+                .append("        if (type == int.class || type == Integer.class) return Integer.parseInt(raw);\n")
+                .append("        if (type == long.class || type == Long.class) return Long.parseLong(raw);\n")
+                .append("        if (type == double.class || type == Double.class) return Double.parseDouble(raw);\n")
+                .append("        if (type == boolean.class || type == Boolean.class) return Boolean.parseBoolean(raw);\n")
+                .append("        if (type == char.class || type == Character.class) return parseCharScalar(raw);\n")
+                .append("        if (type == String.class) return parseStringScalar(raw);\n")
+                .append("        throw new RuntimeException(\"Unsupported parameter type: \" + type.getName());\n")
+                .append("    }\n\n");
+
+        sb.append("    private static String formatValue(Object val) {\n")
+                .append("        if (val == null) return \"null\";\n")
+                .append("        if (val instanceof int[]) return formatIntArray((int[]) val);\n")
+                .append("        if (val instanceof long[]) return formatLongArray((long[]) val);\n")
+                .append("        if (val instanceof double[]) return formatDoubleArray((double[]) val);\n")
+                .append("        if (val instanceof boolean[]) return formatBooleanArray((boolean[]) val);\n")
+                .append("        if (val instanceof char[]) return formatCharArray((char[]) val);\n")
+                .append("        if (val instanceof String[]) return formatStringArray((String[]) val);\n")
+                .append("        if (val instanceof Character) return \"\\\"\" + val + \"\\\"\";\n")
+                .append("        if (val instanceof String) return \"\\\"\" + val + \"\\\"\";\n")
+                .append("        return String.valueOf(val);\n")
+                .append("    }\n\n");
+
+        return sb.toString();
     }
 
     // ===================== SHARED HELPERS (used by both wrapper types)
