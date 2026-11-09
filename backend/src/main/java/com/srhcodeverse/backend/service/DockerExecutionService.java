@@ -34,6 +34,10 @@ public class DockerExecutionService {
         }
     }
 
+    
+    public BatchDockerResult executeBatch(String sourceCode, List<String> inputs) {
+        return executeBatch(sourceCode, inputs, "java");
+    }
     public BatchDockerResult executeBatch(String sourceCode, List<String> inputs, String language) {
         long start = System.nanoTime();
 
