@@ -1,5 +1,7 @@
+import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { useAuth } from "../../context/AuthContext"
+import { getProblems } from "../../api/problemApi"
 
 const courses = [
   ["☕", "Java", "Complete Java from basics to advanced", "120+ Lessons", "#ef4444"],
@@ -47,6 +49,44 @@ function CodeWindow() {
 function Landing() {
   const { user } = useAuth()
   const dashboard = user?.role === "TRAINER" ? "/trainer/dashboard" : "/dashboard"
+  const [problems, setProblems] = useState(null)
+
+  useEffect(() => {
+    let active = true
+
+    getProblems()
+      .then((response) => {
+        if (active) setProblems(Array.isArray(response.data) ? response.data : [])
+      })
+      .catch(() => {
+        if (active) setProblems(null)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const problemCountByDifficulty = useMemo(
+    () => {
+      if (!problems) return null
+
+      return problems.reduce((counts, problem) => {
+        const difficulty = String(problem.difficulty || "").toUpperCase()
+        if (difficulty === "EASY" || difficulty === "MEDIUM" || difficulty === "HARD") {
+          counts[difficulty] += 1
+        }
+        return counts
+      }, { EASY: 0, MEDIUM: 0, HARD: 0 })
+    },
+    [problems]
+  )
+
+  const problemCountLabel = (difficulty) => {
+    if (!problemCountByDifficulty) return "View problems"
+    const count = problemCountByDifficulty[difficulty]
+    return `${count} ${count === 1 ? "Problem" : "Problems"}`
+  }
 
   return <main>
     <section className="cv-hero min-h-[720px] lg:min-h-[760px] flex items-center">
@@ -80,7 +120,7 @@ function Landing() {
 
     <section className="max-w-[1280px] mx-auto px-5 sm:px-8 pb-20 grid lg:grid-cols-[1.45fr_.75fr] gap-5">
       <div className="cv-section-panel rounded-3xl p-6 sm:p-8"><p className="cv-kicker">WHY CHOOSE US</p><h2 className="text-3xl font-black mt-2">Why Choose SRH <span className="cv-gradient-text">CodeVerse?</span></h2><p className="text-[var(--cv-muted)] mt-2">More than just courses — a complete platform to help you grow as a developer.</p><div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-7">{features.map(([icon,title,desc]) => <div key={title} className="rounded-2xl p-4 bg-[var(--cv-surface-2)] border border-[var(--cv-border)] hover:-translate-y-1 transition"><span className="w-10 h-10 rounded-xl grid place-items-center bg-violet-500/10 text-violet-600 font-bold">{icon}</span><h3 className="text-sm font-bold mt-4">{title}</h3><p className="text-[11px] leading-5 text-[var(--cv-muted)] mt-1">{desc}</p></div>)}</div></div>
-      <div className="cv-section-panel rounded-3xl p-6 sm:p-8"><div className="flex items-start justify-between"><div><p className="cv-kicker">PRACTICE</p><h2 className="text-2xl font-black mt-2">Practice Problems</h2><p className="text-xs text-[var(--cv-muted)] mt-1">Sharpen your skills with coding challenges.</p></div><Link to="/problems" className="text-xs font-bold text-violet-600">View All →</Link></div><div className="space-y-3 mt-7">{[["Easy","450+ Problems","#22c55e"],["Medium","320+ Problems","#f59e0b"],["Hard","180+ Problems","#ef4444"]].map(([name,count,color]) => <Link to="/problems" key={name} className="flex items-center justify-between rounded-2xl p-4 bg-[var(--cv-surface-2)] border border-[var(--cv-border)] hover:-translate-y-1 transition"><div className="flex items-center gap-3"><span className="w-10 h-10 rounded-xl grid place-items-center font-bold" style={{color,background:`color-mix(in srgb, ${color} 10%, var(--cv-surface))`}}>◆</span><div><b className="text-sm">{name}</b><p className="text-[10px] text-[var(--cv-muted)]">{count}</p></div></div><span className="text-[var(--cv-muted)]">→</span></Link>)}</div></div>
+      <div className="cv-section-panel rounded-3xl p-6 sm:p-8"><div className="flex items-start justify-between"><div><p className="cv-kicker">PRACTICE</p><h2 className="text-2xl font-black mt-2">Practice Problems</h2><p className="text-xs text-[var(--cv-muted)] mt-1">Sharpen your skills with coding challenges.</p></div><Link to="/problems" className="text-xs font-bold text-violet-600">View All →</Link></div><div className="space-y-3 mt-7">{[["Easy","EASY","#22c55e"],["Medium","MEDIUM","#f59e0b"],["Hard","HARD","#ef4444"]].map(([name,difficulty,color]) => <Link to={`/problems?difficulty=${difficulty}`} key={name} className="flex items-center justify-between rounded-2xl p-4 bg-[var(--cv-surface-2)] border border-[var(--cv-border)] hover:-translate-y-1 transition"><div className="flex items-center gap-3"><span className="w-10 h-10 rounded-xl grid place-items-center font-bold" style={{color,background:`color-mix(in srgb, ${color} 10%, var(--cv-surface))`}}>◆</span><div><b className="text-sm">{name}</b><p className="text-[10px] text-[var(--cv-muted)]">{problemCountLabel(difficulty)}</p></div></div><span className="text-[var(--cv-muted)]">→</span></Link>)}</div></div>
     </section>
 
     <section className="max-w-[1280px] mx-auto px-5 sm:px-8 pb-24"><div className="rounded-[28px] overflow-hidden relative p-8 sm:p-12 bg-gradient-to-r from-violet-700 via-blue-600 to-cyan-500 text-white shadow-2xl"><div className="absolute -right-20 -top-20 w-72 h-72 rounded-full bg-white/15 blur-3xl"/><div className="relative z-10 max-w-2xl"><p className="text-xs font-black tracking-[.18em] text-white/75">LEARN. PRACTICE. BUILD. GROW.</p><h2 className="text-3xl sm:text-4xl font-black mt-3">Your next level starts with one solved problem.</h2><p className="mt-3 text-sm sm:text-base text-white/80">Build consistent habits, create real projects and get interview-ready with SRH CodeVerse.</p><div className="mt-7"><Link to={user ? dashboard : "/register"} className="inline-flex items-center gap-2 rounded-xl bg-white text-slate-900 px-5 py-3 font-extrabold hover:-translate-y-1 transition">{user ? "Open Dashboard" : "Join CodeVerse"} →</Link></div></div></div></section>

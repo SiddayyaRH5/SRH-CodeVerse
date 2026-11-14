@@ -1,17 +1,41 @@
 
 import { useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { getProblems } from "../../api/problemApi"
 import DifficultyBadge from "../../components/common/DifficultyBadge"
 import { cachedFetch } from "../../utils/cache"
 import { useAuth } from "../../context/AuthContext"
 import { isBookmarked, toggleBookmark } from "../../utils/srhStudy"
 
+const difficulties = ["EASY", "MEDIUM", "HARD"]
+
+const difficultyStyles = {
+  EASY: {
+    active: "border-emerald-400/70 bg-emerald-500/10 ring-1 ring-emerald-400/40",
+    text: "text-emerald-400",
+  },
+  MEDIUM: {
+    active: "border-amber-400/70 bg-amber-500/10 ring-1 ring-amber-400/40",
+    text: "text-amber-400",
+  },
+  HARD: {
+    active: "border-rose-400/70 bg-rose-500/10 ring-1 ring-rose-400/40",
+    text: "text-rose-400",
+  },
+}
+
+const normaliseDifficulty = (value) => {
+  const difficulty = String(value || "").toUpperCase()
+  return difficulties.includes(difficulty) ? difficulty : "ALL"
+}
+
 function Problems() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const difficultyFromUrl = normaliseDifficulty(searchParams.get("difficulty"))
   const [problems, setProblems] = useState([])
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
-  const [difficultyFilter, setDifficultyFilter] = useState("ALL")
+  const [difficultyFilter, setDifficultyFilter] = useState(difficultyFromUrl)
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [topicFilter, setTopicFilter] = useState("ALL")
   const [searchQuery, setSearchQuery] = useState("")
@@ -45,6 +69,10 @@ function Problems() {
     }
   }, [user?.username])
 
+  useEffect(() => {
+    setDifficultyFilter(difficultyFromUrl)
+  }, [difficultyFromUrl])
+
   const topics = useMemo(
     () => [
       "ALL",
@@ -55,7 +83,7 @@ function Problems() {
     [problems]
   )
 
-  const filtered = useMemo(() => {
+  const filteredByOtherFilters = useMemo(() => {
     const search = searchQuery.trim().toLowerCase()
 
     return problems
@@ -71,10 +99,6 @@ function Problems() {
           String(problem.problemNumber).includes(search) ||
           String(problem.title || "").toLowerCase().includes(search)
 
-        const matchesDifficulty =
-          difficultyFilter === "ALL" ||
-          String(problem.difficulty || "").toUpperCase() === difficultyFilter
-
         const matchesStatus =
           statusFilter === "ALL" ||
           (statusFilter === "SOLVED"
@@ -86,17 +110,57 @@ function Problems() {
 
         return (
           matchesSearch &&
-          matchesDifficulty &&
           matchesStatus &&
           matchesTopic
         )
       })
-  }, [problems, searchQuery, difficultyFilter, statusFilter, topicFilter])
+  }, [problems, searchQuery, statusFilter, topicFilter])
+
+  const filtered = useMemo(
+    () =>
+      filteredByOtherFilters.filter(
+        (problem) =>
+          difficultyFilter === "ALL" ||
+          String(problem.difficulty || "").toUpperCase() === difficultyFilter
+      ),
+    [filteredByOtherFilters, difficultyFilter]
+  )
+
+  const difficultyCounts = useMemo(
+    () =>
+      difficulties.reduce(
+        (counts, difficulty) => ({
+          ...counts,
+          [difficulty]: filteredByOtherFilters.filter(
+            (problem) =>
+              String(problem.difficulty || "").toUpperCase() === difficulty
+          ).length,
+        }),
+        {}
+      ),
+    [filteredByOtherFilters]
+  )
 
   const solvedCount = problems.filter((problem) => problem.solved).length
 
+  const setDifficulty = (difficulty) => {
+    const nextDifficulty =
+      difficulty === "ALL" || difficultyFilter === difficulty
+        ? "ALL"
+        : difficulty
+
+    setDifficultyFilter(nextDifficulty)
+    const nextSearchParams = new URLSearchParams(searchParams)
+    if (nextDifficulty === "ALL") {
+      nextSearchParams.delete("difficulty")
+    } else {
+      nextSearchParams.set("difficulty", nextDifficulty)
+    }
+    setSearchParams(nextSearchParams, { replace: true })
+  }
+
   const resetFilters = () => {
-    setDifficultyFilter("ALL")
+    setDifficulty("ALL")
     setStatusFilter("ALL")
     setTopicFilter("ALL")
     setSearchQuery("")
@@ -189,6 +253,50 @@ function Problems() {
         </div>
       </header>
 
+      <section
+        aria-label="Filter problems by difficulty"
+        className="mb-6 grid gap-3 sm:grid-cols-3"
+      >
+        {difficulties.map((difficulty) => {
+          const active = difficultyFilter === difficulty
+          const count = difficultyCounts[difficulty] || 0
+
+          return (
+            <button
+              key={difficulty}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setDifficulty(difficulty)}
+              className={`rounded-2xl border p-5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+                active
+                  ? difficultyStyles[difficulty].active
+                  : "border-[var(--color-border)] bg-[var(--color-bg-secondary)] hover:border-violet-500/50 hover:bg-[var(--color-bg-tertiary)]"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span
+                  className={`text-sm font-black ${difficultyStyles[difficulty].text}`}
+                >
+                  {difficulty.charAt(0) + difficulty.slice(1).toLowerCase()}
+                </span>
+                {active && (
+                  <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-primary)]">
+                    Selected
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-2xl font-black text-[var(--color-text-primary)]">
+                {count}
+              </p>
+              <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                {count === 1 ? "problem" : "problems"}
+                {active ? " shown — click to show all" : " available"}
+              </p>
+            </button>
+          )
+        })}
+      </section>
+
       {/* Search and filters */}
       <section className="mb-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4 sm:p-5">
         <label
@@ -217,12 +325,12 @@ function Problems() {
             DIFFICULTY
           </p>
           <div className="flex flex-wrap gap-2">
-            {["ALL", "EASY", "MEDIUM", "HARD"].map((difficulty) => (
+            {["ALL", ...difficulties].map((difficulty) => (
               <button
                 key={difficulty}
                 type="button"
                 aria-pressed={difficultyFilter === difficulty}
-                onClick={() => setDifficultyFilter(difficulty)}
+                onClick={() => setDifficulty(difficulty)}
                 className={filterButton(difficultyFilter === difficulty)}
               >
                 {difficulty === "ALL" ? "All difficulties" : difficulty}
