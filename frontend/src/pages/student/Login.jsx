@@ -284,7 +284,7 @@ function Login() {
               <button
                 type="button"
                 disabled
-                title="Google sign-in is not connected yet"
+                title="Google and GitHub sign-in coming soon"
                 className="cv-secondary-btn !py-3 opacity-70"
               >
                 <span className="mr-2 font-bold">G</span>
@@ -294,13 +294,17 @@ function Login() {
               <button
                 type="button"
                 disabled
-                title="GitHub sign-in is not connected yet"
+                title="Google and GitHub sign-in coming soon"
                 className="cv-secondary-btn !py-3 opacity-70"
               >
                 <span className="mr-2 font-bold">●</span>
                 Continue with GitHub
               </button>
             </div>
+
+            <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
+              Google and GitHub sign-in coming soon.
+            </p>
 
             <p className="mt-7 text-center text-xs text-[var(--cv-muted)]">
               Don&apos;t have an account?{" "}

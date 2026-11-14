@@ -41,6 +41,33 @@ function Register() {
             <div><div className="relative"><input name="password" type={showPassword ? "text" : "password"} placeholder="Create a password" value={form.password} onChange={(e)=>setForm({...form,password:e.target.value})} className="cv-input pr-11" minLength={6} required /><button type="button" onClick={()=>setShowPassword(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--cv-subtle)]">{showPassword ? "◉" : "◌"}</button></div>{strength && <div className="flex items-center gap-2 mt-2"><div className="h-1.5 flex-1 rounded-full bg-[var(--cv-surface-2)] overflow-hidden"><div className={`h-full ${strength === "Strong" ? "w-full" : strength === "Good" ? "w-2/3" : "w-1/3"} bg-gradient-to-r from-violet-500 to-cyan-400 rounded-full transition-all`}/></div><span className="text-[10px] text-[var(--cv-muted)]">{strength}</span></div>}</div>
             <button disabled={loading} className="cv-primary-btn w-full !py-3.5 disabled:opacity-60">{loading ? "Creating account..." : "Create Account"} →</button>
           </form>
+          {/* Social sign-in buttons: temporarily disabled until backend OAuth is ready */}
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              disabled
+              title="Google and GitHub sign-in coming soon"
+              className="cv-secondary-btn !py-3 opacity-70"
+            >
+              <span className="mr-2 font-bold">G</span>
+              Continue with Google
+            </button>
+
+            <button
+              type="button"
+              disabled
+              title="Google and GitHub sign-in coming soon"
+              className="cv-secondary-btn !py-3 opacity-70"
+            >
+              <span className="mr-2 font-bold">●</span>
+              Continue with GitHub
+            </button>
+          </div>
+
+          <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
+            Google and GitHub sign-in coming soon.
+          </p>
+
           <p className="text-[11px] leading-5 text-[var(--cv-muted)] mt-5">By creating an account, you agree to use CodeVerse responsibly and respect the community.</p>
         </div>
       </section>
