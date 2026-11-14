@@ -42,8 +42,8 @@ class AnalyticsServiceTest {
             case "countDistinctSolvedProblems" -> 2L;
             case "findDistinctAcceptedSubmissionDatesByStudent" -> acceptedDates;
             case "countSubmissionsByDayForStudent" -> List.of(
-                    new Object[] { today.toString(), 3L },
-                    new Object[] { today.minusDays(1).toString(), 1L });
+                    new Object[] { 3L, java.sql.Date.valueOf(today) },
+                    new Object[] { 1L, java.sql.Date.valueOf(today.minusDays(1)) });
             case "findDistinctSolvedProblemIds" -> List.of(1L, 3L);
             default -> null;
         });

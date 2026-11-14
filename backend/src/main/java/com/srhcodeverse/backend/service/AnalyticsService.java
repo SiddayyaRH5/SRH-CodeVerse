@@ -103,7 +103,9 @@ public class AnalyticsService {
         Map<String, Long> countsByDate = submissionRepository
                 .countSubmissionsByDayForStudent(user, startDate.atStartOfDay())
                 .stream()
-                .collect(Collectors.toMap(row -> row[0].toString(), row -> (Long) row[1]));
+                .collect(Collectors.toMap(
+                        row -> toLocalDate(row[1]).toString(),
+                        row -> toLong(row[0])));
 
         List<DayCount> activity = new ArrayList<>();
         for (int i = 13; i >= 0; i--) {
@@ -111,6 +113,13 @@ public class AnalyticsService {
             activity.add(DayCount.builder().date(date).count(countsByDate.getOrDefault(date, 0L)).build());
         }
         return activity;
+    }
+
+    private long toLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        throw new IllegalStateException("Unsupported submission count value: " + value);
     }
 
     private List<DifficultyMastery> getDifficultyMastery(Set<Long> solvedProblemIds) {

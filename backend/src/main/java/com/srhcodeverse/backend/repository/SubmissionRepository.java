@@ -53,6 +53,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     List<Object[]> countSubmissionsByDay(
             @Param("since") LocalDateTime since);
 
+    // Object[] columns are ordered exactly as SELECT: count first, JDBC date second.
     @Query("SELECT COUNT(s), FUNCTION('DATE', s.submittedAt) " +
            "FROM Submission s WHERE s.student = :student " +
            "AND s.submittedAt >= :since " +
