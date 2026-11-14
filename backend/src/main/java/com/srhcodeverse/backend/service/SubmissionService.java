@@ -234,6 +234,7 @@ public class SubmissionService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public List<SubmissionHistoryResponse> getMySubmissions(String username) {
         return submissionRepository
                 .findByStudentUsernameOrderBySubmittedAtDesc(username)
