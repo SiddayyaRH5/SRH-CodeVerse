@@ -1,7 +1,6 @@
 package com.srhcodeverse.backend.service;
 
 import com.srhcodeverse.backend.entity.Problem;
-import com.srhcodeverse.backend.entity.Submission;
 import com.srhcodeverse.backend.entity.User;
 import com.srhcodeverse.backend.repository.ProblemRepository;
 import com.srhcodeverse.backend.repository.SubmissionRepository;
@@ -10,7 +9,6 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,8 +20,7 @@ class AnalyticsServiceTest {
     void calculatesPersonalAnalyticsFromAcceptedSubmissionsOnly() {
         LocalDate today = LocalDate.now();
         User user = User.builder().id(11L).username("student").build();
-        List<Submission> accepted = List.of(
-                submission(today), submission(today.minusDays(1)), submission(today.minusDays(4)));
+        List<Object> acceptedDates = List.of(today, today.minusDays(1), today.minusDays(4));
 
         UserRepository userRepository = repository(UserRepository.class, (method, args) ->
                 method.getName().equals("findByUsername") ? Optional.of(user) : null);
@@ -38,7 +35,7 @@ class AnalyticsServiceTest {
         });
         SubmissionRepository submissionRepository = repository(SubmissionRepository.class, (method, args) -> switch (method.getName()) {
             case "countDistinctSolvedProblems" -> 2L;
-            case "findByStudentAndStatus" -> accepted;
+            case "findDistinctAcceptedSubmissionDatesByStudent" -> acceptedDates;
             case "countSubmissionsByDayForStudent" -> List.of(
                     new Object[] { today.toString(), 3L },
                     new Object[] { today.minusDays(1).toString(), 1L });
@@ -63,13 +60,6 @@ class AnalyticsServiceTest {
                 .map(item -> item.solved()).toList());
         assertEquals(List.of(2L, 2L, 1L), analytics.getDifficultyMastery().stream()
                 .map(item -> item.total()).toList());
-    }
-
-    private Submission submission(LocalDate date) {
-        return Submission.builder()
-                .status(Submission.Status.PASSED)
-                .submittedAt(LocalDateTime.of(date, java.time.LocalTime.NOON))
-                .build();
     }
 
     @SuppressWarnings("unchecked")

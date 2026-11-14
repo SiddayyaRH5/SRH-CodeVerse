@@ -3,7 +3,6 @@ package com.srhcodeverse.backend.service;
 import com.srhcodeverse.backend.dto.*;
 import com.srhcodeverse.backend.entity.Problem;
 import com.srhcodeverse.backend.entity.Role;
-import com.srhcodeverse.backend.entity.Submission;
 import com.srhcodeverse.backend.entity.User;
 import com.srhcodeverse.backend.repository.*;
 import org.springframework.stereotype.Service;
@@ -45,12 +44,10 @@ public class AnalyticsService {
 
         long solved = submissionRepository.countDistinctSolvedProblems(user);
         long totalAvailable = problemRepository.count();
-        List<Submission> accepted = submissionRepository
-                .findByStudentAndStatus(user, Submission.Status.PASSED);
-        Set<LocalDate> acceptedDays = accepted.stream()
-                .map(Submission::getSubmittedAt)
-                .filter(Objects::nonNull)
-                .map(LocalDateTime::toLocalDate)
+        Set<LocalDate> acceptedDays = submissionRepository
+                .findDistinctAcceptedSubmissionDatesByStudent(user)
+                .stream()
+                .map(value -> LocalDate.parse(value.toString()))
                 .collect(Collectors.toSet());
 
         return PersonalAnalyticsResponse.builder()

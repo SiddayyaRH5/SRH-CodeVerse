@@ -32,6 +32,10 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     List<Submission> findByStudentAndStatus(
             User student, Submission.Status status);
 
+    @Query("SELECT DISTINCT FUNCTION('DATE', s.submittedAt) FROM Submission s " +
+           "WHERE s.student = :student AND s.status = 'PASSED' AND s.submittedAt IS NOT NULL")
+    List<Object> findDistinctAcceptedSubmissionDatesByStudent(@Param("student") User student);
+
     boolean existsByStudent_UsernameAndProblem_IdAndStatusAndSubmittedAtAfter(
             String username, Long problemId, Submission.Status status,
             LocalDateTime submittedAt);
