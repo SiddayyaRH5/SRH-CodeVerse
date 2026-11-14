@@ -57,6 +57,7 @@ public class AnalyticsService {
                 .totalAvailableProblems(totalAvailable)
                 .solveCoverage(totalAvailable == 0 ? 0 : (solved * 100.0) / totalAvailable)
                 .currentStreak(calculateCurrentStreak(acceptedDays, LocalDate.now()))
+                .longestStreak(calculateLongestStreak(acceptedDays))
                 .activeDays(acceptedDays.size())
                 .activity(getActivityForUser(user, LocalDate.now()))
                 .difficultyMastery(getDifficultyMastery(solvedProblemIds))
@@ -71,6 +72,29 @@ public class AnalyticsService {
             cursor = cursor.minusDays(1);
         }
         return streak;
+    }
+
+    private int calculateLongestStreak(Set<LocalDate> acceptedDays) {
+        if (acceptedDays.isEmpty()) {
+            return 0;
+        }
+        List<LocalDate> sortedDates = new ArrayList<>(acceptedDays);
+        Collections.sort(sortedDates);
+        int longest = 1;
+        int current = 1;
+        for (int i = 1; i < sortedDates.size(); i++) {
+            LocalDate prev = sortedDates.get(i - 1);
+            LocalDate curr = sortedDates.get(i);
+            if (curr.equals(prev.plusDays(1))) {
+                current++;
+                if (current > longest) {
+                    longest = current;
+                }
+            } else {
+                current = 1;
+            }
+        }
+        return longest;
     }
 
     private LocalDate toLocalDate(Object value) {

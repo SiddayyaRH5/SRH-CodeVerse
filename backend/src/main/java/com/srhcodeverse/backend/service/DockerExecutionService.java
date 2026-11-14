@@ -399,7 +399,7 @@ public class DockerExecutionService {
             List<DockerResult> results = new ArrayList<>();
             for (int i = 0; i < inputs.size(); i++) {
                 List<String> command = switch (lang) {
-                    case "python" -> List.of("python3", "Main.py");
+                    case "python" -> List.of(hostPythonCommand(), "Main.py");
                     case "javascript" -> List.of("node", "Main.js");
                     default -> List.of("java", "-Xms16m", "-Xmx64m", "-cp", ".", "Main");
                 };
@@ -434,5 +434,11 @@ public class DockerExecutionService {
         } finally {
             if (tempDir != null) deleteDirectory(tempDir);
         }
+    }
+
+    private String hostPythonCommand() {
+        return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win")
+                ? "python"
+                : "python3";
     }
 }

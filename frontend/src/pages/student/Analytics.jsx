@@ -34,8 +34,14 @@ export default function Analytics() {
     [analytics]
   )
   const difficulty = analytics?.difficultyMastery || []
-  const solveCoverage = Math.round(analytics?.solveCoverage || 0)
+  const rawSolveCoverage = Number(analytics?.solveCoverage)
+  const solveCoverage = analytics?.solveCoverage !== null &&
+    analytics?.solveCoverage !== undefined &&
+    Number.isFinite(rawSolveCoverage)
+    ? Number(rawSolveCoverage.toFixed(1))
+    : 0
   const activeDays = analytics?.activeDays || 0
+  const longestStreak = analytics?.longestStreak || 0
 
   if (loading && !analytics) {
     return <div className="cv-page"><p className="text-[var(--cv-muted)]">Building your developer analytics...</p></div>
@@ -52,9 +58,19 @@ export default function Analytics() {
       {[
         ["Problems Solved", analytics?.problemsSolved ?? 0, "✓"],
         ["Current Streak", `${analytics?.currentStreak ?? 0} days`, "🔥"],
+        ["Longest Streak", `${longestStreak} days`, "💎"],
         ["Solve Coverage", `${solveCoverage}%`, "◈"],
         ["Active Days", activeDays, "↗"],
-      ].map(([label, value, icon]) => <div key={label} className="cv-stat-card rounded-2xl p-5"><div className="flex justify-between"><span className="w-10 h-10 rounded-xl grid place-items-center bg-violet-500/10 text-violet-500">{icon}</span><span className="text-xs text-emerald-500 font-bold">LIVE</span></div><p className="text-xs text-[var(--cv-muted)] mt-6">{label}</p><p className="text-3xl font-black mt-1">{value}</p></div>)}
+      ].map(([label, value, icon]) => (
+        <div key={label} className="cv-stat-card rounded-2xl p-5">
+          <div className="flex justify-between">
+            <span className="w-10 h-10 rounded-xl grid place-items-center bg-violet-500/10 text-violet-500">{icon}</span>
+            <span className="text-xs text-emerald-500 font-bold">LIVE</span>
+          </div>
+          <p className="text-xs text-[var(--cv-muted)] mt-6">{label}</p>
+          <p className="text-3xl font-black mt-1">{value}</p>
+        </div>
+      ))}
     </div>
     <div className="grid xl:grid-cols-[1.35fr_.65fr] gap-5 mt-5">
       <section className="cv-panel"><div className="flex justify-between items-end"><div><p className="text-xs font-bold text-violet-500">LAST 14 DAYS</p><h2 className="text-xl font-black mt-1">Coding Activity</h2></div><span className="text-xs text-[var(--cv-muted)]">Your actual submissions</span></div><div className="h-72 mt-6"><ResponsiveContainer width="100%" height="100%"><AreaChart data={last14}><defs><linearGradient id="activityFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#7c3aed" stopOpacity={0.35}/><stop offset="95%" stopColor="#7c3aed" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="var(--cv-border)"/><XAxis dataKey="date" tick={{fill:'var(--cv-muted)',fontSize:11}}/><YAxis allowDecimals={false} tick={{fill:'var(--cv-muted)',fontSize:11}}/><Tooltip contentStyle={{background:'var(--cv-surface)',border:'1px solid var(--cv-border)',borderRadius:12,color:'var(--cv-text)'}}/><Area type="monotone" dataKey="submissions" stroke="#7c3aed" fill="url(#activityFill)" strokeWidth={3}/></AreaChart></ResponsiveContainer></div></section>

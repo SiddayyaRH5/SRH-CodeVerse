@@ -14,6 +14,7 @@ public class PersonalAnalyticsResponse {
     private long totalAvailableProblems;
     private double solveCoverage;
     private int currentStreak;
+    private int longestStreak;
     private long activeDays;
     private List<DayCount> activity;
     private List<DifficultyMastery> difficultyMastery;
