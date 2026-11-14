@@ -139,7 +139,7 @@ public class ExecutionService {
                     : expectedOutputs.get(i).trim();
 
             results.add(new TestResult(
-                    actualOutput.equals(expectedOutput),
+                    normalizeOutput(actualOutput).equals(normalizeOutput(expectedOutput)),
                     actualOutput,
                     null));
         }
@@ -149,6 +149,35 @@ public class ExecutionService {
                 null,
                 results,
                 System.currentTimeMillis() - start);
+    }
+
+    /**
+     * Examples commonly use JSON-like array formatting. Whitespace outside quoted
+     * values is presentation only, but whitespace inside a String result is data.
+     */
+    static String normalizeOutput(String output) {
+        if (output == null) {
+            return "";
+        }
+
+        StringBuilder normalized = new StringBuilder();
+        boolean quoted = false;
+        boolean escaped = false;
+        for (char c : output.trim().toCharArray()) {
+            if (quoted && escaped) {
+                normalized.append(c);
+                escaped = false;
+            } else if (quoted && c == '\\') {
+                normalized.append(c);
+                escaped = true;
+            } else if (c == '"') {
+                normalized.append(c);
+                quoted = !quoted;
+            } else if (quoted || !Character.isWhitespace(c)) {
+                normalized.append(c);
+            }
+        }
+        return normalized.toString();
     }
 
     // ===================== MODE DETECTION =====================
@@ -202,13 +231,21 @@ public class ExecutionService {
         StringBuilder src = new StringBuilder();
 
         src.append("import java.io.*;\n");
+        src.append("import java.util.*;\n");
         src.append("import java.lang.reflect.*;\n\n");
         src.append("public class Main {\n\n");
+        // These are only used when a bare LeetCode-style method references the
+        // conventional types. Class-mode keeps the student's own definitions.
+        src.append("    static class ListNode { int val; ListNode next; ListNode() {} ListNode(int val) { this.val = val; } ListNode(int val, ListNode next) { this.val = val; this.next = next; } }\n");
+        src.append("    static class TreeNode { int val; TreeNode left; TreeNode right; TreeNode() {} TreeNode(int val) { this.val = val; } TreeNode(int val, TreeNode left, TreeNode right) { this.val = val; this.left = left; this.right = right; } }\n\n");
         src.append(studentCode);
         src.append("\n\n");
 
         src.append("    public static void main(String[] args) throws Exception {\n");
         src.append("        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n");
+        src.append("        String __input = br.lines().collect(java.util.stream.Collectors.joining(\"\\n\"));\n");
+        src.append("        List<String> __arguments = readArguments(__input, \"").append(methodName)
+                .append("\", ").append(params.size()).append(");\n");
         src.append("        Main solution = new Main();\n\n");
 
         List<String> argNames = new ArrayList<>();
@@ -217,7 +254,7 @@ public class ExecutionService {
             String name = params.get(i)[1];
             argNames.add(name);
 
-            src.append("        String __line").append(i).append(" = br.readLine();\n");
+            src.append("        String __line").append(i).append(" = __arguments.get(").append(i).append(");\n");
             src.append(buildParseLine(type, name, "__line" + i));
         }
         src.append("\n");
@@ -249,6 +286,7 @@ public class ExecutionService {
         }
 
         src.append("    }\n\n");
+        src.append(buildMethodModeHelpers());
         src.append(buildSharedHelpers());
         src.append("}\n");
 
@@ -269,6 +307,14 @@ public class ExecutionService {
                 return "        long[] " + varName + " = parseLongArray(" + lineVar + ");\n";
             case "double[]":
                 return "        double[] " + varName + " = parseDoubleArray(" + lineVar + ");\n";
+            case "int[][]":
+                return "        int[][] " + varName + " = parseIntMatrix(" + lineVar + ");\n";
+            case "String[][]":
+                return "        String[][] " + varName + " = parseStringMatrix(" + lineVar + ");\n";
+            case "ListNode":
+                return "        ListNode " + varName + " = parseListNode(" + lineVar + ");\n";
+            case "TreeNode":
+                return "        TreeNode " + varName + " = parseTreeNode(" + lineVar + ");\n";
             case "int":
                 return "        int " + varName + " = Integer.parseInt(" + lineVar + ".trim());\n";
             case "long":
@@ -300,6 +346,11 @@ public class ExecutionService {
                 return "        System.out.println(formatLongArray(" + varName + "));\n";
             case "double[]":
                 return "        System.out.println(formatDoubleArray(" + varName + "));\n";
+            case "int[][]":
+            case "String[][]":
+            case "ListNode":
+            case "TreeNode":
+                return "        System.out.println(formatValue(" + varName + "));\n";
             case "int":
             case "long":
             case "double":
@@ -311,6 +362,90 @@ public class ExecutionService {
             default:
                 throw new IllegalArgumentException("Unsupported return type: " + type);
         }
+    }
+
+    private String buildMethodModeHelpers() {
+        return """
+                    private static List<String> readArguments(String raw, String methodName, int expectedCount) {
+                        raw = raw == null ? "" : raw.trim();
+                        if (raw.startsWith(methodName + "(") && raw.endsWith(")")) {
+                            return splitDelimited(raw.substring(methodName.length() + 1, raw.length() - 1));
+                        }
+                        String[] lines = raw.split("\\\\R", -1);
+                        if (lines.length == expectedCount) return Arrays.asList(lines);
+                        List<String> commaSeparated = splitDelimited(raw);
+                        if (commaSeparated.size() == expectedCount) return commaSeparated;
+                        if (expectedCount == 1) return List.of(raw);
+                        throw new IllegalArgumentException("Expected " + expectedCount + " arguments for " + methodName);
+                    }
+
+                    private static List<String> splitDelimited(String text) {
+                        List<String> values = new ArrayList<>();
+                        if (text.trim().isEmpty()) return values;
+                        int depth = 0;
+                        boolean quoted = false;
+                        boolean escaped = false;
+                        StringBuilder current = new StringBuilder();
+                        for (char c : text.toCharArray()) {
+                            if (quoted && escaped) { escaped = false; current.append(c); continue; }
+                            if (quoted && c == '\\\\') { escaped = true; current.append(c); continue; }
+                            if (c == '"') quoted = !quoted;
+                            if (!quoted && (c == '[' || c == '(')) depth++;
+                            if (!quoted && (c == ']' || c == ')')) depth--;
+                            if (c == ',' && depth == 0 && !quoted) { values.add(current.toString().trim()); current.setLength(0); }
+                            else current.append(c);
+                        }
+                        values.add(current.toString().trim());
+                        return values;
+                    }
+
+                    private static int[][] parseIntMatrix(String raw) {
+                        if (raw.trim().equals("null")) return null;
+                        List<String> rows = splitDelimited(stripBrackets(raw));
+                        int[][] matrix = new int[rows.size()][];
+                        for (int i = 0; i < rows.size(); i++) matrix[i] = parseIntArray(rows.get(i));
+                        return matrix;
+                    }
+
+                    private static String[][] parseStringMatrix(String raw) {
+                        if (raw.trim().equals("null")) return null;
+                        List<String> rows = splitDelimited(stripBrackets(raw));
+                        String[][] matrix = new String[rows.size()][];
+                        for (int i = 0; i < rows.size(); i++) matrix[i] = parseStringArray(rows.get(i));
+                        return matrix;
+                    }
+
+                    private static ListNode parseListNode(String raw) {
+                        if (raw.trim().equals("null")) return null;
+                        ListNode dummy = new ListNode(0), tail = dummy;
+                        for (int value : parseIntArray(raw)) { tail.next = new ListNode(value); tail = tail.next; }
+                        return dummy.next;
+                    }
+
+                    private static TreeNode parseTreeNode(String raw) {
+                        if (raw.trim().equals("null") || stripBrackets(raw).isEmpty()) return null;
+                        List<String> values = splitDelimited(stripBrackets(raw));
+                        if (values.isEmpty() || values.get(0).trim().equals("null")) return null;
+                        TreeNode root = new TreeNode(Integer.parseInt(values.get(0).trim()));
+                        Queue<TreeNode> queue = new ArrayDeque<>(); queue.add(root); int index = 1;
+                        while (!queue.isEmpty() && index < values.size()) {
+                            TreeNode parent = queue.remove();
+                            String left = values.get(index++).trim();
+                            if (!left.equals("null")) { parent.left = new TreeNode(Integer.parseInt(left)); queue.add(parent.left); }
+                            if (index < values.size()) { String right = values.get(index++).trim(); if (!right.equals("null")) { parent.right = new TreeNode(Integer.parseInt(right)); queue.add(parent.right); } }
+                        }
+                        return root;
+                    }
+
+                    private static String formatValue(Object value) {
+                        if (value == null) return "null";
+                        if (value instanceof ListNode) { List<String> values = new ArrayList<>(); for (ListNode n = (ListNode) value; n != null; n = n.next) values.add(String.valueOf(n.val)); return "[" + String.join(",", values) + "]"; }
+                        if (value instanceof TreeNode) { List<String> values = new ArrayList<>(); Queue<TreeNode> queue = new LinkedList<>(); queue.add((TreeNode) value); while (!queue.isEmpty()) { TreeNode n = queue.remove(); if (n == null) values.add("null"); else { values.add(String.valueOf(n.val)); queue.add(n.left); queue.add(n.right); } } while (!values.isEmpty() && values.get(values.size() - 1).equals("null")) values.remove(values.size() - 1); return "[" + String.join(",", values) + "]"; }
+                        if (value.getClass().isArray()) { int length = java.lang.reflect.Array.getLength(value); List<String> values = new ArrayList<>(); for (int i = 0; i < length; i++) values.add(formatValue(java.lang.reflect.Array.get(value, i))); return "[" + String.join(",", values) + "]"; }
+                        if (value instanceof String || value instanceof Character) return "\\\"" + value + "\\\"";
+                        return String.valueOf(value);
+                    }
+                """;
     }
 
     // ===================== CLASS-MODE WRAPPER (stateful, multi-call,
@@ -345,6 +480,18 @@ public class ExecutionService {
             src.append("\"").append(allClassNames.get(k)).append("\"");
         }
         src.append("};\n\n");
+
+        // A conventional LeetCode submission often declares Solution plus helper
+        // node classes. Treat one function call as method mode, while retaining the
+        // original comma-separated class-mode protocol for design problems.
+        src.append("        if (isSingleFunctionCall(line)) {\n");
+        src.append("            int open = line.indexOf('(');\n");
+        src.append("            String methodName = line.substring(0, open).trim();\n");
+        src.append("            String inner = line.substring(open + 1, line.lastIndexOf(')')).trim();\n");
+        src.append("            List<String> functionArgs = inner.isEmpty() ? new ArrayList<>() : splitTopLevel(inner);\n");
+        src.append("            System.out.println(formatValue(invokeFunction(knownClasses, methodName, functionArgs)));\n");
+        src.append("            return;\n");
+        src.append("        }\n\n");
 
         src.append("        int i = 0;\n");
         src.append("        String selectedClassName = \"").append(className).append("\";\n");
@@ -406,12 +553,15 @@ public class ExecutionService {
 
         sb.append("    private static List<String> splitTopLevel(String s) {\n")
                 .append("        List<String> result = new ArrayList<>();\n")
-                .append("        int depth = 0;\n")
+                .append("        int depth = 0; boolean quoted = false; boolean escaped = false;\n")
                 .append("        StringBuilder current = new StringBuilder();\n")
                 .append("        for (char c : s.toCharArray()) {\n")
-                .append("            if (c == '(' || c == '[') depth++;\n")
-                .append("            if (c == ')' || c == ']') depth--;\n")
-                .append("            if (c == ',' && depth == 0) {\n")
+                .append("            if (quoted && escaped) { escaped = false; current.append(c); continue; }\n")
+                .append("            if (quoted && c == '\\\\') { escaped = true; current.append(c); continue; }\n")
+                .append("            if (c == '\"') quoted = !quoted;\n")
+                .append("            if (!quoted && (c == '(' || c == '[' || c == '{')) depth++;\n")
+                .append("            if (!quoted && (c == ')' || c == ']' || c == '}')) depth--;\n")
+                .append("            if (c == ',' && depth == 0 && !quoted) {\n")
                 .append("                result.add(current.toString().trim());\n")
                 .append("                current = new StringBuilder();\n")
                 .append("            } else {\n")
@@ -427,6 +577,24 @@ public class ExecutionService {
 
         sb.append("    private static boolean looksLikeCall(String token) {\n")
                 .append("        return token.trim().matches(\"\\\\w+\\\\(.*\\\\)\");\n")
+                .append("    }\n\n");
+
+        sb.append("    private static boolean isSingleFunctionCall(String line) {\n")
+                .append("        List<String> calls = splitTopLevel(line);\n")
+                .append("        return calls.size() == 1 && looksLikeCall(calls.get(0));\n")
+                .append("    }\n\n");
+
+        sb.append("    private static Object invokeFunction(String[] classNames, String methodName, List<String> rawArgs) throws Exception {\n")
+                .append("        Exception lastFailure = null;\n")
+                .append("        for (String className : classNames) {\n")
+                .append("            try {\n")
+                .append("                Class<?> clazz = Class.forName(className);\n")
+                .append("                boolean hasMethod = false;\n")
+                .append("                for (Method method : clazz.getDeclaredMethods()) if (method.getName().equals(methodName) && method.getParameterCount() == rawArgs.size()) { hasMethod = true; break; }\n")
+                .append("                if (hasMethod) return invokeMethod(construct(clazz, new ArrayList<>()), methodName, rawArgs);\n")
+                .append("            } catch (Exception e) { lastFailure = e; }\n")
+                .append("        }\n")
+                .append("        throw new RuntimeException(\"No class exposes matching function: \" + methodName, lastFailure);\n")
                 .append("    }\n\n");
 
         sb.append("    private static Object construct(Class<?> clazz, List<String> rawArgs) throws Exception {\n")
@@ -480,18 +648,14 @@ public class ExecutionService {
 
         sb.append("    private static Object parseValue(String raw, Class<?> type) {\n")
                 .append("        raw = raw.trim();\n")
+                .append("        if (raw.equals(\"null\") && !type.isPrimitive()) return null;\n")
                 .append("        if (type.isArray()) {\n")
                 .append("            Class<?> comp = type.getComponentType();\n")
                 .append("            String inner = stripBrackets(raw);\n")
-                .append("            String[] parts = inner.isEmpty() ? new String[0] : inner.split(\",\");\n")
-                .append("            int n = parts.length;\n")
-                .append("            if (comp == int.class) { int[] a = new int[n]; for (int k=0;k<n;k++) a[k]=Integer.parseInt(parts[k].trim()); return a; }\n")
-                .append("            if (comp == long.class) { long[] a = new long[n]; for (int k=0;k<n;k++) a[k]=Long.parseLong(parts[k].trim()); return a; }\n")
-                .append("            if (comp == double.class) { double[] a = new double[n]; for (int k=0;k<n;k++) a[k]=Double.parseDouble(parts[k].trim()); return a; }\n")
-                .append("            if (comp == boolean.class) { boolean[] a = new boolean[n]; for (int k=0;k<n;k++) a[k]=Boolean.parseBoolean(parts[k].trim()); return a; }\n")
-                .append("            if (comp == char.class) { char[] a = new char[n]; for (int k=0;k<n;k++) a[k]=parseCharScalar(parts[k]); return a; }\n")
-                .append("            if (comp == String.class) { String[] a = new String[n]; for (int k=0;k<n;k++) a[k]=parseStringScalar(parts[k]); return a; }\n")
-                .append("            throw new RuntimeException(\"Unsupported array component type: \" + comp);\n")
+                .append("            List<String> parts = inner.isEmpty() ? new ArrayList<>() : splitTopLevel(inner);\n")
+                .append("            Object array = Array.newInstance(comp, parts.size());\n")
+                .append("            for (int k = 0; k < parts.size(); k++) Array.set(array, k, parseValue(parts.get(k), comp));\n")
+                .append("            return array;\n")
                 .append("        }\n")
                 .append("        if (type == int.class || type == Integer.class) return Integer.parseInt(raw);\n")
                 .append("        if (type == long.class || type == Long.class) return Long.parseLong(raw);\n")
@@ -499,21 +663,42 @@ public class ExecutionService {
                 .append("        if (type == boolean.class || type == Boolean.class) return Boolean.parseBoolean(raw);\n")
                 .append("        if (type == char.class || type == Character.class) return parseCharScalar(raw);\n")
                 .append("        if (type == String.class) return parseStringScalar(raw);\n")
+                .append("        if (type.getSimpleName().equals(\"ListNode\")) return parseListNode(raw, type);\n")
+                .append("        if (type.getSimpleName().equals(\"TreeNode\")) return parseTreeNode(raw, type);\n")
                 .append("        throw new RuntimeException(\"Unsupported parameter type: \" + type.getName());\n")
                 .append("    }\n\n");
 
         sb.append("    private static String formatValue(Object val) {\n")
                 .append("        if (val == null) return \"null\";\n")
-                .append("        if (val instanceof int[]) return formatIntArray((int[]) val);\n")
-                .append("        if (val instanceof long[]) return formatLongArray((long[]) val);\n")
-                .append("        if (val instanceof double[]) return formatDoubleArray((double[]) val);\n")
-                .append("        if (val instanceof boolean[]) return formatBooleanArray((boolean[]) val);\n")
-                .append("        if (val instanceof char[]) return formatCharArray((char[]) val);\n")
-                .append("        if (val instanceof String[]) return formatStringArray((String[]) val);\n")
+                .append("        if (val.getClass().isArray()) { List<String> values = new ArrayList<>(); int n = Array.getLength(val); for (int i = 0; i < n; i++) values.add(formatValue(Array.get(val, i))); return \"[\" + String.join(\",\", values) + \"]\"; }\n")
+                .append("        if (val.getClass().getSimpleName().equals(\"ListNode\")) return formatListNode(val);\n")
+                .append("        if (val.getClass().getSimpleName().equals(\"TreeNode\")) return formatTreeNode(val);\n")
                 .append("        if (val instanceof Character) return \"\\\"\" + val + \"\\\"\";\n")
                 .append("        if (val instanceof String) return \"\\\"\" + val + \"\\\"\";\n")
                 .append("        return String.valueOf(val);\n")
                 .append("    }\n\n");
+
+        sb.append("    private static Object parseListNode(String raw, Class<?> type) {\n")
+                .append("        if (raw.equals(\"null\")) return null;\n")
+                .append("        Object head = null, tail = null;\n")
+                .append("        for (String part : splitTopLevel(stripBrackets(raw))) { Object node = newNode(type, Integer.parseInt(part.trim())); if (head == null) head = node; else setField(tail, \"next\", node); tail = node; }\n")
+                .append("        return head;\n")
+                .append("    }\n\n")
+                .append("    private static Object parseTreeNode(String raw, Class<?> type) {\n")
+                .append("        if (raw.equals(\"null\") || stripBrackets(raw).isEmpty()) return null;\n")
+                .append("        List<String> values = splitTopLevel(stripBrackets(raw)); if (values.isEmpty() || values.get(0).trim().equals(\"null\")) return null;\n")
+                .append("        Object root = newNode(type, Integer.parseInt(values.get(0).trim())); Queue<Object> queue = new ArrayDeque<>(); queue.add(root); int index = 1;\n")
+                .append("        while (!queue.isEmpty() && index < values.size()) { Object parent = queue.remove(); String left = values.get(index++).trim(); if (!left.equals(\"null\")) { Object child = newNode(type, Integer.parseInt(left)); setField(parent, \"left\", child); queue.add(child); } if (index < values.size()) { String right = values.get(index++).trim(); if (!right.equals(\"null\")) { Object child = newNode(type, Integer.parseInt(right)); setField(parent, \"right\", child); queue.add(child); } } }\n")
+                .append("        return root;\n")
+                .append("    }\n\n")
+                .append("    private static Object newNode(Class<?> type, int value) {\n")
+                .append("        try { Constructor<?> ctor = type.getDeclaredConstructor(int.class); ctor.setAccessible(true); return ctor.newInstance(value); } catch (Exception ignored) {}\n")
+                .append("        try { Constructor<?> ctor = type.getDeclaredConstructor(); ctor.setAccessible(true); Object node = ctor.newInstance(); setField(node, \"val\", value); return node; } catch (Exception e) { throw new RuntimeException(\"Cannot construct \" + type.getName(), e); }\n")
+                .append("    }\n\n")
+                .append("    private static void setField(Object target, String name, Object value) { try { Field field = target.getClass().getDeclaredField(name); field.setAccessible(true); field.set(target, value); } catch (Exception e) { throw new RuntimeException(\"Missing node field: \" + name, e); } }\n")
+                .append("    private static Object getField(Object target, String name) { try { Field field = target.getClass().getDeclaredField(name); field.setAccessible(true); return field.get(target); } catch (Exception e) { throw new RuntimeException(\"Missing node field: \" + name, e); } }\n\n")
+                .append("    private static String formatListNode(Object node) { List<String> values = new ArrayList<>(); while (node != null) { values.add(String.valueOf(getField(node, \"val\"))); node = getField(node, \"next\"); } return \"[\" + String.join(\",\", values) + \"]\"; }\n")
+                .append("    private static String formatTreeNode(Object root) { List<String> values = new ArrayList<>(); Queue<Object> queue = new LinkedList<>(); queue.add(root); while (!queue.isEmpty()) { Object node = queue.remove(); if (node == null) values.add(\"null\"); else { values.add(String.valueOf(getField(node, \"val\"))); queue.add(getField(node, \"left\")); queue.add(getField(node, \"right\")); } } while (!values.isEmpty() && values.get(values.size() - 1).equals(\"null\")) values.remove(values.size() - 1); return \"[\" + String.join(\",\", values) + \"]\"; }\n\n");
 
         return sb.toString();
     }
@@ -532,57 +717,71 @@ public class ExecutionService {
                 .append("        return line.trim();\n")
                 .append("    }\n\n");
 
+        sb.append("    private static List<String> splitValues(String text) {\n")
+                .append("        List<String> values = new ArrayList<>(); if (text.trim().isEmpty()) return values;\n")
+                .append("        int depth = 0; boolean quoted = false; boolean escaped = false; StringBuilder current = new StringBuilder();\n")
+                .append("        for (char c : text.toCharArray()) {\n")
+                .append("            if (quoted && escaped) { escaped = false; current.append(c); continue; }\n")
+                .append("            if (quoted && c == '\\\\') { escaped = true; current.append(c); continue; }\n")
+                .append("            if (c == '\"') quoted = !quoted;\n")
+                .append("            if (!quoted && (c == '[' || c == '(' || c == '{')) depth++;\n")
+                .append("            if (!quoted && (c == ']' || c == ')' || c == '}')) depth--;\n")
+                .append("            if (c == ',' && depth == 0 && !quoted) { values.add(current.toString().trim()); current.setLength(0); } else current.append(c);\n")
+                .append("        }\n")
+                .append("        values.add(current.toString().trim()); return values;\n")
+                .append("    }\n\n");
+
         sb.append("    private static int[] parseIntArray(String line) {\n")
                 .append("        String inner = stripBrackets(line);\n")
                 .append("        if (inner.isEmpty()) return new int[0];\n")
-                .append("        String[] parts = inner.split(\",\");\n")
-                .append("        int[] result = new int[parts.length];\n")
-                .append("        for (int i = 0; i < parts.length; i++) result[i] = Integer.parseInt(parts[i].trim());\n")
+                .append("        List<String> parts = splitValues(inner);\n")
+                .append("        int[] result = new int[parts.size()];\n")
+                .append("        for (int i = 0; i < parts.size(); i++) result[i] = Integer.parseInt(parts.get(i).trim());\n")
                 .append("        return result;\n")
                 .append("    }\n\n");
 
         sb.append("    private static long[] parseLongArray(String line) {\n")
                 .append("        String inner = stripBrackets(line);\n")
                 .append("        if (inner.isEmpty()) return new long[0];\n")
-                .append("        String[] parts = inner.split(\",\");\n")
-                .append("        long[] result = new long[parts.length];\n")
-                .append("        for (int i = 0; i < parts.length; i++) result[i] = Long.parseLong(parts[i].trim());\n")
+                .append("        List<String> parts = splitValues(inner);\n")
+                .append("        long[] result = new long[parts.size()];\n")
+                .append("        for (int i = 0; i < parts.size(); i++) result[i] = Long.parseLong(parts.get(i).trim());\n")
                 .append("        return result;\n")
                 .append("    }\n\n");
 
         sb.append("    private static double[] parseDoubleArray(String line) {\n")
                 .append("        String inner = stripBrackets(line);\n")
                 .append("        if (inner.isEmpty()) return new double[0];\n")
-                .append("        String[] parts = inner.split(\",\");\n")
-                .append("        double[] result = new double[parts.length];\n")
-                .append("        for (int i = 0; i < parts.length; i++) result[i] = Double.parseDouble(parts[i].trim());\n")
+                .append("        List<String> parts = splitValues(inner);\n")
+                .append("        double[] result = new double[parts.size()];\n")
+                .append("        for (int i = 0; i < parts.size(); i++) result[i] = Double.parseDouble(parts.get(i).trim());\n")
                 .append("        return result;\n")
                 .append("    }\n\n");
 
         sb.append("    private static boolean[] parseBooleanArray(String line) {\n")
                 .append("        String inner = stripBrackets(line);\n")
                 .append("        if (inner.isEmpty()) return new boolean[0];\n")
-                .append("        String[] parts = inner.split(\",\");\n")
-                .append("        boolean[] result = new boolean[parts.length];\n")
-                .append("        for (int i = 0; i < parts.length; i++) result[i] = Boolean.parseBoolean(parts[i].trim());\n")
+                .append("        List<String> parts = splitValues(inner);\n")
+                .append("        boolean[] result = new boolean[parts.size()];\n")
+                .append("        for (int i = 0; i < parts.size(); i++) result[i] = Boolean.parseBoolean(parts.get(i).trim());\n")
                 .append("        return result;\n")
                 .append("    }\n\n");
 
         sb.append("    private static char[] parseCharArray(String line) {\n")
                 .append("        String inner = stripBrackets(line);\n")
                 .append("        if (inner.isEmpty()) return new char[0];\n")
-                .append("        String[] parts = inner.split(\",\");\n")
-                .append("        char[] result = new char[parts.length];\n")
-                .append("        for (int i = 0; i < parts.length; i++) result[i] = parseCharScalar(parts[i]);\n")
+                .append("        List<String> parts = splitValues(inner);\n")
+                .append("        char[] result = new char[parts.size()];\n")
+                .append("        for (int i = 0; i < parts.size(); i++) result[i] = parseCharScalar(parts.get(i));\n")
                 .append("        return result;\n")
                 .append("    }\n\n");
 
         sb.append("    private static String[] parseStringArray(String line) {\n")
                 .append("        String inner = stripBrackets(line);\n")
                 .append("        if (inner.isEmpty()) return new String[0];\n")
-                .append("        String[] parts = inner.split(\",\");\n")
-                .append("        String[] result = new String[parts.length];\n")
-                .append("        for (int i = 0; i < parts.length; i++) result[i] = parseStringScalar(parts[i]);\n")
+                .append("        List<String> parts = splitValues(inner);\n")
+                .append("        String[] result = new String[parts.size()];\n")
+                .append("        for (int i = 0; i < parts.size(); i++) result[i] = parseStringScalar(parts.get(i));\n")
                 .append("        return result;\n")
                 .append("    }\n\n");
 
