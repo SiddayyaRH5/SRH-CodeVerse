@@ -20,7 +20,10 @@ class AnalyticsServiceTest {
     void calculatesPersonalAnalyticsFromAcceptedSubmissionsOnly() {
         LocalDate today = LocalDate.now();
         User user = User.builder().id(11L).username("student").build();
-        List<Object> acceptedDates = List.of(today, today.minusDays(1), today.minusDays(4));
+        List<Object> acceptedDates = List.of(
+                java.sql.Timestamp.valueOf(today.atStartOfDay()),
+                java.sql.Date.valueOf(today.minusDays(1)),
+                today.minusDays(4));
 
         UserRepository userRepository = repository(UserRepository.class, (method, args) ->
                 method.getName().equals("findByUsername") ? Optional.of(user) : null);

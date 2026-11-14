@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -48,7 +49,7 @@ public class AnalyticsService {
         Set<LocalDate> acceptedDays = submissionRepository
                 .findDistinctAcceptedSubmissionDatesByStudent(user)
                 .stream()
-                .map(value -> LocalDate.parse(value.toString()))
+                .map(this::toLocalDate)
                 .collect(Collectors.toSet());
 
         return PersonalAnalyticsResponse.builder()
@@ -70,6 +71,31 @@ public class AnalyticsService {
             cursor = cursor.minusDays(1);
         }
         return streak;
+    }
+
+    private LocalDate toLocalDate(Object value) {
+        if (value instanceof LocalDate date) {
+            return date;
+        }
+        if (value instanceof java.sql.Date date) {
+            return date.toLocalDate();
+        }
+        if (value instanceof java.sql.Timestamp timestamp) {
+            return timestamp.toLocalDateTime().toLocalDate();
+        }
+        if (value instanceof LocalDateTime dateTime) {
+            return dateTime.toLocalDate();
+        }
+        if (value instanceof java.util.Date date) {
+            return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        }
+
+        String text = String.valueOf(value);
+        try {
+            return LocalDate.parse(text.length() >= 10 ? text.substring(0, 10) : text);
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("Unsupported accepted-submission date value: " + text, e);
+        }
     }
 
     private List<DayCount> getActivityForUser(User user, LocalDate today) {
