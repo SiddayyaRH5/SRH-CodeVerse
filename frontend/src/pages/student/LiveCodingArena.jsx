@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import CodeEditor from "../../components/editor/CodeEditor"
 import { getProblemDetail, getProblems, runCode, submitCode } from "../../api/problemApi"
+import { getMySubmissions } from "../../api/submissionApi"
 
 const START_SECONDS = 45 * 60
 const LANGUAGES = [
@@ -33,6 +34,18 @@ function getLanguageStarter(language, problem) {
 }
 
 const LEFT_TABS = ["Description", "Instructions", "Submissions"]
+
+function formatSubmissionDate(value) {
+  if (!value) return "Unknown time"
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? String(value).replace("T", " ") : date.toLocaleString()
+}
+
+function submissionStatusClass(status) {
+  return status === "PASSED"
+    ? "bg-emerald-500/10 text-[color:var(--ar-green)] border-emerald-500/30"
+    : "bg-rose-500/10 text-[color:var(--ar-red)] border-rose-500/30"
+}
 
 const diffStyle = {
   easy: "bg-emerald-500/15 text-[color:var(--ar-green)]",
@@ -121,6 +134,9 @@ export default function LiveCodingArena() {
   const [seconds, setSeconds] = useState(START_SECONDS)
   const [started, setStarted] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [submissions, setSubmissions] = useState([])
+  const [submissionsLoading, setSubmissionsLoading] = useState(true)
+  const [submissionsError, setSubmissionsError] = useState("")
   const [leftTab, setLeftTab] = useState("Description")
   const [bottomTab, setBottomTab] = useState("Testcase")
   const [activeCase, setActiveCase] = useState(0)
@@ -128,6 +144,29 @@ export default function LiveCodingArena() {
   const [saved, setSaved] = useState(true)
   const [copied, setCopied] = useState(false)
   const editorRef = useRef(null)
+
+  const loadSubmissions = useCallback(async () => {
+    setSubmissionsLoading(true)
+    setSubmissionsError("")
+    try {
+      const response = await getMySubmissions()
+      const payload = response.data
+      const records = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.value)
+          ? payload.value
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : []
+      setSubmissions(records)
+    } catch (err) {
+      setSubmissionsError(
+        err.response?.data?.message || "Could not load submission history. Try again."
+      )
+    } finally {
+      setSubmissionsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     getProblems()
@@ -142,8 +181,13 @@ export default function LiveCodingArena() {
   }, [])
 
   useEffect(() => {
+    loadSubmissions()
+  }, [loadSubmissions])
+
+  useEffect(() => {
     if (!selectedId) return
     setResult(null)
+    setSubmitted(false)
     setActiveCase(0)
     setBottomTab("Testcase")
     setProblemLoading(true)
@@ -225,7 +269,10 @@ export default function LiveCodingArena() {
     try {
       const res = await (isSubmit ? submitCode(problem.id, code, language) : runCode(problem.id, code, language))
       setResult(res.data)
-      if (isSubmit && res.data.status === "PASSED") setSubmitted(true)
+      if (isSubmit) {
+        setSubmitted(res.data.status === "PASSED")
+        await loadSubmissions()
+      }
     } catch (err) {
       setResult({ status: "ERROR", compileError: err.response?.data?.message || "Request failed" })
     } finally {
@@ -245,6 +292,10 @@ export default function LiveCodingArena() {
   const formatCode = () => editorRef.current?.getAction("editor.action.formatDocument")?.run()
 
   const cases = problem?.visibleTestCases || []
+  const problemSubmissions = useMemo(
+    () => submissions.filter((submission) => submission.problemId === Number(problem?.id)),
+    [submissions, problem?.id]
+  )
   const currentCase = cases[activeCase]
   const diffKey = String(problem?.difficulty || "").toLowerCase()
   const lowTime = seconds < 300
@@ -371,10 +422,40 @@ export default function LiveCodingArena() {
                 <li>• Submit to check against hidden tests</li>
                 <li>• Your draft is saved automatically</li>
               </ul>
+            ) : submissionsLoading ? (
+              <p className="text-sm text-slate-500">Loading submission history...</p>
+            ) : submissionsError ? (
+              <div className="space-y-3">
+                <p className="text-sm text-[color:var(--ar-red)]">{submissionsError}</p>
+                <button
+                  onClick={loadSubmissions}
+                  className="rounded-lg border border-[color:var(--ar-line2)] px-3 py-1.5 text-sm text-[color:var(--ar-text)] hover:bg-[var(--ar-hover)]"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : problemSubmissions.length === 0 ? (
+              <p className="text-sm text-slate-500">No submissions yet for this problem. Submit your solution to see it here.</p>
             ) : (
-              <p className="text-sm text-slate-500">
-                {submitted ? "Your last submission passed all tests." : "No submissions yet. Submit your solution to see it here."}
-              </p>
+              <div className="space-y-3">
+                {problemSubmissions.map((submission) => (
+                  <div key={submission.id} className="rounded-xl border border-[color:var(--ar-line2)] bg-[var(--ar-card)] p-3 text-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-[color:var(--ar-text)]">{formatSubmissionDate(submission.submittedAt)}</p>
+                        <p className="mt-1 text-xs text-[color:var(--ar-muted)]">Language: {submission.language || "Not recorded"}</p>
+                      </div>
+                      <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${submissionStatusClass(submission.status)}`}>
+                        {submission.status || "UNKNOWN"}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[color:var(--ar-muted)]">
+                      <span>Tests: <b className="text-[color:var(--ar-text)]">{submission.passedTestCount ?? 0}/{submission.totalTestCount ?? 0}</b></span>
+                      <span>Runtime: <b className="text-[color:var(--ar-text)]">{submission.runtimeMs ?? 0} ms</b></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </section>
