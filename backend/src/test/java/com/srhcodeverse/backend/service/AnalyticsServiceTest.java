@@ -24,13 +24,15 @@ class AnalyticsServiceTest {
 
         UserRepository userRepository = repository(UserRepository.class, (method, args) ->
                 method.getName().equals("findByUsername") ? Optional.of(user) : null);
+        List<Problem> problems = List.of(
+                Problem.builder().id(1L).difficulty(Problem.Difficulty.EASY).build(),
+                Problem.builder().id(2L).difficulty(Problem.Difficulty.EASY).build(),
+                Problem.builder().id(3L).difficulty(Problem.Difficulty.MEDIUM).build(),
+                Problem.builder().id(4L).difficulty(Problem.Difficulty.MEDIUM).build(),
+                Problem.builder().id(5L).difficulty(Problem.Difficulty.HARD).build());
         ProblemRepository problemRepository = repository(ProblemRepository.class, (method, args) -> switch (method.getName()) {
             case "count" -> 5L;
-            case "countByDifficulty" -> switch ((Problem.Difficulty) args[0]) {
-                case EASY -> 2L;
-                case MEDIUM -> 2L;
-                case HARD -> 1L;
-            };
+            case "findAll" -> problems;
             default -> null;
         });
         SubmissionRepository submissionRepository = repository(SubmissionRepository.class, (method, args) -> switch (method.getName()) {
@@ -39,9 +41,7 @@ class AnalyticsServiceTest {
             case "countSubmissionsByDayForStudent" -> List.of(
                     new Object[] { today.toString(), 3L },
                     new Object[] { today.minusDays(1).toString(), 1L });
-            case "countDistinctSolvedProblemsByDifficulty" -> List.of(
-                    new Object[] { Problem.Difficulty.EASY, 1L },
-                    new Object[] { Problem.Difficulty.MEDIUM, 1L });
+            case "findDistinctSolvedProblemIds" -> List.of(1L, 3L);
             default -> null;
         });
 

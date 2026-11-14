@@ -66,10 +66,9 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
            "GROUP BY s.student.id")
     List<Object[]> countSolvedGroupedByStudent();
 
-    @Query("SELECT s.problem.difficulty, COUNT(DISTINCT s.problem.id) " +
-           "FROM Submission s WHERE s.student = :student AND s.status = 'PASSED' " +
-           "GROUP BY s.problem.difficulty")
-    List<Object[]> countDistinctSolvedProblemsByDifficulty(@Param("student") User student);
+    @Query("SELECT DISTINCT s.problem.id FROM Submission s " +
+           "WHERE s.student = :student AND s.status = 'PASSED'")
+    List<Long> findDistinctSolvedProblemIds(@Param("student") User student);
 
     @Query("SELECT COUNT(DISTINCT s.student.id) FROM Submission s " +
            "WHERE s.submittedAt >= :since")

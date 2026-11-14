@@ -44,6 +44,7 @@ public class AnalyticsService {
 
         long solved = submissionRepository.countDistinctSolvedProblems(user);
         long totalAvailable = problemRepository.count();
+        Set<Long> solvedProblemIds = new HashSet<>(submissionRepository.findDistinctSolvedProblemIds(user));
         Set<LocalDate> acceptedDays = submissionRepository
                 .findDistinctAcceptedSubmissionDatesByStudent(user)
                 .stream()
@@ -57,7 +58,7 @@ public class AnalyticsService {
                 .currentStreak(calculateCurrentStreak(acceptedDays, LocalDate.now()))
                 .activeDays(acceptedDays.size())
                 .activity(getActivityForUser(user, LocalDate.now()))
-                .difficultyMastery(getDifficultyMastery(user))
+                .difficultyMastery(getDifficultyMastery(solvedProblemIds))
                 .build();
     }
 
@@ -86,22 +87,22 @@ public class AnalyticsService {
         return activity;
     }
 
-    private List<DifficultyMastery> getDifficultyMastery(User user) {
-        Map<String, Long> solvedByDifficulty = submissionRepository
-                .countDistinctSolvedProblemsByDifficulty(user)
-                .stream()
-                .collect(Collectors.toMap(
-                        row -> row[0].toString(),
-                        row -> (Long) row[1]));
-
-        List<DifficultyMastery> mastery = new ArrayList<>();
-        for (Problem.Difficulty difficulty : Problem.Difficulty.values()) {
-            mastery.add(new DifficultyMastery(
-                    difficulty.name(),
-                    solvedByDifficulty.getOrDefault(difficulty.name(), 0L),
-                    problemRepository.countByDifficulty(difficulty)));
+    private List<DifficultyMastery> getDifficultyMastery(Set<Long> solvedProblemIds) {
+        Map<Problem.Difficulty, Long> totalByDifficulty = new EnumMap<>(Problem.Difficulty.class);
+        Map<Problem.Difficulty, Long> solvedByDifficulty = new EnumMap<>(Problem.Difficulty.class);
+        for (Problem problem : problemRepository.findAll()) {
+            totalByDifficulty.merge(problem.getDifficulty(), 1L, Long::sum);
+            if (solvedProblemIds.contains(problem.getId())) {
+                solvedByDifficulty.merge(problem.getDifficulty(), 1L, Long::sum);
+            }
         }
-        return mastery;
+
+        return Arrays.stream(Problem.Difficulty.values())
+                .map(difficulty -> new DifficultyMastery(
+                        difficulty.name(),
+                        solvedByDifficulty.getOrDefault(difficulty, 0L),
+                        totalByDifficulty.getOrDefault(difficulty, 0L)))
+                .toList();
     }
 
     private List<DayCount> getSubmissionTrend() {
