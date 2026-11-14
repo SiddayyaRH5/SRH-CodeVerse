@@ -28,6 +28,9 @@ public class Submission {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String code;
 
+    @Column(name = "language", length = 20)
+    private String language;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Status status;

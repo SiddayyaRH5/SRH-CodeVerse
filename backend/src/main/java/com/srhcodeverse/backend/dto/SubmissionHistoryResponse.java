@@ -7,6 +7,7 @@ public record SubmissionHistoryResponse(
         Long problemId,
         String problemTitle,
         String code,
+        String language,
         String status,
         Integer passedTestCount,
         Integer totalTestCount,

@@ -1,0 +1,85 @@
+package com.srhcodeverse.backend.service;
+
+import com.srhcodeverse.backend.entity.Problem;
+import com.srhcodeverse.backend.entity.Submission;
+import com.srhcodeverse.backend.entity.User;
+import com.srhcodeverse.backend.repository.ProblemRepository;
+import com.srhcodeverse.backend.repository.SubmissionRepository;
+import com.srhcodeverse.backend.repository.UserRepository;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Proxy;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class AnalyticsServiceTest {
+
+    @Test
+    void calculatesPersonalAnalyticsFromAcceptedSubmissionsOnly() {
+        LocalDate today = LocalDate.now();
+        User user = User.builder().id(11L).username("student").build();
+        List<Submission> accepted = List.of(
+                submission(today), submission(today.minusDays(1)), submission(today.minusDays(4)));
+
+        UserRepository userRepository = repository(UserRepository.class, (method, args) ->
+                method.getName().equals("findByUsername") ? Optional.of(user) : null);
+        ProblemRepository problemRepository = repository(ProblemRepository.class, (method, args) -> switch (method.getName()) {
+            case "count" -> 5L;
+            case "countByDifficulty" -> switch ((Problem.Difficulty) args[0]) {
+                case EASY -> 2L;
+                case MEDIUM -> 2L;
+                case HARD -> 1L;
+            };
+            default -> null;
+        });
+        SubmissionRepository submissionRepository = repository(SubmissionRepository.class, (method, args) -> switch (method.getName()) {
+            case "countDistinctSolvedProblems" -> 2L;
+            case "findByStudentAndStatus" -> accepted;
+            case "countSubmissionsByDayForStudent" -> List.of(
+                    new Object[] { today.toString(), 3L },
+                    new Object[] { today.minusDays(1).toString(), 1L });
+            case "countDistinctSolvedProblemsByDifficulty" -> List.of(
+                    new Object[] { Problem.Difficulty.EASY, 1L },
+                    new Object[] { Problem.Difficulty.MEDIUM, 1L });
+            default -> null;
+        });
+
+        AnalyticsService service = new AnalyticsService(submissionRepository, problemRepository,
+                userRepository, null);
+        var analytics = service.getAnalyticsForUser("student");
+
+        assertEquals(2L, analytics.getProblemsSolved());
+        assertEquals(5L, analytics.getTotalAvailableProblems());
+        assertEquals(40.0, analytics.getSolveCoverage());
+        assertEquals(2, analytics.getCurrentStreak());
+        assertEquals(3L, analytics.getActiveDays());
+        assertEquals(14, analytics.getActivity().size());
+        assertEquals(3L, analytics.getActivity().getLast().getCount());
+        assertEquals(List.of(1L, 1L, 0L), analytics.getDifficultyMastery().stream()
+                .map(item -> item.solved()).toList());
+        assertEquals(List.of(2L, 2L, 1L), analytics.getDifficultyMastery().stream()
+                .map(item -> item.total()).toList());
+    }
+
+    private Submission submission(LocalDate date) {
+        return Submission.builder()
+                .status(Submission.Status.PASSED)
+                .submittedAt(LocalDateTime.of(date, java.time.LocalTime.NOON))
+                .build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T repository(Class<T> type, RepositoryMethod handler) {
+        return (T) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { type },
+                (proxy, method, args) -> handler.invoke(method, args));
+    }
+
+    @FunctionalInterface
+    private interface RepositoryMethod {
+        Object invoke(java.lang.reflect.Method method, Object[] args);
+    }
+}

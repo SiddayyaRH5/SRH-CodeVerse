@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class SubmissionService {
@@ -67,6 +68,8 @@ public class SubmissionService {
             String username,
             String language) {
 
+        String selectedLanguage = normalizeLanguage(language);
+
         Problem problem = problemRepository.findById(problemId)
                 .orElseThrow(() ->
                         new IllegalArgumentException("Problem not found"));
@@ -76,12 +79,13 @@ public class SubmissionService {
                         new IllegalArgumentException("User not found"));
 
         SubmissionResponse response =
-                execute(code, problem.getTestCases(), true, language);
+                execute(code, problem.getTestCases(), true, selectedLanguage);
 
         Submission submission = Submission.builder()
                 .student(student)
                 .problem(problem)
                 .code(code)
+                .language(selectedLanguage)
                 .status(Submission.Status.valueOf(response.getStatus()))
                 .runtimeMs(response.getRuntimeMs())
                 .passedTestCount(response.getPassedTestCount())
@@ -244,6 +248,7 @@ public class SubmissionService {
                         s.getProblem().getId(),
                         s.getProblem().getTitle(),
                         s.getCode(),
+                        s.getLanguage(),
                         s.getStatus().name(),
                         s.getPassedTestCount(),
                         s.getTotalTestCount(),
@@ -251,5 +256,11 @@ public class SubmissionService {
                         s.getSubmittedAt()
                 ))
                 .toList();
+    }
+
+    private String normalizeLanguage(String language) {
+        return language == null || language.isBlank()
+                ? "java"
+                : language.trim().toLowerCase(Locale.ROOT);
     }
 }

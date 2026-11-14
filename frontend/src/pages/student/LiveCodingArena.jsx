@@ -35,6 +35,12 @@ function getLanguageStarter(language, problem) {
 
 const LEFT_TABS = ["Description", "Instructions", "Submissions"]
 
+const SUBMISSION_LANGUAGE_LABELS = {
+  java: "Java 21",
+  python: "Python 3.12",
+  javascript: "JavaScript (Node.js 22)",
+}
+
 function formatSubmissionDate(value) {
   if (!value) return "Unknown time"
   const date = new Date(value)
@@ -45,6 +51,11 @@ function submissionStatusClass(status) {
   return status === "PASSED"
     ? "bg-emerald-500/10 text-[color:var(--ar-green)] border-emerald-500/30"
     : "bg-rose-500/10 text-[color:var(--ar-red)] border-rose-500/30"
+}
+
+function formatSubmissionLanguage(language) {
+  if (!language) return "Not recorded"
+  return SUBMISSION_LANGUAGE_LABELS[String(language).toLowerCase()] || language
 }
 
 const diffStyle = {
@@ -443,7 +454,7 @@ export default function LiveCodingArena() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-medium text-[color:var(--ar-text)]">{formatSubmissionDate(submission.submittedAt)}</p>
-                        <p className="mt-1 text-xs text-[color:var(--ar-muted)]">Language: {submission.language || "Not recorded"}</p>
+                        <p className="mt-1 text-xs text-[color:var(--ar-muted)]">Language: {formatSubmissionLanguage(submission.language)}</p>
                       </div>
                       <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${submissionStatusClass(submission.status)}`}>
                         {submission.status || "UNKNOWN"}

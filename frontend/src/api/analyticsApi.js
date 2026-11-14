@@ -1,2 +1,2 @@
 import axiosInstance from "./axiosInstance"
-export const getAnalytics = () => axiosInstance.get("/trainer/analytics")
+export const getAnalytics = () => axiosInstance.get("/analytics")
