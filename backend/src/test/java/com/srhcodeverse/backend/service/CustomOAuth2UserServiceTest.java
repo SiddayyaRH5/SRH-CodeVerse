@@ -45,16 +45,37 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 class CustomOAuth2UserServiceTest {
 
     @Test
-    void loadsExistingGoogleIdentityByProviderAndId() {
+    void loadsExistingGoogleIdentityByProviderIdWhenEmailIsVerified() {
         Fixture fixture = new Fixture();
         User localUser = user("google-local", "google-local@example.test", "TRAINER");
         fixture.addIdentity("google", "google-id", localUser);
 
-        OAuth2User principal = fixture.service("google", attributes("google", "google-id", null))
+        OAuth2User principal = fixture.service(
+                        "google",
+                        attributes("google", "google-id", "provider-email@example.test"))
                 .loadUser(request("google"));
 
         assertEquals("google-local", principal.getName());
         assertTrue(principal.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_TRAINER")));
+        assertTrue(fixture.savedUsers.isEmpty());
+        assertTrue(fixture.savedIdentities.isEmpty());
+    }
+
+    @Test
+    void rejectsExistingGoogleIdentityWhenEmailIsUnverified() {
+        Fixture fixture = new Fixture();
+        User localUser = user("google-local", "google-local@example.test", "TRAINER");
+        fixture.addIdentity("google", "google-id", localUser);
+        Map<String, Object> googleAttributes =
+                attributes("google", "google-id", "provider-email@example.test");
+        googleAttributes.put("email_verified", Boolean.FALSE);
+
+        OAuth2AuthenticationException exception = assertThrows(
+                OAuth2AuthenticationException.class,
+                () -> fixture.service("google", googleAttributes).loadUser(request("google")));
+
+        assertEquals("invalid_user_info", exception.getError().getErrorCode());
+        assertFalse(exception.getError().getDescription().contains("provider-email@example.test"));
         assertTrue(fixture.savedUsers.isEmpty());
         assertTrue(fixture.savedIdentities.isEmpty());
     }
@@ -189,6 +210,19 @@ class CustomOAuth2UserServiceTest {
     }
 
     @Test
+    void rejectsGoogleWhenVerificationClaimIsMissingOrMalformed() {
+        Map<String, Object> missingClaim =
+                attributes("google", "google-missing-verification", "google@example.test");
+        missingClaim.remove("email_verified");
+        assertGoogleAttributesRejected(missingClaim);
+
+        Map<String, Object> malformedClaim =
+                attributes("google", "google-malformed-verification", "google@example.test");
+        malformedClaim.put("email_verified", "true");
+        assertGoogleAttributesRejected(malformedClaim);
+    }
+
+    @Test
     void doesNotAutomaticallyLinkPasswordAccountByEmail() {
         Fixture fixture = new Fixture();
         String email = "existing-password@example.test";
@@ -306,6 +340,17 @@ class CustomOAuth2UserServiceTest {
         assertTrue(fixture.savedUsers.isEmpty());
         assertTrue(fixture.savedIdentities.isEmpty());
         githubApi.server.verify();
+    }
+
+    private static void assertGoogleAttributesRejected(Map<String, Object> attributes) {
+        Fixture fixture = new Fixture();
+        OAuth2AuthenticationException exception = assertThrows(
+                OAuth2AuthenticationException.class,
+                () -> fixture.service("google", attributes).loadUser(request("google")));
+
+        assertEquals("invalid_user_info", exception.getError().getErrorCode());
+        assertTrue(fixture.savedUsers.isEmpty());
+        assertTrue(fixture.savedIdentities.isEmpty());
     }
 
     private static RestClientSetup githubApiResponse(String responseBody) {

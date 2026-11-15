@@ -39,7 +39,10 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
         String username = null;
         if (authentication.getPrincipal() instanceof org.springframework.security.oauth2.core.user.OAuth2User oAuth2User) {
-            username = oAuth2User.getName();
+            username = oAuth2User.getAttribute("username");
+            if (username == null || username.isBlank()) {
+                username = oAuth2User.getName();
+            }
         } else if (authentication.getPrincipal() instanceof User user) {
             username = user.getUsername();
         }

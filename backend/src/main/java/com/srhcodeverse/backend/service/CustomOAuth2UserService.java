@@ -98,13 +98,20 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                     "OAuth sign-in could not be completed because a verified email could not be confirmed.");
         }
 
+        String googleEmail = "google".equals(provider) ? extractGoogleEmail(attributes) : null;
+        if ("google".equals(provider) && googleEmail == null) {
+            throw authenticationError(
+                    "invalid_user_info",
+                    "OAuth sign-in could not be completed because a verified email could not be confirmed.");
+        }
+
         Optional<OAuthIdentity> identity = oAuthIdentityRepository
                 .findByProviderAndProviderUserId(provider, providerUserId);
         if (identity.isPresent()) {
             return toOAuth2User(identity.get().getUser(), attributes);
         }
 
-        String email = "github".equals(provider) ? githubEmail : extractGoogleEmail(attributes);
+        String email = "github".equals(provider) ? githubEmail : googleEmail;
         if (email == null) {
             throw authenticationError(
                     "invalid_user_info",
@@ -161,8 +168,10 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     private String extractGoogleEmail(Map<String, Object> attributes) {
         Object email = attributes.get("email");
         Object emailVerified = attributes.get("email_verified");
-        if (email != null && Boolean.TRUE.equals(emailVerified)) {
-            return email.toString();
+        if (email instanceof String verifiedEmail
+                && !verifiedEmail.isBlank()
+                && Boolean.TRUE.equals(emailVerified)) {
+            return verifiedEmail;
         }
         return null;
     }

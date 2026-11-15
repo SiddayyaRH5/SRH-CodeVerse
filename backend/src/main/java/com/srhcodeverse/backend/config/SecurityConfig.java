@@ -18,10 +18,14 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -75,9 +79,11 @@ public class SecurityConfig {
                                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                                 .redirectUri(googleRedirectUri)
                                 .scope("openid", "profile", "email")
-                                .authorizationUri("https://accounts.google.com/o/oauth2/auth")
-                                .tokenUri("https://accounts.google.com/o/oauth2/token")
+                                .authorizationUri("https://accounts.google.com/o/oauth2/v2/auth")
+                                .tokenUri("https://oauth2.googleapis.com/token")
                                 .userInfoUri("https://openidconnect.googleapis.com/v1/userinfo")
+                                .issuerUri("https://accounts.google.com")
+                                .jwkSetUri("https://www.googleapis.com/oauth2/v3/certs")
                                 .userNameAttributeName("sub")
                                 .clientName("Google")
                                 .build();
@@ -97,6 +103,14 @@ public class SecurityConfig {
                                 .build();
 
                 return new InMemoryClientRegistrationRepository(googleRegistration, githubRegistration);
+        }
+
+        @Bean
+        public OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService(
+                        CustomOAuth2UserService customOAuth2UserService) {
+                OidcUserService oidcUserService = new OidcUserService();
+                oidcUserService.setOauth2UserService(customOAuth2UserService);
+                return oidcUserService;
         }
 
         private static void requireOAuthCredentials(String provider, String clientId, String clientSecret) {
@@ -136,7 +150,9 @@ public class SecurityConfig {
         }
 
         @Bean
-public SecurityFilterChain securityFilterChain(HttpSecurity http)
+public SecurityFilterChain securityFilterChain(
+                HttpSecurity http,
+                OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService)
                 throws Exception {
 
         http
@@ -152,8 +168,10 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http)
                                 .hasAnyRole("STUDENT", "TRAINER", "ADMIN")
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> oauth2
-                        .userInfoEndpoint(userInfo -> userInfo
-                                .userService(customOAuth2UserService))
+                        .userInfoEndpoint(userInfo ->
+                                userInfo
+                                        .oidcUserService(oidcUserService)
+                                        .userService(customOAuth2UserService))
                         .successHandler(oAuth2LoginSuccessHandler)
                         .authorizationEndpoint(authorization ->
                                 authorization.baseUri("/api/auth/login/oauth2")))

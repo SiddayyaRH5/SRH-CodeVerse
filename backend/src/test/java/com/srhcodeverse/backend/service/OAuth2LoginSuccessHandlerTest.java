@@ -62,6 +62,36 @@ class OAuth2LoginSuccessHandlerTest {
                         "http://untrusted.example"));
     }
 
+    @Test
+    void usesLocalUsernameClaimForOidcPrincipal() throws Exception {
+        UserRepository userRepository = mock(UserRepository.class);
+        OAuthCodeService oAuthCodeService = mock(OAuthCodeService.class);
+        User user = User.builder().username("oauth-user").build();
+        when(userRepository.findByUsername("oauth-user")).thenReturn(Optional.of(user));
+        when(oAuthCodeService.issueCode(user)).thenReturn("temporary-code");
+
+        DefaultOAuth2User principal = new DefaultOAuth2User(
+                List.of(),
+                Map.of("sub", "google-subject", "username", "oauth-user"),
+                "sub");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        new OAuth2LoginSuccessHandler(
+                userRepository,
+                oAuthCodeService,
+                "https://srh-codeverse.vercel.app")
+                .onAuthenticationSuccess(
+                        new MockHttpServletRequest(),
+                        response,
+                        new TestingAuthenticationToken(principal, null));
+
+        assertEquals(
+                "https://srh-codeverse.vercel.app/oauth/callback?code=temporary-code",
+                response.getRedirectedUrl());
+        verify(userRepository).findByUsername("oauth-user");
+        verify(oAuthCodeService).issueCode(user);
+    }
+
     private String runHandler(String frontendBaseUrl, String code) throws Exception {
         UserRepository userRepository = mock(UserRepository.class);
         OAuthCodeService oAuthCodeService = mock(OAuthCodeService.class);
