@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import CodeEditor from '../../components/editor/CodeEditor'
 import { Link, useParams } from 'react-router-dom'
+import axiosInstance from '../../api/axiosInstance'
 import { getCourseProblem } from '../../api/courseApi'
 
 export default function CourseProblemDetail() {
@@ -59,34 +60,15 @@ export default function CourseProblemDetail() {
 
     try {
       // These endpoints must be implemented by the backend.
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/courses/${slug}/problems/${problemId}/${type === 'run' ? 'run' : 'submit'}`,
+      const response = await axiosInstance.post(
+        `/courses/${slug}/problems/${problemId}/${type === 'run' ? 'run' : 'submit'}`,
         {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(localStorage.getItem('srhcodeverse_token')
-              ? {
-                  Authorization: `Bearer ${localStorage.getItem('srhcodeverse_token')}`,
-                }
-              : {}),
-          },
-          body: JSON.stringify({
-            code,
-            language: 'java',
-            input: customInput,
-          }),
-        }
+          code,
+          language: 'java',
+          input: customInput,
+        },
       )
-
-      const data = await response.json().catch(() => ({}))
-
-      if (!response.ok) {
-        throw new Error(
-          data.message ||
-            `The ${type === 'run' ? 'Run Code' : 'Submit'} request failed.`
-        )
-      }
+      const data = response.data || {}
 
       setResult(data)
       setOutput(
@@ -96,7 +78,11 @@ export default function CourseProblemDetail() {
           JSON.stringify(data, null, 2)
       )
     } catch (err) {
-      setOutput(err.message || 'Request failed.')
+      setOutput(
+        err.response?.data?.message
+          || err.message
+          || 'Request failed.'
+      )
       setResult({ success: false })
     } finally {
       setAction('')

@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { getProblems } from "../../api/problemApi"
 import DifficultyBadge from "../../components/common/DifficultyBadge"
-import { cachedFetch } from "../../utils/cache"
 import { useAuth } from "../../context/AuthContext"
 import { isBookmarked, toggleBookmark } from "../../utils/srhStudy"
 
@@ -46,10 +45,8 @@ function Problems() {
     setLoading(true)
     setError("")
 
-    cachedFetch(
-      `problems:${user?.username}`,
-      () => getProblems().then((res) => res.data)
-    )
+    getProblems()
+      .then((res) => res.data)
       .then((data) => {
         if (active) setProblems(Array.isArray(data) ? data : [])
       })

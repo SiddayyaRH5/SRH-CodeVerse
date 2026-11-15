@@ -19,6 +19,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   const login = (authResponse) => {
+    clearCache()
     localStorage.setItem("srhcodeverse_token", authResponse.token)
     localStorage.setItem("srhcodeverse_username", authResponse.username)
     localStorage.setItem("srhcodeverse_role", authResponse.role)

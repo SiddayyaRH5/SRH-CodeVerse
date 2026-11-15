@@ -1,30 +1,129 @@
 const store = new Map()
+const inFlight = new Map()
+const DEFAULT_TTL_MS = 2 * 60 * 1000
+const MAX_CACHE_ENTRIES = 200
+let activeUserToken = null
+let cacheVersion = 0
 
-const DEFAULT_TTL_MS = 5 * 60 * 1000 // 5 minutes
-
-/**
- * Returns cached data if present and not expired, otherwise calls fetchFn,
- * caches the result, and returns it.
- */
-export async function cachedFetch(key, fetchFn, ttlMs = DEFAULT_TTL_MS) {
+function readEntry(key) {
   const entry = store.get(key)
-  const now = Date.now()
+  if (!entry) return { found: false }
+  if (Date.now() >= entry.expiresAt) {
+    store.delete(key)
+    return { found: false }
+  }
+  return { found: true, value: entry.value }
+}
 
-  if (entry && now - entry.timestamp < ttlMs) {
-    return entry.data
+function removeExpiredEntries() {
+  const now = Date.now()
+  for (const [key, entry] of store) {
+    if (now >= entry.expiresAt) store.delete(key)
+  }
+}
+
+export function syncCacheUser(token) {
+  const nextToken = token || null
+  if (activeUserToken !== nextToken) {
+    cacheVersion += 1
+    store.clear()
+    inFlight.clear()
+    activeUserToken = nextToken
+  }
+}
+
+export function getCachedResponse(key) {
+  const entry = readEntry(key)
+  return entry.found ? entry.value : null
+}
+
+export function getCacheVersion() {
+  return cacheVersion
+}
+
+export function setCachedResponse(
+  key,
+  value,
+  ttlMs = DEFAULT_TTL_MS,
+  requestVersion = cacheVersion,
+) {
+  if (requestVersion !== cacheVersion || ttlMs <= 0) return
+
+  removeExpiredEntries()
+  store.delete(key)
+  store.set(key, { value, expiresAt: Date.now() + ttlMs })
+
+  while (store.size > MAX_CACHE_ENTRIES) {
+    store.delete(store.keys().next().value)
+  }
+}
+
+export function getInFlight(key) {
+  return inFlight.get(key)
+}
+
+export function setInFlight(key, promise) {
+  inFlight.set(key, promise)
+}
+
+export function clearInFlight(key, promise) {
+  if (!promise || inFlight.get(key) === promise) {
+    inFlight.delete(key)
+  }
+}
+
+export function cachedFetch(key, fetchFn, ttlMs = DEFAULT_TTL_MS) {
+  const cached = readEntry(key)
+  if (cached.found) return Promise.resolve(cached.value)
+
+  const pending = inFlight.get(key)
+  if (pending) return pending
+
+  const requestVersion = cacheVersion
+  let request
+  request = Promise.resolve()
+    .then(fetchFn)
+    .then((value) => {
+      setCachedResponse(key, value, ttlMs, requestVersion)
+      return value
+    })
+    .finally(() => clearInFlight(key, request))
+  inFlight.set(key, request)
+  return request
+}
+
+export function invalidateAllCache() {
+  cacheVersion += 1
+  store.clear()
+  inFlight.clear()
+}
+
+export function invalidate(key) {
+  if (!key) {
+    invalidateAllCache()
+    return
   }
 
-  const data = await fetchFn()
-  store.set(key, { data, timestamp: now })
-  return data
+  const matchesKey = key.startsWith("problems:")
+    ? (cacheKey) => cacheKey.includes("/problems")
+    : (cacheKey) => cacheKey === key || cacheKey.startsWith(`${key}::`)
+  const keys = new Set([...store.keys(), ...inFlight.keys()])
+  const matchingKeys = [...keys].filter(matchesKey)
+
+  if (matchingKeys.length === 0) return
+
+  cacheVersion += 1
+  matchingKeys.forEach((cacheKey) => {
+    store.delete(cacheKey)
+    inFlight.delete(cacheKey)
+  })
 }
 
-/** Removes one cache entry (e.g. after a mutation that invalidates it). */
-export function invalidate(key) {
-  store.delete(key)
+export function invalidateCache(key) {
+  invalidate(key)
 }
 
-/** Clears everything — call on logout so the next user starts clean. */
 export function clearCache() {
-  store.clear()
+  invalidateAllCache()
+  activeUserToken = null
 }
