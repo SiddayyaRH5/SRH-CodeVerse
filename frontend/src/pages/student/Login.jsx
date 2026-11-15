@@ -1,6 +1,6 @@
 import { useRef, useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
-import { loginUser } from "../../api/authApi"
+import { loginUser, OAUTH_INITIATION_URLS } from "../../api/authApi"
 import { useAuth } from "../../context/AuthContext"
 
 function Login() {
@@ -279,13 +279,12 @@ function Login() {
               <span className="h-px flex-1 bg-[var(--cv-border)]" />
             </div>
 
-            {/* Provider buttons: visual placeholders until OAuth is connected */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button
                 type="button"
-                disabled
-                title="Google and GitHub sign-in coming soon"
-                className="cv-secondary-btn !py-3 opacity-70"
+                onClick={() => window.location.assign(OAUTH_INITIATION_URLS.google)}
+                title="Google sign-in"
+                className="cv-secondary-btn !py-3"
               >
                 <span className="mr-2 font-bold">G</span>
                 Continue with Google
@@ -293,18 +292,14 @@ function Login() {
 
               <button
                 type="button"
-                disabled
-                title="Google and GitHub sign-in coming soon"
-                className="cv-secondary-btn !py-3 opacity-70"
+                onClick={() => window.location.assign(OAUTH_INITIATION_URLS.github)}
+                title="GitHub sign-in"
+                className="cv-secondary-btn !py-3"
               >
                 <span className="mr-2 font-bold">●</span>
                 Continue with GitHub
               </button>
             </div>
-
-            <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
-              Google and GitHub sign-in coming soon.
-            </p>
 
             <p className="mt-7 text-center text-xs text-[var(--cv-muted)]">
               Don&apos;t have an account?{" "}

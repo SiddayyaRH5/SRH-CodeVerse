@@ -4,6 +4,7 @@ import PageLayout from "../components/layout/PageLayout"
 import ProtectedRoute from "./ProtectedRoute"
 import Landing from "../pages/student/Landing"
 import Login from "../pages/student/Login"
+import OAuthCallback from "../pages/student/OAuthCallback"
 import Register from "../pages/student/Register"
 import Problems from "../pages/student/Problems"
 import Dashboard from "../pages/student/Dashboard"
@@ -37,6 +38,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/oauth/callback" element={<OAuthCallback />} />
         <Route path="/register" element={<Register />} />
         <Route path="/courses" element={<Courses />} />
         <Route path="/courses/:slug" element={<CourseDetail />} />
