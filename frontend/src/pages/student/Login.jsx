@@ -1,9 +1,12 @@
 import { useRef, useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
+import { useNavigate, Link, useSearchParams } from "react-router-dom"
 import { loginUser, OAUTH_INITIATION_URLS } from "../../api/authApi"
 import { useAuth } from "../../context/AuthContext"
 
 function Login() {
+  const [searchParams] = useSearchParams()
+  const sessionExpired = searchParams.get("reason") === "session-expired"
+
   const [form, setForm] = useState({
     username: "",
     password: "",
@@ -97,6 +100,15 @@ function Login() {
             <p className="mt-3 leading-6 text-[var(--cv-muted)]">
               Login to continue your coding journey with SRH CodeVerse.
             </p>
+
+            {sessionExpired && !error && (
+              <div
+                role="status"
+                className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-sm text-amber-300"
+              >
+                Your session expired. Please sign in again.
+              </div>
+            )}
 
             {error && (
               <div

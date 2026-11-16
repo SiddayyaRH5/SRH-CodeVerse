@@ -1,6 +1,8 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { getMySubmissions } from "../../api/submissionApi"
+import EmptyState from "../../components/common/EmptyState"
+import { SkeletonList } from "../../components/common/Skeleton"
 
 function formatDate(value) {
   if (!value) return "Date unavailable"
@@ -190,9 +192,7 @@ function MySubmissions() {
         </div>
 
         {loading ? (
-          <div className="p-12 text-center text-sm text-[var(--cv-muted,#6b7280)]">
-            Loading your submission history...
-          </div>
+          <SkeletonList count={4} />
         ) : error ? (
           <div className="p-8 text-center">
             <p className="font-semibold text-red-600">{error}</p>
@@ -205,27 +205,19 @@ function MySubmissions() {
             </button>
           </div>
         ) : filteredSubmissions.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="text-4xl" aria-hidden="true">{"</>"}</div>
-            <h2 className="mt-4 text-lg font-bold">
-              {submissions.length === 0
-                ? "No submissions yet"
-                : "No matching submissions"}
-            </h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-[var(--cv-muted,#6b7280)]">
-              {submissions.length === 0
+          <EmptyState
+            icon="</>"
+            title={
+              submissions.length === 0 ? "No submissions yet" : "No matching submissions"
+            }
+            description={
+              submissions.length === 0
                 ? "Your submitted solutions will appear here. Choose a problem and submit your first solution."
-                : "Try a different search term or select another status."}
-            </p>
-            {submissions.length === 0 && (
-              <Link
-                to="/problems"
-                className="mt-5 inline-flex rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700"
-              >
-                Explore problems
-              </Link>
-            )}
-          </div>
+                : "Try a different search term or select another status."
+            }
+            actionLabel={submissions.length === 0 ? "Explore problems" : undefined}
+            actionTo={submissions.length === 0 ? "/problems" : undefined}
+          />
         ) : (
           <>
             <div className="hidden overflow-x-auto md:block">

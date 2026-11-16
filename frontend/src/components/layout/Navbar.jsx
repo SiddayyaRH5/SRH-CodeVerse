@@ -163,6 +163,27 @@ function Navbar() {
                   </Link>
 
                   <Link
+                    to="/my-submissions"
+                    className="block px-3 py-2 rounded-xl text-sm hover:bg-[var(--cv-surface-2)]"
+                  >
+                    My Submissions
+                  </Link>
+
+                  <Link
+                    to="/notifications"
+                    className="block px-3 py-2 rounded-xl text-sm hover:bg-[var(--cv-surface-2)]"
+                  >
+                    Notifications
+                  </Link>
+
+                  <Link
+                    to="/workspace/select"
+                    className="block px-3 py-2 rounded-xl text-sm hover:bg-[var(--cv-surface-2)]"
+                  >
+                    Workspaces
+                  </Link>
+
+                  <Link
                     to="/analytics"
                     className="block px-3 py-2 rounded-xl text-sm hover:bg-[var(--cv-surface-2)]"
                   >
@@ -241,6 +262,31 @@ function Navbar() {
                 {label}
               </Link>
             ))}
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-[var(--cv-border)] grid sm:grid-cols-2 gap-1">
+            {user && (
+              <>
+                <Link
+                  to="/my-submissions"
+                  className="px-3 py-2.5 rounded-xl text-sm text-[var(--cv-muted)] hover:bg-[var(--cv-surface-2)]"
+                >
+                  My Submissions
+                </Link>
+                <Link
+                  to="/notifications"
+                  className="px-3 py-2.5 rounded-xl text-sm text-[var(--cv-muted)] hover:bg-[var(--cv-surface-2)]"
+                >
+                  Notifications
+                </Link>
+                <Link
+                  to="/workspace/select"
+                  className="px-3 py-2.5 rounded-xl text-sm text-[var(--cv-muted)] hover:bg-[var(--cv-surface-2)]"
+                >
+                  Workspaces
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="mt-3 pt-3 border-t border-[var(--cv-border)] flex gap-2">

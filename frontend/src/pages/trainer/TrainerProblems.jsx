@@ -13,6 +13,7 @@ function TrainerProblems() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [confirmDelete, setConfirmDelete] = useState(null) // { id, title } or null
+  const [deleting, setDeleting] = useState(false)
 
   const loadProblems = () => {
     setLoading(true)
@@ -31,14 +32,18 @@ function TrainerProblems() {
   }
 
   const confirmDeleteProblem = async () => {
+    if (!confirmDelete || deleting) return
     const { id, title } = confirmDelete
-    setConfirmDelete(null)
+    setDeleting(true)
     try {
       await deleteProblem(id)
       setProblems((prev) => prev.filter((p) => p.id !== id))
       showToast(`"${title}" deleted.`, "success")
+      setConfirmDelete(null)
     } catch (err) {
       showToast(err.response?.data?.message || "Failed to delete problem", "error")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -159,6 +164,7 @@ function TrainerProblems() {
         title="Delete Problem"
         message={confirmDelete ? `Delete "${confirmDelete.title}"? This cannot be undone.` : ""}
         confirmLabel="Delete"
+        loading={deleting}
         onConfirm={confirmDeleteProblem}
         onCancel={() => setConfirmDelete(null)}
       />

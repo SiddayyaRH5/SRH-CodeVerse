@@ -1,6 +1,7 @@
 import axios from "axios"
 import {
   cachedFetch,
+  clearCache,
   invalidateAllCache,
   syncCacheUser,
 } from "../utils/cache"
@@ -83,5 +84,76 @@ axiosInstance.interceptors.response.use((response) => {
   }
   return response
 })
+
+// ---------------------------------------------------------------------------
+// Unauthorized (401) handling
+// ---------------------------------------------------------------------------
+// Endpoints that legitimately answer 401 for a *failed attempt* rather than an
+// expired session. Redirecting on these would log a user out while they are
+// simply typing the wrong password.
+const PUBLIC_AUTH_PATHS = [
+  "/auth/login",
+  "/auth/register",
+  "/auth/oauth/exchange-code",
+  "/auth/login/oauth2/",
+]
+
+let unauthorizedHandler = null
+let handlingUnauthorized = false
+
+export function isPublicAuthRequest(url = "") {
+  return PUBLIC_AUTH_PATHS.some((path) => String(url).includes(path))
+}
+
+/**
+ * Registers the React-side cleanup (clearing auth state and navigating to the
+ * login screen). Returns an unregister function.
+ */
+export function setUnauthorizedHandler(handler) {
+  unauthorizedHandler = handler
+  return () => {
+    if (unauthorizedHandler === handler) unauthorizedHandler = null
+  }
+}
+
+/**
+ * Clears the invalid session exactly once, even when several requests fail
+ * with 401 at the same time.
+ */
+export function notifyUnauthorized() {
+  if (handlingUnauthorized) return
+  handlingUnauthorized = true
+  // Release the guard so a later, genuinely separate 401 can still be handled.
+  setTimeout(() => {
+    handlingUnauthorized = false
+  }, 1000)
+
+  try {
+    window.localStorage.removeItem("srhcodeverse_token")
+    window.localStorage.removeItem("srhcodeverse_username")
+    window.localStorage.removeItem("srhcodeverse_role")
+  } catch {
+    // Storage can be unavailable; the cache clear below still applies.
+  }
+
+  clearCache()
+
+  if (unauthorizedHandler) unauthorizedHandler()
+}
+
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status
+    const url = error.config?.url ?? ""
+
+    // 403 means "authenticated but not allowed" — never an expired session.
+    if (status === 401 && !isPublicAuthRequest(url)) {
+      notifyUnauthorized()
+    }
+
+    return Promise.reject(error)
+  },
+)
 
 export default axiosInstance

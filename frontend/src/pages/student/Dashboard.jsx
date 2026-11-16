@@ -42,7 +42,7 @@ function DailyChallengeCard() {
             <p className="cv-dashboard-empty-title">Your next challenge is on its way</p>
             <p className="cv-dashboard-muted">Explore the practice arena while today’s challenge is being prepared.</p>
           </div>
-          <Link to="/practice" className="cv-dashboard-inline-link">Explore practice <span>→</span></Link>
+          <Link to="/problems" className="cv-dashboard-inline-link">Explore practice <span>→</span></Link>
         </div>
       )}
     </section>
@@ -82,7 +82,7 @@ function AchievementsCard() {
             <p className="cv-dashboard-empty-title">Your first achievement is waiting</p>
             <p className="cv-dashboard-muted">Solve your first problem to start collecting milestones.</p>
           </div>
-          <Link to="/practice" className="cv-dashboard-inline-link">Start solving <span>→</span></Link>
+          <Link to="/problems" className="cv-dashboard-inline-link">Start solving <span>→</span></Link>
         </div>
       ) : (
         <div className="cv-dashboard-achievement-grid">
@@ -123,7 +123,7 @@ function Dashboard() {
           <span className="cv-dashboard-welcome-pill"><span className="cv-dashboard-live-dot" /> YOUR DEVELOPER SPACE</span>
           <h1>Welcome back, <span className="cv-dashboard-name">{username}</span> <span role="img" aria-label="waving hand">👋</span></h1>
           <p>Ready to forge something great today? Keep your momentum going.</p>
-          <div className="cv-dashboard-welcome-actions"><Link to="/practice" className="cv-dashboard-button">Continue practicing <span>→</span></Link><Link to="/learning-path" className="cv-dashboard-quiet-link">View learning path <span>↗</span></Link></div>
+          <div className="cv-dashboard-welcome-actions"><Link to="/problems" className="cv-dashboard-button">Continue practicing <span>→</span></Link><Link to="/learning-path" className="cv-dashboard-quiet-link">View learning path <span>↗</span></Link></div>
         </div>
         <div className="cv-dashboard-code-card" aria-hidden="true">
           <div className="cv-dashboard-code-top"><span /><span /><span /><small>your-next-level.js</small></div>

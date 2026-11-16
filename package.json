@@ -1,0 +1,15 @@
+{
+  "name": "srh-codeverse",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview",
+    "test": "npm --prefix frontend run test",
+    "lint": "npm --prefix frontend run lint"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.3.0",
+    "vite": "^8.2.0"
+  }
+}

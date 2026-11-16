@@ -2,6 +2,9 @@
 import { Routes, Route } from "react-router-dom"
 import PageLayout from "../components/layout/PageLayout"
 import ProtectedRoute from "./ProtectedRoute"
+import WorkspaceAccess from "../features/workspace/WorkspaceAccess"
+import WorkspaceRouter from "../features/workspace/WorkspaceRouter"
+import WorkspaceSelect from "../features/workspace/WorkspaceSelect"
 import Landing from "../pages/student/Landing"
 import Login from "../pages/student/Login"
 import OAuthCallback from "../pages/student/OAuthCallback"
@@ -31,6 +34,13 @@ import Certificates from "../pages/student/Certificates"
 import Courses from "../pages/student/Courses"
 import CourseDetail from "../pages/student/CourseDetail"
 import CourseProblemDetail from "../pages/student/CourseProblemDetail";
+import MySubmissions from "../pages/student/MySubmissions"
+import Announcements from "../pages/student/Announcements"
+import Calendar from "../pages/student/Calendar"
+import Notifications from "../pages/student/Notifications"
+import ForgotPassword from "../pages/student/ForgotPassword"
+import NotFound from "../pages/student/NotFound"
+import TrainerProfile from "../pages/trainer/Profile"
 
 function AppRoutes() {
   return (
@@ -38,8 +48,27 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
         <Route path="/register" element={<Register />} />
+        <Route
+          path="/workspace/select"
+          element={
+            <ProtectedRoute>
+              <WorkspaceSelect />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/workspace/:portal/*"
+          element={
+            <ProtectedRoute>
+              <WorkspaceAccess>
+                <WorkspaceRouter />
+              </WorkspaceAccess>
+            </ProtectedRoute>
+          }
+        />
         <Route path="/courses" element={<Courses />} />
         <Route path="/courses/:slug" element={<CourseDetail />} />
 <Route
@@ -150,8 +179,27 @@ function AppRoutes() {
         <Route path="/certificates" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><Certificates /></ProtectedRoute>} />
         <Route path="/playground" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><Playground /></ProtectedRoute>} />
 
+<Route path="/trainer/profile" element={<ProtectedRoute allowedRoles={[ "TRAINER" ]}><TrainerProfile /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><Profile /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><Settings /></ProtectedRoute>} />
+<Route path="/announcements" element={<ProtectedRoute allowedRoles={[ "STUDENT", "TRAINER" ]}><Announcements /></ProtectedRoute>} />
+        <Route path="/calendar" element={<ProtectedRoute allowedRoles={[ "STUDENT", "TRAINER" ]}><Calendar /></ProtectedRoute>} />
+        <Route
+          path="/my-submissions"
+          element={
+            <ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}>
+              <MySubmissions />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}>
+              <Notifications />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/trainer/students"
@@ -188,6 +236,9 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
+        {/* Catch-all: unknown URLs always render a real page, never a blank shell. */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </PageLayout>
   )
