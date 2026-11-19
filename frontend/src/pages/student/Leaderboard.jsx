@@ -77,7 +77,7 @@ function Leaderboard() {
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Page header */}
       <header className="mb-8">
-        <p className="text-xs font-bold uppercase tracking-[0.22em] text-violet-400">
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--cv-primary)]">
           CODEVERSE COMMUNITY
         </p>
 
@@ -212,7 +212,7 @@ function Leaderboard() {
                   {entries.length} {entries.length === 1 ? "participant" : "participants"}
                 </p>
               </div>
-              <span className="w-fit rounded-full bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-400">
+              <span className="w-fit rounded-full bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-[var(--cv-primary)]">
                 Live standings
               </span>
             </div>
@@ -234,7 +234,7 @@ function Leaderboard() {
                           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl font-black ${
                             medal
                               ? "bg-violet-500/10 text-xl"
-                              : "bg-[var(--color-bg-tertiary)] text-sm text-violet-400"
+                              : "bg-[var(--color-bg-tertiary)] text-sm text-[var(--cv-primary)]"
                           }`}
                         >
                           {medal || `#${entry.rank}`}

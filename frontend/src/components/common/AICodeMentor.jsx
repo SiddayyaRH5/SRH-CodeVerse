@@ -82,7 +82,7 @@ export default function AICodeMentor({ code, problem, result }) {
           <span className="w-10 h-10 rounded-xl grid place-items-center bg-gradient-to-br from-violet-600 to-cyan-500 text-white shadow-lg">✦</span>
           <div><p className="font-bold text-sm">AI Code Mentor</p><p className="text-[11px] text-[var(--cv-muted)]">Hints, debugging and optimization guidance</p></div>
         </div>
-        <span className="text-violet-500">{open ? "⌃" : "⌄"}</span>
+        <span className="text-[var(--cv-primary)]">{open ? "⌃" : "⌄"}</span>
       </button>
       {open && <div className="px-4 pb-4">
         <div className="flex flex-wrap gap-2 mb-4">

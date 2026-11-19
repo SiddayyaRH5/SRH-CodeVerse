@@ -1,0 +1,36 @@
+import fs from 'node:fs';
+import path from 'node:path';
+const root = path.resolve(import.meta.dirname, '..');
+const checks=[];
+const add=(name,ok,detail='')=>checks.push({name,ok,detail});
+const read=(p)=>fs.existsSync(path.join(root,p))?fs.readFileSync(path.join(root,p),'utf8'):'';
+const frontendPkg=JSON.parse(read('frontend/package.json')||'{}');
+const backendPom=read('backend/pom.xml');
+add('Frontend package manifest exists',!!frontendPkg.name);
+add('Frontend build script defined',typeof frontendPkg.scripts?.build==='string');
+add('Frontend test script defined',typeof frontendPkg.scripts?.test==='string');
+add('Lockfile committed',fs.existsSync(path.join(root,'frontend/package-lock.json')));
+add('Backend Maven manifest exists',backendPom.includes('<artifactId>srh-codeverse-backend</artifactId>'));
+add('Backend Java 21 configured',backendPom.includes('<java.version>21</java.version>'));
+add('Backend test dependency present',backendPom.includes('spring-boot-starter-data-jpa-test'));
+add('Security config tests exist',fs.existsSync(path.join(root,'backend/src/test/java/com/srhcodeverse/backend/config/SecurityConfigTest.java')));
+add('Frontend API client tests exist',fs.existsSync(path.join(root,'frontend/src/api/axiosInstance.test.js')));
+add('Frontend workspace routing tests exist',fs.existsSync(path.join(root,'frontend/src/features/workspace/workspaceRoutes.test.js')));
+add('Backend execution service tests exist',fs.existsSync(path.join(root,'backend/src/test/java/com/srhcodeverse/backend/service/ExecutionServiceTest.java')));
+add('Release health workflow exists',fs.existsSync(path.join(root,'.github/workflows/backend-health-ping.yml')));
+const envFiles=[];
+for (const dir of ['frontend','backend']) if(fs.existsSync(path.join(root,dir))) for(const f of fs.readdirSync(path.join(root,dir))) if(f.startsWith('.env')&&!f.endsWith('.example')) envFiles.push(`${dir}/${f}`);
+add('No tracked-looking real env files in root app dirs',envFiles.length===0,envFiles.length?envFiles.join(', '):'');
+const frontendSource=path.join(root,'frontend/src');
+let sourceFiles=[];
+function walk(d){if(!fs.existsSync(d))return;for(const e of fs.readdirSync(d,{withFileTypes:true})){if(e.isDirectory())walk(path.join(d,e.name));else if(/\.(jsx?|tsx?)$/.test(e.name))sourceFiles.push(path.join(d,e.name));}}
+walk(frontendSource);
+const suspicious=[];
+for(const f of sourceFiles){const s=fs.readFileSync(f,'utf8');if(/\b(?:eval|new Function)\s*\(/.test(s)) suspicious.push(path.relative(root,f)+' (dynamic code execution)');const auditText=s.replace(/`[\s\S]*?`/g,'').replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/[^\n]*/g,'');if(/console\.(?:log|debug)\s*\(/.test(auditText)) suspicious.push(path.relative(root,f)+' (console debug)');}
+add('Frontend source avoids eval/new Function',!suspicious.some(x=>x.includes('dynamic code execution')),suspicious.filter(x=>x.includes('dynamic code execution')).join('; '));
+add('Frontend debug logs audit report',!suspicious.some(x=>x.includes('console debug')),suspicious.filter(x=>x.includes('console debug')).slice(0,12).join('; '));
+const apiFiles=sourceFiles.filter(f=>f.includes(`${path.sep}api${path.sep}`));
+add('Frontend API layer present',apiFiles.length>0,`${apiFiles.length} source files found`);
+console.log(`Stage 9 QA readiness: ${checks.filter(x=>x.ok).length}/${checks.length} static checks passed`);
+for(const c of checks)console.log(`${c.ok?'PASS':'FAIL'} ${c.name}${c.detail?` — ${c.detail}`:''}`);
+if(checks.some(x=>!x.ok))process.exitCode=1;

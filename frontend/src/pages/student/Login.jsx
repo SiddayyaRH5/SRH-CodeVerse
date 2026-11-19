@@ -79,15 +79,25 @@ function Login() {
               </span>
             </Link>
 
-            <span className="text-sm text-[var(--cv-muted)]">
-              New here?{" "}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm text-[var(--cv-muted)]">
+                New here?{" "}
+                <Link
+                  to="/register"
+                  className="font-bold text-[var(--cv-primary)] transition hover:text-cyan-400"
+                >
+                  Sign Up
+                </Link>
+              </span>
+
               <Link
-                to="/register"
-                className="font-bold text-violet-500 transition hover:text-cyan-400"
+                to="/demo"
+                className="cv-secondary-btn !px-4 !py-2 text-xs"
+                title="Try the demo without creating an account"
               >
-                Sign Up
+                Explore Demo
               </Link>
-            </span>
+            </div>
           </div>
 
           <div className="mx-auto w-full max-w-md min-w-0">
@@ -204,7 +214,7 @@ function Login() {
                       showPassword ? "Hide password" : "Show password"
                     }
                     aria-pressed={showPassword}
-                    className="absolute right-3 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-[var(--cv-muted)] transition hover:bg-violet-500/10 hover:text-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                    className="absolute right-3 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-[var(--cv-muted)] transition hover:bg-violet-500/10 hover:text-[var(--cv-primary)] focus:outline-none focus:ring-2 focus:ring-violet-500/40"
                   >
                     {showPassword ? (
                       <svg
@@ -256,7 +266,7 @@ function Login() {
 
                 <Link
                   to="/forgot-password"
-                  className="font-bold text-violet-500 transition hover:text-cyan-400"
+                  className="font-bold text-[var(--cv-primary)] transition hover:text-cyan-400"
                 >
                   Forgot password?
                 </Link>
@@ -330,7 +340,7 @@ function Login() {
               Don&apos;t have an account?{" "}
               <Link
                 to="/register"
-                className="font-bold text-violet-500 transition hover:text-cyan-400"
+                className="font-bold text-[var(--cv-primary)] transition hover:text-cyan-400"
               >
                 Sign Up
               </Link>

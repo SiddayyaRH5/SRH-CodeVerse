@@ -1,0 +1,16 @@
+import fs from 'node:fs';
+import path from 'node:path';
+const root=path.resolve(import.meta.dirname,'..');
+const checks=[];const add=(n,ok,d='')=>checks.push({n,ok,d});
+const has=(p)=>fs.existsSync(path.join(root,p));
+add('Release readiness guide present',has('RELEASE_STAGE_10.md'));
+add('Stage 9 verifier present',has('scripts/verify-stage-9.mjs'));
+add('Stage 10 verifier present',has('scripts/verify-stage-10.mjs'));
+add('Frontend CI workflow present',has('.github/workflows/ci.yml'));
+add('Backend health workflow retained',has('.github/workflows/backend-health-ping.yml'));
+add('Root README present',has('Readme.MD'));
+add('Environment sample guide present',has('ENVIRONMENT_SETUP.md'));
+add('Migration folder present',has('backend/src/main/resources/db/migration'));
+console.log(`Stage 10 release checks: ${checks.filter(x=>x.ok).length}/${checks.length} passed`);
+for(const c of checks)console.log(`${c.ok?'PASS':'FAIL'} ${c.n}${c.d?` — ${c.d}`:''}`);
+if(checks.some(x=>!x.ok))process.exitCode=1;

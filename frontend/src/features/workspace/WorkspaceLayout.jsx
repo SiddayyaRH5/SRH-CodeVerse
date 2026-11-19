@@ -27,9 +27,15 @@ function WorkspaceLayout({ portal, children }) {
     studentMode,
   } = useWorkspace()
 
+  // Demo mode is a no-login preview reached via /demo/*. It uses the same
+  // workspace shell and sample data, but the base path changes so portal
+  // switching and sidebar links stay inside the demo tree.
+  const isDemoMode = pathname.startsWith("/demo")
+  const basePath = isDemoMode ? "/demo" : "/workspace"
+
   const portalInfo = PORTALS[portal]
   const navigation = PORTAL_NAVIGATION[portal]
-  const pagePath = pathname.split(`/workspace/${portal}/`)[1] || "dashboard"
+  const pagePath = pathname.split(`${basePath}/${portal}/`)[1] || "dashboard"
   const pageTitle =
     navigation.find(([, route]) => pagePath === route || pagePath.startsWith(`${route}/`))?.[0] ??
     portalInfo.label
@@ -49,7 +55,7 @@ function WorkspaceLayout({ portal, children }) {
   function changePortal(event) {
     const nextPortal = event.target.value
     selectPortal(nextPortal)
-    navigate(`/workspace/${nextPortal}/${PORTALS[nextPortal].dashboardPath}`)
+    navigate(`${basePath}/${nextPortal}/${PORTALS[nextPortal].dashboardPath}`)
     setMobileMenuOpen(false)
   }
 
@@ -81,7 +87,7 @@ function WorkspaceLayout({ portal, children }) {
           {navigation.map(([label, route]) => (
             <NavLink
               key={route}
-              to={`/workspace/${portal}/${route}`}
+              to={`${basePath}/${portal}/${route}`}
               onClick={() => setMobileMenuOpen(false)}
               className={({ isActive }) =>
                 `cv-nav-link flex min-h-10 items-center rounded-xl px-3 py-2 text-sm transition-colors ${
@@ -95,6 +101,27 @@ function WorkspaceLayout({ portal, children }) {
             </NavLink>
           ))}
         </nav>
+        {!isDemoMode && portal === "student" && (
+          <div className="border-t border-[var(--cv-border)] px-3 py-4">
+            <p className="cv-kicker mb-2">LEARNING TOOLS</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                ["Playground", "/playground"],
+                ["Mock interview", "/mock-interview"],
+                ["Live coding", "/live-coding"],
+                ["Study Hub", "/study-hub"],
+                ["Roadmap", "/roadmap"],
+                ["Analytics", "/analytics"],
+                ["Leaderboard", "/leaderboard"],
+                ["Achievements", "/achievements"],
+              ].map(([label, href]) => (
+                <Link key={href} to={href} onClick={() => setMobileMenuOpen(false)} className="rounded-lg border border-[var(--cv-border)] px-2 py-2 text-xs text-[var(--cv-muted)] transition-colors hover:bg-[var(--cv-surface-2)] hover:text-[var(--cv-text)]">
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="border-t border-[var(--cv-border)] p-4">
           <div className="mb-3 text-xs text-[var(--cv-muted)]">
             Demo identity: <span className="font-semibold text-[var(--cv-text)]">{demoUser.displayName}</span>
@@ -120,7 +147,7 @@ function WorkspaceLayout({ portal, children }) {
             <div className="mr-auto min-w-0 flex-1 sm:min-w-36">
               <p className="cv-kicker">{portalInfo.description}</p>
               <nav aria-label="Breadcrumb" className="mt-1 flex items-center gap-2 text-sm">
-                <Link to={`/workspace/${portal}/dashboard`} className="text-[var(--cv-muted)] hover:text-[var(--cv-text)]">{portalInfo.label}</Link>
+                <Link to={`${basePath}/${portal}/dashboard`} className="text-[var(--cv-muted)] hover:text-[var(--cv-text)]">{portalInfo.label}</Link>
                 <span aria-hidden="true" className="text-[var(--cv-subtle)]">/</span>
                 <span className="font-bold">{currentRouteLabel}</span>
               </nav>
@@ -139,7 +166,7 @@ function WorkspaceLayout({ portal, children }) {
                 </option>
               ))}
             </select>
-            <Link to={`/workspace/${portal}/${notificationRoute}`} aria-label={`${notificationCount} ${notificationLabel}`} className="cv-secondary-btn relative !px-3 !py-2 text-sm">
+            <Link to={`${basePath}/${portal}/${notificationRoute}`} aria-label={`${notificationCount} ${notificationLabel}`} className="cv-secondary-btn relative !px-3 !py-2 text-sm">
               Notifications
               <span className="ml-2 inline-flex min-w-5 justify-center rounded-full bg-[var(--cv-primary)] px-1.5 py-0.5 text-xs font-bold text-white">{notificationCount}</span>
             </Link>
@@ -186,8 +213,8 @@ function WorkspaceLayout({ portal, children }) {
               </button>
               {profileMenuOpen && (
                 <div role="menu" className="absolute right-0 top-full z-30 mt-2 grid min-w-44 gap-1 rounded-xl border border-[var(--cv-border)] bg-[var(--cv-surface)] p-2 shadow-xl">
-                  <Link role="menuitem" to={`/workspace/${portal}/profile`} onClick={() => setProfileMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm hover:bg-[var(--cv-surface-2)]">My profile</Link>
-                  <Link role="menuitem" to={`/workspace/${portal}/settings`} onClick={() => setProfileMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm hover:bg-[var(--cv-surface-2)]">Settings</Link>
+                  <Link role="menuitem" to={`${basePath}/${portal}/profile`} onClick={() => setProfileMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm hover:bg-[var(--cv-surface-2)]">My profile</Link>
+                  <Link role="menuitem" to={`${basePath}/${portal}/settings`} onClick={() => setProfileMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm hover:bg-[var(--cv-surface-2)]">Settings</Link>
                   <Link role="menuitem" to="/" onClick={() => setProfileMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm hover:bg-[var(--cv-surface-2)]">Exit demo workspace</Link>
                 </div>
               )}
@@ -207,6 +234,19 @@ function WorkspaceLayout({ portal, children }) {
               <button type="button" onClick={disableDemoPreview} className="cv-secondary-btn !px-3 !py-2 text-sm">
                 Stop preview
               </button>
+            </div>
+          )}
+          {isDemoMode && (
+            <div className="cv-panel mb-6 flex flex-wrap items-start gap-3 !border-amber-500/40 !bg-amber-500/10 !p-4 text-sm">
+              <span aria-hidden="true" className="cv-kicker text-amber-400">DEMO MODE</span>
+              <p className="flex-1 text-[var(--cv-muted)]">
+                You are browsing a no-login demo. All data is sample content held in this browser session
+                only — nothing is saved to the backend and no account is created.{" "}
+                <Link to="/login" className="font-bold text-[var(--cv-primary)] transition hover:text-cyan-400">
+                  Sign in
+                </Link>{" "}
+                for the full experience.
+              </p>
             </div>
           )}
           <div className="cv-panel mb-6 flex items-start gap-3 !border-violet-500/20 !bg-[var(--cv-surface-2)] !p-4 text-sm">
