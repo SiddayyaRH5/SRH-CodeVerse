@@ -342,3 +342,61 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Stage 2 — unified workspace design-system polish */
+:root {
+  --cv-accent-violet: #8b5cf6;
+  --cv-accent-cyan: #22d3ee;
+  --cv-accent-blue: #4f8cff;
+  --cv-motion-fast: 160ms;
+  --cv-motion-base: 240ms;
+  --cv-motion-slow: 420ms;
+  --cv-ease-standard: cubic-bezier(.2,.7,.2,1);
+  --cv-ease-emphasis: cubic-bezier(.16,1,.3,1);
+}
+
+.cv-nav-link {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.cv-nav-link::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180, var(--cv-accent-violet), var(--cv-accent-cyan));
+  opacity: 0;
+  transform: scaleY(.45);
+  transition: opacity var(--cv-motion-base) ease, transform var(--cv-motion-base) var(--cv-ease-standard);
+}
+.cv-nav-link.active::before,
+.cv-nav-link[aria-current="page"]::before { opacity: 1; transform: scaleY(1); }
+.cv-panel {
+  background-image: linear-gradient(145deg, color-mix(in srgb, var(--cv-surface) 96%, white 4%), var(--cv-surface));  
+}
+.cv-primary-btn:focus-visible,
+.cv-secondary-btn:focus-visible,
+.cv-input:focus-visible,
+.cv-nav-link:focus-visible,
+.cv-panel a:focus-visible,
+.cv-panel button:focus-visible {
+  outline: 2px solid var(--cv-accent-cyan);
+  outline-offset: 3px;
+}
+.cv-primary-btn:hover,
+.cv-secondary-btn:hover { box-shadow: 0 5px 18px color-mix(in srgb, var(--cv-purple) 14%, transparent); }
+.cv-workspace-page > * { animation: cvPageCascadeIn var(--cv-motion-slow) var(--cv-ease-emphasis) both; }
+.cv-workspace-page > *:nth-child(2) { animation-delay: 35ms; }
+.cv-workspace-page > *:nth-child(3) { animation-delay: 70ms; }
+.cv-workspace-page > *:nth-child(4) { animation-delay: 105ms; }
+.cv-panel:hover { border-color: color-mix(in srgb, var(--cv-accent-violet) 24%, var(--cv-border)); }
+@keyframes cvPageCascadeIn { from { opacity: 0; transform: translate3d(0, 9px, 0); } to { opacity: 1; transform: none; } }
+@media (max-width: 768px) {
+  .cv-workspace-page { padding-inline: clamp(12px, 3vw, 20px); }
+  .cv-panel { border-radius: min(1rem, 4vw); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cv-workspace-page > *, .cv-nav-link::before { animation: none !important; transition: none !important; }
+}

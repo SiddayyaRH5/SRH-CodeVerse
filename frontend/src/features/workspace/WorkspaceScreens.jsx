@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate, useLocation } from "react-router-dom"
 import {
   DEMO_CHANNELS,
   DEMO_MEMBERSHIPS,
@@ -10,6 +10,7 @@ import {
 import { useWorkspace } from "./useWorkspace"
 import { RESOURCE_PAGES } from "./resourcePages"
 import { useToast } from "../../context/ToastContext"
+import { getPlatformOrganizations, createPlatformOrganization, updatePlatformOrganizationStatus } from "../../api/platformAdminApi"
 
 const TASK_STATUSES = [
   ["TODO", "To do"],
@@ -86,11 +87,15 @@ function Surface({ children, className = "" }) {
   )
 }
 
-function MetricCard({ label, value, note }) {
+function MetricCard({ label, value, note, index = 0 }) {
+  const accents = ["violet", "cyan", "pink", "amber"]
   return (
-    <Surface>
-      <p className="text-sm text-[var(--cv-muted)]">{label}</p>
-      <p className="mt-2 text-3xl font-bold tracking-tight">{value}</p>
+    <Surface className={`cv-metric-card cv-metric-${accents[index % accents.length]}`}>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm font-medium text-[var(--cv-muted)]">{label}</p>
+        <span className="cv-metric-spark" aria-hidden="true"><span /></span>
+      </div>
+      <p className="cv-metric-value mt-3 text-3xl font-extrabold tracking-tight">{value}</p>
       {note && <p className="mt-2 text-xs text-[var(--cv-muted)]">{note}</p>}
     </Surface>
   )
@@ -286,6 +291,8 @@ function PageIntro({ portal, screen }) {
 }
 
 function Dashboard({ portal }) {
+  const location = useLocation()
+  const basePath = location.pathname.startsWith("/demo") ? "/demo" : "/workspace"
   const { activeOrganization, data, studentMode } = useWorkspace()
   const metricsData = data.dashboardMetrics
   const metrics = {
@@ -323,18 +330,26 @@ function Dashboard({ portal }) {
   const shortcuts = PORTAL_NAVIGATION[portal].slice(1, 5)
 
   return (
-    <>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">Welcome back, Demo User</h2>
-        <p className="mt-1 text-sm text-[var(--cv-muted)]">
-          {portal === "superadmin" ? "A platform-wide overview of the demo environment." : `Here is the latest overview for ${activeOrganization?.name ?? "your workspace"}.`}
-        </p>
+    <div className={`cv-workspace-dashboard cv-dashboard-${portal}`}>
+      <div className="cv-dashboard-hero mb-6">
+        <div className="cv-dashboard-hero-copy">
+          <span className="cv-dashboard-welcome-pill">{PORTALS[portal].label.toUpperCase()} SPACE · OVERVIEW</span>
+          <h2 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl">Welcome back, Demo User <span aria-hidden="true">✦</span></h2>
+          <p className="mt-2 max-w-2xl text-sm text-[var(--cv-muted)]">
+            {portal === "superadmin" ? "A platform-wide overview of the demo environment." : `Here is the latest overview for ${activeOrganization?.name ?? "your workspace"}.`}
+          </p>
+          <div className="cv-dashboard-hero-meta mt-5 flex flex-wrap gap-2">
+            <span className="cv-dashboard-meta-chip">● Workspace active</span>
+            <span className="cv-dashboard-meta-chip">Updated just now</span>
+          </div>
+        </div>
+        <div className="cv-dashboard-hero-orb" aria-hidden="true"><div className="cv-dashboard-orb-core" /></div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map(([label, value, note]) => <MetricCard key={label} label={label} value={value} note={note} />)}
+      <div className="cv-dashboard-metrics grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map(([label, value, note], index) => <MetricCard key={label} label={label} value={value} note={note} index={index} />)}
       </div>
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Surface>
+      <div className="cv-dashboard-lower mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.9fr_0.9fr]">
+        <Surface className="cv-dashboard-activity">
           <h3 className="font-semibold">Recent activity</h3>
           <ul className="mt-4 divide-y divide-[var(--cv-border)]">
             {data.auditEvents.slice(0, 4).map((event) => (
@@ -345,19 +360,53 @@ function Dashboard({ portal }) {
             ))}
           </ul>
         </Surface>
-        <Surface>
+        <WorkspacePulse portal={portal} data={data} />
+        <Surface className="cv-dashboard-shortcuts">
           <h3 className="font-semibold">Quick access</h3>
           <div className="mt-4 grid gap-2">
             {shortcuts.map(([label, route]) => (
-              <Link key={route} to={`/workspace/${portal}/${route}`} className="rounded-lg border border-[var(--cv-border)] px-3 py-2.5 text-sm hover:bg-[var(--cv-surface-2)]">{label} <span aria-hidden="true">→</span></Link>
+              <Link key={route} to={`${basePath}/${portal}/${route}`} className="rounded-lg border border-[var(--cv-border)] px-3 py-2.5 text-sm hover:bg-[var(--cv-surface-2)]">{label} <span aria-hidden="true">→</span></Link>
             ))}
-            {portal === "organization" && <Link to="/workspace/organization/registration" className="rounded-lg border border-[var(--cv-border)] px-3 py-2.5 text-sm hover:bg-[var(--cv-surface-2)]">Organization registration →</Link>}
+            {portal === "organization" && <Link to={`${basePath}/organization/registration`} className="rounded-lg border border-[var(--cv-border)] px-3 py-2.5 text-sm hover:bg-[var(--cv-surface-2)]">Organization registration →</Link>}
           </div>
         </Surface>
       </div>
-    </>
+    </div>
   )
 }
+
+
+function WorkspacePulse({ portal, data }) {
+  const pulseItems = {
+    student: [["Courses", data.courses], ["Challenges", data.challenges], ["Assignments", data.assignments], ["Certificates", data.certificates]],
+    trainer: [["Learners", data.students], ["Batches", data.teams], ["Assignments", data.assignments], ["Submissions", data.submissions]],
+    employee: [["Projects", data.projects], ["Tasks", data.tasks], ["Teams", data.teams], ["Work logs", data.workLogs]],
+    organization: [["Members", data.employees], ["Projects", data.projects], ["Tasks", data.tasks], ["Teams", data.teams]],
+    superadmin: [["Organizations", data.organizations], ["Users", data.employees], ["Applications", data.applications], ["Audit events", data.auditEvents]],
+  }[portal]
+  const items = pulseItems.map(([label, records]) => [label, Array.isArray(records) ? records.length : 0])
+  const max = Math.max(1, ...items.map(([, value]) => value))
+  return (
+    <Surface className="cv-dashboard-pulse">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-semibold">Workspace pulse</h3>
+        <span className="cv-dashboard-meta-chip">Sample data</span>
+      </div>
+      <div className="mt-5 space-y-4">
+        {items.map(([label, value], index) => (
+          <div key={label} className="cv-pulse-row" style={{ animationDelay: `${index * 75}ms` }}>
+            <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+              <span className="text-[var(--cv-muted)]">{label}</span>
+              <span className="font-semibold tabular-nums">{value}</span>
+            </div>
+            <div className="cv-pulse-track"><span style={{ width: `${Math.max(value ? 8 : 0, value / max * 100)}%` }} /></div>
+          </div>
+        ))}
+      </div>
+    </Surface>
+  )
+}
+
 
 function WorkspaceTable({ title, rows, columns, emptyMessage }) {
   return (
@@ -920,8 +969,45 @@ function OrganizationRegistration({ statusOnly = false }) {
   )
 }
 
+function PlatformOrganizationsLive({ onBack }) {
+  const [rows, setRows] = useState([])
+  const [query, setQuery] = useState("")
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+  const [meta, setMeta] = useState({ page: 0, totalPages: 0, totalElements: 0 })
+  const load = async (page = 0, search = query) => {
+    setLoading(true); setError("")
+    try { const response = await getPlatformOrganizations(search, page, 25); const data = response.data; setRows(data.items ?? []); setMeta(data) }
+    catch (e) { setError(e?.response?.data?.message || e.message || "Could not load platform organizations.") }
+    finally { setLoading(false) }
+  }
+  useEffect(() => { load(0, query) }, [])
+  const submit = async (e) => {
+    e.preventDefault(); if (!name.trim()) return
+    setSaving(true); setError("")
+    try { await createPlatformOrganization({ name: name.trim(), description: description.trim() }); setName(""); setDescription(""); await load(0, query) }
+    catch (e) { setError(e?.response?.data?.message || e.message || "Organization creation failed.") }
+    finally { setSaving(false) }
+  }
+  const changeStatus = async (org, status) => {
+    setError(""); try { await updatePlatformOrganizationStatus(org.id, status); await load(meta.page, query) }
+    catch (e) { setError(e?.response?.data?.message || e.message || "Status update failed.") }
+  }
+  return <div className="space-y-4">
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="cv-kicker">LIVE BACKEND MODE</p><h3 className="text-lg font-semibold">Persistent platform organizations</h3><p className="text-sm text-[var(--cv-muted)]">This view uses secured Super Admin APIs, not the local demo store.</p></div><button onClick={onBack} type="button" className="cv-secondary-btn !px-3 !py-2 text-sm">Return to demo</button></div>
+    <Surface><form onSubmit={submit} className="grid gap-3 sm:grid-cols-2"><label className="text-sm">Organization name<input value={name} onChange={e=>setName(e.target.value)} required minLength={2} maxLength={160} className="cv-input mt-1 w-full" placeholder="Organization name" /></label><label className="text-sm">Description<input value={description} onChange={e=>setDescription(e.target.value)} maxLength={1000} className="cv-input mt-1 w-full" placeholder="Optional description" /></label><div className="sm:col-span-2"><button disabled={saving} className="cv-primary-btn !px-4 !py-2 text-sm">{saving ? "Creating…" : "Create organization (pending)"}</button></div></form></Surface>
+    <Surface><div className="flex flex-wrap gap-2"><input value={query} onChange={e=>setQuery(e.target.value)} className="cv-input min-w-0 flex-1" placeholder="Search name or slug"/><button type="button" onClick={()=>load(0,query)} className="cv-secondary-btn !px-3 !py-2 text-sm">Search</button></div>{error && <p role="alert" className="mt-3 text-sm text-rose-400">{error}</p>}{loading ? <p className="py-8 text-center text-sm text-[var(--cv-muted)]">Loading organization data…</p> : <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[680px] text-sm"><thead><tr className="border-b border-[var(--cv-border)] text-left"><th className="py-2">Organization</th><th>Slug</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody>{rows.map(org=><tr key={org.id} className="border-b border-[var(--cv-border)]/60"><td className="py-3 font-medium">{org.name}<p className="text-xs text-[var(--cv-muted)]">{org.description}</p></td><td>{org.slug}</td><td><StatusBadge value={org.status}/></td><td className="text-xs">{org.createdAt ? new Date(org.createdAt).toLocaleDateString() : "—"}</td><td><select value={org.status} onChange={e=>changeStatus(org,e.target.value)} className="cv-input max-w-[150px] text-xs"><option value="PENDING">Pending</option><option value="ACTIVE">Active</option><option value="SUSPENDED">Suspended</option><option value="REJECTED">Rejected</option></select></td></tr>)}</tbody></table>{rows.length===0 && <p className="py-6 text-center text-sm text-[var(--cv-muted)]">No organizations found.</p>}</div>}<div className="mt-4 flex items-center justify-between text-sm"><span>{meta.totalElements ?? 0} organizations</span><div className="flex gap-2"><button disabled={loading || meta.page<=0} onClick={()=>load(meta.page-1)} className="cv-secondary-btn !px-3 !py-1">Previous</button><span className="self-center">Page {(meta.page??0)+1} / {Math.max(1,meta.totalPages??0)}</span><button disabled={loading || (meta.page??0)+1>=(meta.totalPages??0)} onClick={()=>load(meta.page+1)} className="cv-secondary-btn !px-3 !py-1">Next</button></div></div></Surface>
+  </div>
+}
+
+
 function OrganizationDirectory({ suspended = false, routeParts = [] }) {
+  const [liveMode, setLiveMode] = useState(false)
   const { data, mutate } = useWorkspace()
+  if (liveMode && !suspended) return <PlatformOrganizationsLive onBack={() => setLiveMode(false)} />
   const rows = data.organizations.filter((organization) =>
     suspended ? organization.status === "SUSPENDED" : organization.status === "ACTIVE",
   )
@@ -970,10 +1056,12 @@ function OrganizationDirectory({ suspended = false, routeParts = [] }) {
   ]
   return (
     <div className="space-y-5">
+      {!suspended && <Surface><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="cv-kicker">API INTEGRATION</p><p className="text-sm text-[var(--cv-muted)]">Switch to the persistent backend organization directory.</p></div><button type="button" onClick={() => setLiveMode(true)} className="cv-primary-btn !px-4 !py-2 text-sm">Open live organization management</button></div></Surface>}
       <WorkspaceTable title={suspended ? "Suspended organizations" : "Active organizations"} rows={rows} columns={columns} />
     </div>
   )
 }
+
 
 const PLATFORM_ROLES = ["STUDENT", "TRAINER", "EMPLOYEE", "TEAM_LEAD", "ORG_ADMIN", "SUPER_ADMIN"]
 
@@ -2038,8 +2126,19 @@ export default function WorkspaceScreens({ portal, screen, routeParts = [] }) {
   const activeOrg = DEMO_ORGANIZATIONS.find((organization) => organization.id === activeOrganizationId)
 
   return (
-    <div>
+    <div className="cv-workspace-page">
       {screen !== "dashboard" && <PageIntro portal={portal} screen={screen} />}
+      {portal === "employee" && (
+        <Surface className="mb-5 border-amber-500/30 bg-amber-500/5">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400" aria-hidden="true">i</span>
+            <div>
+              <p className="font-semibold">Professional portal preview</p>
+              <p className="mt-1 text-sm text-[var(--cv-muted)]">This workspace currently uses local demo data. Changes are preview-only and are not synced to a production API or organization account.</p>
+            </div>
+          </div>
+        </Surface>
+      )}
       {isStudent && !hasOrganization && (
         <Surface className="mb-5">
           <h3 className="font-semibold">Independent student mode</h3>

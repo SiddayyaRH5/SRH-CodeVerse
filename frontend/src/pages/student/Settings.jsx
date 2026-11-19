@@ -1,11 +1,13 @@
-
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
   getProfile,
   updateProfile,
   changePassword,
 } from "../../api/profileApi"
 import { useTheme } from "../../context/ThemeContext"
+import PageContainer from "../../components/layout/PageContainer"
+import EmptyState from "../../components/common/EmptyState"
+import { SkeletonCards } from "../../components/common/Skeleton"
 
 function Settings() {
   const [email, setEmail] = useState("")
@@ -24,11 +26,25 @@ function Settings() {
   )
   const { theme, toggleTheme } = useTheme()
 
-  useEffect(() => {
-    getProfile()
-      .then((res) => setEmail(res.data.email || ""))
-      .catch(() => {})
+  const [profileLoading, setProfileLoading] = useState(true)
+  const [profileError, setProfileError] = useState("")
+
+  const loadProfile = useCallback(async () => {
+    setProfileLoading(true)
+    setProfileError("")
+    try {
+      const res = await getProfile()
+      setEmail(res.data.email || "")
+    } catch (err) {
+      setProfileError(err.response?.data?.message || "Failed to load profile.")
+    } finally {
+      setProfileLoading(false)
+    }
   }, [])
+
+  useEffect(() => {
+    loadProfile()
+  }, [loadProfile])
 
   const handleEmailUpdate = async (e) => {
     e.preventDefault()
@@ -84,6 +100,61 @@ function Settings() {
         ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
         : "border border-red-500/20 bg-red-500/10 text-red-400"
     }`
+
+  if (profileLoading) {
+    return (
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <header className="mb-8">
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-[var(--color-forge-500)]">
+            PREFERENCES
+          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--color-text-primary)] sm:text-4xl">
+            Settings
+          </h1>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+            Manage your account and personalize your workspace.
+          </p>
+        </header>
+        <PageContainer>
+          <SkeletonCards count={3} />
+        </PageContainer>
+      </main>
+    )
+  }
+
+  if (profileError) {
+    return (
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <header className="mb-8">
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-[var(--color-forge-500)]">
+            PREFERENCES
+          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--color-text-primary)] sm:text-4xl">
+            Settings
+          </h1>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+            Manage your account and personalize your workspace.
+          </p>
+        </header>
+        <PageContainer>
+          <EmptyState
+            icon="!"
+            title={profileError}
+            description="Please check your connection and try again."
+            action={
+              <button
+                onClick={loadProfile}
+                className="cv-primary-btn !px-4 !py-2.5 text-sm"
+              >
+                Try again
+              </button>
+            }
+            className="max-w-md mx-auto mt-20"
+          />
+        </PageContainer>
+      </main>
+    )
+  }
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

@@ -255,7 +255,7 @@ function Navbar() {
                 to={path}
                 className={`px-3 py-2.5 rounded-xl text-sm ${
                   isActive(path)
-                    ? "bg-violet-500/10 text-violet-600"
+                    ? "bg-violet-500/10 text-[var(--cv-primary)]"
                     : "text-[var(--cv-muted)] hover:bg-[var(--cv-surface-2)]"
                 }`}
               >

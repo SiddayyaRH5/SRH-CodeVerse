@@ -1,0 +1,31 @@
+import fs from 'node:fs'
+import path from 'node:path'
+const root = process.cwd().endsWith('frontend') ? path.resolve(process.cwd(), '..') : process.cwd()
+const read = (p) => fs.readFileSync(path.join(root, p), 'utf8')
+const checks = []
+const check = (name, condition) => checks.push({ name, passed: Boolean(condition) })
+const routes = read('frontend/src/routes/AppRoutes.jsx')
+const nav = read('frontend/src/features/workspace/demoData.js')
+const screens = read('frontend/src/features/workspace/WorkspaceScreens.jsx')
+const pages = read('frontend/src/features/workspace/resourcePages.js')
+const service = read('frontend/src/features/workspace/demoService.js')
+const trainerFiles = ['TrainerDashboard.jsx','TrainerCourses.jsx','TrainerAssignments.jsx','TrainerBatches.jsx','TrainerProblems.jsx','ProblemForm.jsx','Students.jsx','StudentDetail.jsx','Profile.jsx']
+for (const file of trainerFiles) check(`Stage 5 trainer page exists: ${file}`, fs.existsSync(path.join(root,'frontend/src/pages/trainer',file)))
+for (const route of ['/trainer/dashboard','/trainer/courses','/trainer/assignments','/trainer/batches','/trainer/problems','/trainer/students','/trainer/profile']) check(`Stage 5 route present: ${route}`, routes.includes(route))
+for (const item of ['curriculum','materials','assignments','submissions','evaluation','attendance','schedule','learning-paths','reports']) check(`Stage 5 workspace navigation: ${item}`, nav.includes(`"${item}"`) || nav.includes(`, "${item}"`))
+for (const item of ['curriculum','materials','assignments','evaluation','learning-paths','schedule']) check(`Stage 5 configurable CRUD page: ${item}`, pages.includes(`${item}: page(`) || pages.includes(`\"${item}\": page(`))
+for (const item of ['createCourse','createAssignment','markStudentAttendance']) check(`Stage 5 service mutation exists: ${item}`, service.includes(`${item}(`))
+check('Stage 5 attendance component', screens.includes('function Attendance(data, portal)') || screens.includes('function Attendance({ data, portal })'))
+check('Stage 5 reports component', screens.includes('function Reports({ portal })'))
+for (const item of ['employees','invitations','departments','teams','projects','timesheets','leave','holidays','training','courses','assignments','announcements','notifications','documents','policies','channels','audit']) check(`Stage 6 organization resource: ${item}`, pages.includes(`${item}: page(`) || (item === 'invitations' && screens.includes('screen === \"invitations\"')) || pages.includes(`\"${item}\": page(`))
+for (const item of ['dashboard','employees','invitations','departments','teams','roles','projects','tasks','timesheets','attendance','leave','holidays','training','courses','assignments','reports','analytics','announcements','notifications','documents','policies','channels','audit','access','registration','application-status']) check(`Stage 6 navigation item: ${item}`, nav.includes(`"${item}"`) || nav.includes(`, "${item}"`))
+for (const item of ['inviteEmployee','createDepartment','updateRolePermission','updateTaskStatus','reviewLeaveRequest']) check(`Stage 6 mutation exists: ${item}`, service.includes(`${item}(`))
+check('Stage 6 role permissions component', screens.includes('function SimpleAccessRoles()'))
+check('Stage 6 organization profile', screens.includes('function OrganizationProfile()'))
+check('Stage 6 organization registration flow', screens.includes('function OrganizationRegistration'))
+check('Stage 6 reporting component', screens.includes('function Reports({ portal })'))
+check('Stage 6 access control demo component', screens.includes('function SimpleAccessRoles()'))
+const failures = checks.filter(c => !c.passed)
+console.log(`Stage 5 & 6 static verification: ${checks.length-failures.length}/${checks.length} passed; ${failures.length} failed.`)
+if (failures.length) { failures.forEach(c => console.error(`FAIL: ${c.name}`)); process.exitCode = 1 }
+else console.log('All static coverage checks passed. Runtime/build/browser verification is not implied.')

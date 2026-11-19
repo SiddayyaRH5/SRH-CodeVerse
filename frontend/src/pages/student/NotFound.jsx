@@ -51,7 +51,7 @@ function NotFound() {
                   className="flex items-center justify-between rounded-xl border border-[var(--cv-border)] bg-[var(--cv-surface)] px-4 py-3 text-sm font-semibold transition hover:bg-[var(--cv-surface-2)]"
                 >
                   {label}
-                  <span aria-hidden="true" className="text-violet-500">
+                  <span aria-hidden="true" className="text-[var(--cv-primary)]">
                     →
                   </span>
                 </Link>
