@@ -2128,6 +2128,17 @@ export default function WorkspaceScreens({ portal, screen, routeParts = [] }) {
   return (
     <div className="cv-workspace-page">
       {screen !== "dashboard" && <PageIntro portal={portal} screen={screen} />}
+      {portal === "employee" && (
+        <Surface className="mb-5 border-amber-500/30 bg-amber-500/5">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400" aria-hidden="true">i</span>
+            <div>
+              <p className="font-semibold">Professional portal preview</p>
+              <p className="mt-1 text-sm text-[var(--cv-muted)]">This workspace currently uses local demo data. Changes are preview-only and are not synced to a production API or organization account.</p>
+            </div>
+          </div>
+        </Surface>
+      )}
       {isStudent && !hasOrganization && (
         <Surface className="mb-5">
           <h3 className="font-semibold">Independent student mode</h3>

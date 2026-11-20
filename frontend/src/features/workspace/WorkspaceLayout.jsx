@@ -74,12 +74,12 @@ function WorkspaceLayout({ portal, children }) {
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         } ${isPlatformAdmin ? "border-t-4 border-t-rose-500" : ""}`}
       >
-        <div className="cv-workspace-brand border-b border-[var(--cv-border)] px-5 py-5">
+        <div className="border-b border-[var(--cv-border)] px-5 py-5">
           <Link to="/" className="flex items-center gap-3" aria-label="Return to SRH CodeVerse home">
-            <img src="/srh-codeverse-logo.png" alt="" className="h-11 w-11 rounded-xl border border-violet-400/30 bg-slate-950/80 p-1 object-contain cv-workspace-logo" />
+            <img src="/srh-codeverse-logo.png" alt="" className="h-10 w-10 rounded-xl border border-violet-400/30 bg-slate-950/80 p-1 object-contain" />
             <span className="font-black tracking-tight cv-brand-gradient">SRH CodeVerse</span>
           </Link>
-          <p className="cv-kicker mt-3 cv-workspace-label">
+          <p className="cv-kicker mt-3">
             {isPlatformAdmin ? "Platform control center" : `${portalInfo.label} workspace`}
           </p>
         </div>
@@ -133,7 +133,7 @@ function WorkspaceLayout({ portal, children }) {
       </aside>
 
       <div className="min-h-screen md:pl-64">
-        <header className="cv-navbar cv-workspace-topbar sticky top-0 z-20 border-b">
+        <header className="cv-navbar sticky top-0 z-20 border-b">
           <div className="flex min-h-16 w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-3 px-4 py-3 sm:px-6 lg:px-8">
             <button
               type="button"
@@ -222,18 +222,37 @@ function WorkspaceLayout({ portal, children }) {
           </div>
         </header>
 
-        <main className="cv-workspace-main mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8">
-          {(isDemoMode || isDemoPreview) && (
-            <div className="cv-demo-notice mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-violet-500/30 bg-violet-500/5 px-4 py-3 text-sm">
-              <span className="cv-demo-notice-label">DEMO MODE</span>
+        <main className="mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8">
+          {isDemoPreview && (
+            <div className="cv-panel mb-6 flex flex-wrap items-start gap-3 !border-amber-500/40 !bg-amber-500/10 !p-4 text-sm">
+              <span aria-hidden="true" className="cv-kicker">DEMO PREVIEW</span>
               <p className="flex-1 text-[var(--cv-muted)]">
-                Sample data only. Changes stay in this session and are not saved to the backend.
-                {!isDemoMode && <> You are previewing the {portalInfo.label.toLowerCase()} portal as {user?.role ?? "an unknown role"}.</>}
+                You are previewing the {portalInfo.label.toLowerCase()} portal as{" "}
+                <strong>{user?.role ?? "an unknown role"}</strong>. Sample records only — the
+                workspace never calls the SRH CodeVerse API and grants no backend permission.
               </p>
-              {isDemoMode ? <Link to="/login" className="font-semibold text-[var(--cv-primary)] hover:text-cyan-400">Sign in <span aria-hidden="true">→</span></Link> :
-                <button type="button" onClick={disableDemoPreview} className="cv-secondary-btn !px-3 !py-1.5 text-xs">Stop preview</button>}
+              <button type="button" onClick={disableDemoPreview} className="cv-secondary-btn !px-3 !py-2 text-sm">
+                Stop preview
+              </button>
             </div>
           )}
+          {isDemoMode && (
+            <div className="cv-panel mb-6 flex flex-wrap items-start gap-3 !border-amber-500/40 !bg-amber-500/10 !p-4 text-sm">
+              <span aria-hidden="true" className="cv-kicker text-amber-400">DEMO MODE</span>
+              <p className="flex-1 text-[var(--cv-muted)]">
+                You are browsing a no-login demo. All data is sample content held in this browser session
+                only — nothing is saved to the backend and no account is created.{" "}
+                <Link to="/login" className="font-bold text-[var(--cv-primary)] transition hover:text-cyan-400">
+                  Sign in
+                </Link>{" "}
+                for the full experience.
+              </p>
+            </div>
+          )}
+          <div className="cv-panel mb-6 flex items-start gap-3 !border-violet-500/20 !bg-[var(--cv-surface-2)] !p-4 text-sm">
+            <span aria-hidden="true" className="cv-kicker">DEMO</span>
+            <p className="text-[var(--cv-muted)]">Changes are held in memory for this browser session only. Nothing is saved to the backend.</p>
+          </div>
           {children}
         </main>
       </div>
