@@ -99,7 +99,7 @@ export default function CourseProblemDetail() {
         <p className="text-red-500">{error || 'Problem not found.'}</p>
         <Link
           to={`/courses/${slug}`}
-          className="inline-block mt-4 text-[var(--cv-primary)] font-bold"
+          className="inline-block mt-4 text-violet-500 font-bold"
         >
           ← Back to course
         </Link>
@@ -111,7 +111,7 @@ export default function CourseProblemDetail() {
     <main className="max-w-7xl mx-auto px-5 py-8">
       <Link
         to={`/courses/${slug}`}
-        className="text-sm font-bold text-[var(--cv-primary)]"
+        className="text-sm font-bold text-violet-500"
       >
         ← Back to course
       </Link>
@@ -120,7 +120,7 @@ export default function CourseProblemDetail() {
         {/* Problem description */}
         <section className="cv-section-panel rounded-2xl p-6 min-w-0">
           <div className="flex justify-between gap-3">
-            <span className="text-xs font-black text-[var(--cv-primary)]">
+            <span className="text-xs font-black text-violet-500">
               {problem.topic || 'Practice'}
             </span>
             <span className="text-xs font-bold">
@@ -177,7 +177,7 @@ export default function CourseProblemDetail() {
         <section className="cv-section-panel rounded-2xl p-5 min-w-0">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-black">Coding Workspace</h2>
-            <span className="text-xs font-bold text-[var(--cv-primary)]">
+            <span className="text-xs font-bold text-violet-500">
               Java
             </span>
           </div>
@@ -251,7 +251,7 @@ export default function CourseProblemDetail() {
               type="button"
               disabled={!!action || !code.trim()}
               onClick={() => handleCodeAction('submit')}
-              className="rounded-xl px-5 py-3 border border-violet-500 text-[var(--cv-primary)] font-bold hover:bg-violet-500/10 disabled:opacity-50"
+              className="rounded-xl px-5 py-3 border border-violet-500 text-violet-500 font-bold hover:bg-violet-500/10 disabled:opacity-50"
             >
               {action === 'submit' ? 'Submitting...' : '✓ Submit Solution'}
             </button>

@@ -250,20 +250,3 @@ The frontend must never treat a selected workspace as proof of authorization. Th
 ## Error and concurrency behavior
 
 Use `400` for malformed/invalid fields, `401` for missing/invalid authentication, `403` for insufficient permission, `404` when a resource is not visible to the caller, `409` for conflicting state transitions, and `429` for rate limits. Include the common error envelope above. Mutations should return the canonical updated resource and version/timestamp; clients should refresh or invalidate affected cache entries after a successful mutation.
-
-## Super Admin Platform APIs (Stages 7/8)
-
-All endpoints below require a Super Admin role through server-side authorization.
-
-- `GET /api/admin/platform/overview` — global counts and counts by role, including persistent organizations.
-- `GET /api/admin/platform/users?q=...` — legacy user list; intended for smaller data sets.
-- `GET /api/admin/platform/users/page?q=...&page=0&size=25` — paginated user search; size is bounded to 100.
-- `GET /api/admin/platform/users/{id}` — safe user projection.
-- `PUT /api/admin/platform/users/{id}/role` — update platform role; supported values: `STUDENT`, `TRAINER`, `ADMIN`, `ORG_ADMIN`, `SUPER_ADMIN`. Last-Super-Admin and self-demotion safeguards apply.
-- `GET /api/admin/platform/audit-logs?page=0&size=50` — paginated platform audit events (size bounded to 100).
-- `GET /api/admin/platform/organizations?q=...&page=0&size=25` — persistent organization directory.
-- `POST /api/admin/platform/organizations` — create organization `{name, slug?, description?}`; created with `PENDING` status.
-- `GET /api/admin/platform/organizations/{id}` — organization detail projection.
-- `PATCH /api/admin/platform/organizations/{id}/status` — lifecycle transition request `{status}`; supported values: `PENDING`, `ACTIVE`, `SUSPENDED`, `REJECTED`.
-
-Organization status and role changes are audit logged with the acting username and, when resolvable, acting user ID. The live Organization Management panel in the Super Admin organization directory calls the persistent endpoints; the existing demo screens continue to use demo workspace state.

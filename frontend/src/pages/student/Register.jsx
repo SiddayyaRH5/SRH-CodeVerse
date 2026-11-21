@@ -201,7 +201,7 @@ function StudentForm({ onBack }) {
         </button>
       </div>
       <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
-        <button type="button" onClick={onBack} className="font-bold text-[var(--cv-primary)] transition hover:text-cyan-400">
+        <button type="button" onClick={onBack} className="font-bold text-violet-500 transition hover:text-cyan-400">
           ← Back to account choices
         </button>
       </p>
@@ -290,7 +290,7 @@ function PrototypeForm({ title, fields, onBack }) {
         </button>
       </form>
       <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
-        <button type="button" onClick={onBack} className="font-bold text-[var(--cv-primary)] transition hover:text-cyan-400">
+        <button type="button" onClick={onBack} className="font-bold text-violet-500 transition hover:text-cyan-400">
           ← Back to account choices
         </button>
       </p>
@@ -404,10 +404,9 @@ function OrganizationForm({ onBack }) {
         {submitted && (
           <div
             role="status"
-            className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-sm text-amber-300"
+            className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-sm text-emerald-300"
           >
-            Your organization details have been validated in this prototype. No application was
-            submitted because organization registration is not yet connected to the backend.
+            Your organization application has been submitted and is awaiting Super Admin approval.
           </div>
         )}
         <button type="submit" className="cv-primary-btn w-full !py-3.5">
@@ -415,7 +414,7 @@ function OrganizationForm({ onBack }) {
         </button>
       </form>
       <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
-        <button type="button" onClick={onBack} className="font-bold text-[var(--cv-primary)] transition hover:text-cyan-400">
+        <button type="button" onClick={onBack} className="font-bold text-violet-500 transition hover:text-cyan-400">
           ← Back to account choices
         </button>
       </p>
@@ -490,7 +489,7 @@ function Register() {
             </Link>
             <span className="text-sm text-[var(--cv-muted)]">
               Already here?{" "}
-              <Link to="/login" className="font-bold text-[var(--cv-primary)] transition hover:text-cyan-400">
+              <Link to="/login" className="font-bold text-violet-500 transition hover:text-cyan-400">
                 Login
               </Link>
             </span>

@@ -216,7 +216,7 @@ function Problems() {
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Page heading */}
       <header className="mb-8">
-        <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--cv-primary)]">
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-violet-400">
           PRACTICE • IMPROVE • MASTER
         </p>
 
@@ -394,7 +394,7 @@ function Problems() {
             <button
               type="button"
               onClick={resetFilters}
-              className="text-xs font-semibold text-[var(--cv-primary)] hover:text-violet-300"
+              className="text-xs font-semibold text-violet-400 hover:text-violet-300"
             >
               Clear all filters ✕
             </button>
@@ -453,7 +453,7 @@ function Problems() {
                     </span>
 
                     <div className="min-w-0 flex-1">
-                      <h2 className="break-words text-sm font-semibold text-[var(--color-text-primary)] transition hover:text-[var(--cv-primary)] sm:text-base">
+                      <h2 className="break-words text-sm font-semibold text-[var(--color-text-primary)] transition hover:text-violet-400 sm:text-base">
                         {problem.title}
                       </h2>
                       <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
@@ -483,8 +483,8 @@ function Problems() {
                     }}
                     className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl transition hover:bg-violet-500/10 ${
                       bookmarked
-                        ? "text-[var(--cv-primary)]"
-                        : "text-[var(--color-text-secondary)] hover:text-[var(--cv-primary)]"
+                        ? "text-violet-400"
+                        : "text-[var(--color-text-secondary)] hover:text-violet-400"
                     }`}
                     title={bookmarked ? "Remove bookmark" : "Bookmark problem"}
                     aria-label={

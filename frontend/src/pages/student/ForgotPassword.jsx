@@ -65,7 +65,7 @@ function ForgotPassword() {
 
             <span className="text-sm text-[var(--cv-muted)]">
               Remembered it?{" "}
-              <Link to="/login" className="font-bold text-[var(--cv-primary)] transition hover:text-cyan-400">
+              <Link to="/login" className="font-bold text-violet-500 transition hover:text-cyan-400">
                 Back to login
               </Link>
             </span>
@@ -167,7 +167,7 @@ function ForgotPassword() {
             )}
 
             <p className="mt-7 text-center text-xs text-[var(--cv-muted)]">
-              <Link to="/login" className="font-bold text-[var(--cv-primary)] transition hover:text-cyan-400">
+              <Link to="/login" className="font-bold text-violet-500 transition hover:text-cyan-400">
                 ← Return to login
               </Link>
             </p>

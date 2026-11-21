@@ -111,7 +111,7 @@ export default function RecommendedVideos({ courseTitle, lessonTitle }) {
             )}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block mt-3 text-sm font-bold text-[var(--cv-primary)]"
+            className="inline-block mt-3 text-sm font-bold text-violet-600"
           >
             Search YouTube instead →
           </a>
@@ -152,7 +152,7 @@ export default function RecommendedVideos({ courseTitle, lessonTitle }) {
                 <p className="text-xs text-[var(--cv-muted)] mt-2">
                   {video.channel}
                 </p>
-                <span className="text-xs font-bold text-[var(--cv-primary)] mt-3 inline-block">
+                <span className="text-xs font-bold text-violet-600 mt-3 inline-block">
                   Watch video →
                 </span>
               </div>
@@ -170,7 +170,7 @@ export default function RecommendedVideos({ courseTitle, lessonTitle }) {
             <button
               type="button"
               onClick={() => setActiveVideo(null)}
-              className="text-sm text-[var(--cv-primary)] font-bold"
+              className="text-sm text-violet-600 font-bold"
             >
               Close
             </button>
