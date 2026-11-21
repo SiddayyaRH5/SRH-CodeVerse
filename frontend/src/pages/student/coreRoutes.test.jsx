@@ -10,7 +10,7 @@ import AppRoutes from "../../routes/AppRoutes"
 import { AuthProvider } from "../../context/AuthContext"
 import { ThemeProvider } from "../../context/ThemeContext"
 import { ToastProvider } from "../../context/ToastContext"
-import { WorkspaceProvider } from "../../features/workspace/WorkspaceProvider"
+// WorkspaceProvider removed.
 
 vi.mock("../../api/submissionApi", () => ({
   getMySubmissions: vi.fn(async () => ({ data: [] })),
@@ -52,9 +52,7 @@ async function renderApp(path) {
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>
-              <WorkspaceProvider>
-                <AppRoutes />
-              </WorkspaceProvider>
+              <AppRoutes />
             </ToastProvider>
           </AuthProvider>
         </ThemeProvider>

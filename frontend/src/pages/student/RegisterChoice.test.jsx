@@ -11,7 +11,7 @@ import WorkspaceSelect from "../../features/workspace/WorkspaceSelect"
 import { AuthProvider } from "../../context/AuthContext"
 import { ThemeProvider } from "../../context/ThemeContext"
 import { ToastProvider } from "../../context/ToastContext"
-import { WorkspaceProvider } from "../../features/workspace/WorkspaceProvider"
+// WorkspaceProvider removed.
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
@@ -28,7 +28,7 @@ function render(element) {
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>
-              <WorkspaceProvider>{element}</WorkspaceProvider>
+              {element}
             </ToastProvider>
           </AuthProvider>
         </ThemeProvider>

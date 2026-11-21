@@ -2,9 +2,7 @@ import CourseLessonDetail from '../pages/student/CourseLessonDetail'
 import { Routes, Route } from "react-router-dom"
 import PageLayout from "../components/layout/PageLayout"
 import ProtectedRoute from "./ProtectedRoute"
-import WorkspaceAccess from "../features/workspace/WorkspaceAccess"
-import WorkspaceRouter from "../features/workspace/WorkspaceRouter"
-import WorkspaceSelect from "../features/workspace/WorkspaceSelect"
+// Workspace portal routes removed; Student/Trainer platform only.
 import Landing from "../pages/student/Landing"
 import Login from "../pages/student/Login"
 import OAuthCallback from "../pages/student/OAuthCallback"
@@ -42,36 +40,18 @@ import ForgotPassword from "../pages/student/ForgotPassword"
 import NotFound from "../pages/student/NotFound"
 import TrainerProfile from "../pages/trainer/Profile"
 
-import EnterpriseRouteHost from "../enterprise/EnterpriseRouteHost.jsx"
+// Enterprise routes removed.
 function AppRoutes() {
   return (
     <PageLayout>
       <Routes>
-        <Route path="/enterprise/:workspace" element={<EnterpriseRouteHost />} />
-        <Route path="/platform/console" element={<EnterpriseRouteHost />} />
+        {/* Enterprise routes removed. */}
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
         <Route path="/register" element={<Register />} />
-        <Route
-          path="/workspace/select"
-          element={
-            <ProtectedRoute>
-              <WorkspaceSelect />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/workspace/:portal/*"
-          element={
-            <ProtectedRoute>
-              <WorkspaceAccess>
-                <WorkspaceRouter />
-              </WorkspaceAccess>
-            </ProtectedRoute>
-          }
-        />
+        {/* Workspace portal routes removed. */}
         <Route path="/courses" element={<Courses />} />
         <Route path="/courses/:slug" element={<CourseDetail />} />
 <Route
