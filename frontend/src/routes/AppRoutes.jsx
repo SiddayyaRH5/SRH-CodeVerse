@@ -1,4 +1,4 @@
-﻿import CourseLessonDetail from '../pages/student/CourseLessonDetail'
+import CourseLessonDetail from '../pages/student/CourseLessonDetail'
 import { Routes, Route } from "react-router-dom"
 import PageLayout from "../components/layout/PageLayout"
 import ProtectedRoute from "./ProtectedRoute"
@@ -42,10 +42,13 @@ import ForgotPassword from "../pages/student/ForgotPassword"
 import NotFound from "../pages/student/NotFound"
 import TrainerProfile from "../pages/trainer/Profile"
 
+import EnterpriseRouteHost from "../enterprise/EnterpriseRouteHost.jsx"
 function AppRoutes() {
   return (
     <PageLayout>
       <Routes>
+        <Route path="/enterprise/:workspace" element={<EnterpriseRouteHost />} />
+        <Route path="/platform/console" element={<EnterpriseRouteHost />} />
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
