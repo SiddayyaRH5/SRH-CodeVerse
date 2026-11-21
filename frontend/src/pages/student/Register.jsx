@@ -24,27 +24,7 @@ const ACCOUNT_TYPES = [
   },
 ]
 
-function PrototypeNotice({ title }) {
-  return (
-    <div
-      role="note"
-      className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-300"
-    >
-      <p className="font-semibold">{title} registration is a frontend prototype.</p>
-      <p className="mt-1 leading-6">
-        The current SRH CodeVerse backend only supports Student registration. This form validates
-        input and documents the required API contract; it does not create a real account or assign
-        any backend role. See{" "}
-        <code className="rounded bg-amber-500/20 px-1 py-0.5 text-xs">
-          frontend/src/features/workspace/API_CONTRACTS.md
-        </code>{" "}
-        for the required endpoints.
-      </p>
-    </div>
-  )
-}
-
-function StudentForm({ onBack }) {
+function StudentForm() {
   const [form, setForm] = useState({ username: "", email: "", password: "" })
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
@@ -86,10 +66,8 @@ function StudentForm({ onBack }) {
 
   return (
     <>
-      <PrototypeNotice title="Student" />
       <p className="mt-2 text-xs text-[var(--cv-muted)]">
-        Student registration is connected to the real backend (POST /api/auth/register) and always
-        creates a STUDENT account.
+        Student registration is connected to the real backend and always creates a STUDENT account.
       </p>
       {error && (
         <div
@@ -200,11 +178,7 @@ function StudentForm({ onBack }) {
           </span>
         </button>
       </div>
-      <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
-        <button type="button" onClick={onBack} className="font-bold text-violet-500 transition hover:text-cyan-400">
-          ← Back to account choices
-        </button>
-      </p>
+
     </>
   )
 }
@@ -289,144 +263,12 @@ function PrototypeForm({ title, fields, onBack }) {
           {submitted ? "Validated (prototype)" : `Create ${title} Account`} →
         </button>
       </form>
-      <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
-        <button type="button" onClick={onBack} className="font-bold text-violet-500 transition hover:text-cyan-400">
-          ← Back to account choices
-        </button>
-      </p>
-    </>
-  )
-}
 
-const PROFESSIONAL_FIELDS = [
-  { name: "fullName", label: "Full name", required: true, placeholder: "Your full name" },
-  { name: "email", label: "Email address", type: "email", required: true, placeholder: "you@example.com" },
-  { name: "password", label: "Password", type: "password", required: true, minLength: 6 },
-  { name: "confirmPassword", label: "Confirm password", type: "password", required: true, minLength: 6 },
-  {
-    name: "category",
-    label: "Professional category",
-    type: "select",
-    required: true,
-    options: ["Company employee", "Freelancer", "Independent developer", "Project collaborator", "Small project team"],
-  },
-]
-
-const TRAINER_FIELDS = [
-  { name: "fullName", label: "Full name", required: true, placeholder: "Your full name" },
-  { name: "email", label: "Email address", type: "email", required: true, placeholder: "you@example.com" },
-  { name: "password", label: "Password", type: "password", required: true, minLength: 6 },
-  { name: "confirmPassword", label: "Confirm password", type: "password", required: true, minLength: 6 },
-  { name: "invitationCode", label: "Organization invitation code (optional)", placeholder: "Leave blank for independent trainer" },
-]
-
-const ORGANIZATION_FIELDS = [
-  { name: "organizationName", label: "Organization name", required: true },
-  { name: "officialEmail", label: "Official email", type: "email", required: true },
-  { name: "contactPerson", label: "Contact person", required: true },
-  { name: "contactNumber", label: "Contact number", required: true },
-  {
-    name: "organizationType",
-    label: "Organization type",
-    type: "select",
-    required: true,
-    options: ["Company", "Education", "Non-profit", "Government", "Other"],
-  },
-  { name: "website", label: "Website (optional)", type: "url", placeholder: "https://example.com" },
-  { name: "reason", label: "Reason for joining", required: true, placeholder: "Why do you want to join SRH CodeVerse?" },
-]
-
-function OrganizationForm({ onBack }) {
-  const [values, setValues] = useState(() => Object.fromEntries(ORGANIZATION_FIELDS.map((f) => [f.name, ""])))
-  const [error, setError] = useState("")
-  const [submitted, setSubmitted] = useState(false)
-
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    setError("")
-    for (const field of ORGANIZATION_FIELDS) {
-      if (field.required && !String(values[field.name] || "").trim()) {
-        setError(`${field.label} is required.`)
-        return
-      }
-    }
-    setSubmitted(true)
-  }
-
-  return (
-    <>
-      <PrototypeNotice title="Organization" />
-      <p className="mt-2 text-xs text-[var(--cv-muted)]">
-        Organization registration is an application flow. It does not create an account or grant any
-        role until a Super Admin approves it.
-      </p>
-      <form onSubmit={handleSubmit} className="mt-7 space-y-4">
-        {ORGANIZATION_FIELDS.map((field) => (
-          <div key={field.name}>
-            <label className="mb-2 block text-sm font-medium text-[var(--cv-muted)]">
-              {field.label}
-              {field.required ? " *" : ""}
-            </label>
-            {field.type === "select" ? (
-              <select
-                value={values[field.name]}
-                onChange={(e) => setValues({ ...values, [field.name]: e.target.value })}
-                className="cv-input"
-                required={field.required}
-              >
-                <option value="">Select…</option>
-                {field.options.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type={field.type || "text"}
-                placeholder={field.placeholder || field.label}
-                value={values[field.name]}
-                onChange={(e) => setValues({ ...values, [field.name]: e.target.value })}
-                className="cv-input"
-                required={field.required}
-              />
-            )}
-          </div>
-        ))}
-        {error && (
-          <div
-            role="alert"
-            className="rounded-xl border border-red-500/20 bg-red-500/10 p-3.5 text-sm text-red-400"
-          >
-            {error}
-          </div>
-        )}
-        {submitted && (
-          <div
-            role="status"
-            className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-sm text-emerald-300"
-          >
-            Your organization application has been submitted and is awaiting Super Admin approval.
-          </div>
-        )}
-        <button type="submit" className="cv-primary-btn w-full !py-3.5">
-          {submitted ? "Submitted (prototype)" : "Submit Organization Application"} →
-        </button>
-      </form>
-      <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
-        <button type="button" onClick={onBack} className="font-bold text-violet-500 transition hover:text-cyan-400">
-          ← Back to account choices
-        </button>
-      </p>
     </>
   )
 }
 
 function Register() {
-  const [choice, setChoice] = useState(null)
-
-  const goBack = () => setChoice(null)
-
   return (
     <main className="cv-auth-page relative overflow-hidden">
       <div className="cv-hero-orb cv-orb-purple" aria-hidden="true" />
@@ -496,79 +338,15 @@ function Register() {
           </div>
 
           <div className="mx-auto w-full max-w-md min-w-0">
-            {!choice && (
-              <>
-                <p className="cv-kicker">CREATE ACCOUNT</p>
-                <h2 className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">
-                  Build your <span className="cv-gradient-text">future.</span>
-                </h2>
-                <p className="mt-3 text-[var(--cv-muted)]">
-                  Choose the account type that fits you. You can always explore other portals later.
-                </p>
+            <p className="cv-kicker">CREATE ACCOUNT</p>
+            <h2 className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">
+              Build your <span className="cv-gradient-text">future.</span>
+            </h2>
+            <p className="mt-3 text-[var(--cv-muted)]">
+              Create your Student account to start learning and practicing.
+            </p>
 
-                <div className="mt-7 grid gap-3">
-                  {ACCOUNT_TYPES.map((type) => (
-                    <button
-                      key={type.id}
-                      type="button"
-                      onClick={() => setChoice(type.id)}
-                      className="cv-secondary-btn flex w-full items-start gap-3 !px-4 !py-4 text-left"
-                    >
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-violet-600 to-cyan-400 font-black text-white">
-                        {type.title.charAt(0)}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block font-bold">{type.title}</span>
-                        <span className="mt-0.5 block text-xs text-[var(--cv-muted)]">{type.description}</span>
-                        {!type.real && (
-                          <span className="mt-1 inline-block rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">
-                            Prototype
-                          </span>
-                        )}
-                      </span>
-                    </button>
-                  ))}
-
-                  <button
-                    type="button"
-                    onClick={() => setChoice("organization")}
-                    className="cv-secondary-btn flex w-full items-start gap-3 !px-4 !py-4 text-left"
-                  >
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-cyan-500 to-violet-600 font-black text-white">
-                      O
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block font-bold">Organization</span>
-                      <span className="mt-0.5 block text-xs text-[var(--cv-muted)]">
-                        Apply to register an organization (requires Super Admin approval).
-                      </span>
-                      <span className="mt-1 inline-block rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">
-                        Prototype
-                      </span>
-                    </span>
-                  </button>
-                </div>
-
-                <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
-                  By creating an account, you agree to use CodeVerse responsibly and respect the community.
-                </p>
-              </>
-            )}
-
-            {choice === "student" && <StudentForm onBack={goBack} />}
-            {choice === "professional" && (
-              <PrototypeForm
-                title="Professional"
-                fields={PROFESSIONAL_FIELDS}
-                onBack={goBack}
-              />
-            )}
-            {choice === "trainer" && (
-              <PrototypeForm title="Trainer" fields={TRAINER_FIELDS} onBack={goBack} />
-            )}
-            {choice === "organization" && (
-              <OrganizationForm onBack={goBack} />
-            )}
+            <StudentForm />
           </div>
         </section>
       </div>
