@@ -4,7 +4,7 @@ import { useLocation } from "react-router-dom"
 
 function PageLayout({ children }) {
   const { pathname } = useLocation()
-  if (pathname.startsWith("/workspace")) {
+  if (pathname.startsWith("/workspace") || pathname.startsWith("/enterprise") || pathname.startsWith("/platform")) {
     return <div className="cv-app-shell text-[var(--cv-text)]">{children}</div>
   }
 

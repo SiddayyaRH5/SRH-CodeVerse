@@ -12,3 +12,6 @@ application-local.properties
 .idea/
 .vscode/
 .DS_Store
+*.backup
+*.encoding-backup
+*.click-backup

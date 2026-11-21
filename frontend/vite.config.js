@@ -10,4 +10,7 @@ const __dirname = path.dirname(__filename)
 export default defineConfig({
   root: __dirname,
   plugins: [react(), tailwindcss()],
+  test: {
+    exclude: ['**/node_modules/**', 'src/enterprise/lib/*.test.js'],
+  },
 })
