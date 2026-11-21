@@ -3,7 +3,7 @@ import { AuthProvider } from "./context/AuthContext"
 import { ToastProvider } from "./context/ToastContext"
 import { ThemeProvider } from "./context/ThemeContext"
 import AppRoutes from "./routes/AppRoutes"
-import { WorkspaceProvider } from "./features/workspace/WorkspaceProvider.jsx"
+// WorkspaceProvider removed.
 import ErrorBoundary from "./components/common/ErrorBoundary.jsx"
 import "./App.css"
 
@@ -28,9 +28,7 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <ToastProvider>
-            <WorkspaceProvider>
-              <RoutesBoundary />
-            </WorkspaceProvider>
+            <RoutesBoundary />
           </ToastProvider>
         </AuthProvider>
       </ThemeProvider>

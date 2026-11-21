@@ -8,8 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "test": "vitest run",
-    "preview": "vite preview",
-    "test:enterprise-rules": "node --test src/enterprise/lib/*.test.js"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -22,8 +21,7 @@
     "react-is": "^19.3.0",
     "react-router-dom": "^7.18.2",
     "recharts": "^3.10.1",
-    "tailwindcss": "^4.3.3",
-    "lucide-react": "^0.468.0"
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",
