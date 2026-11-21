@@ -86,7 +86,7 @@ function WorkspaceSelect() {
                       Role: {workspace.info.role} · {workspace.entitled ? "Your account" : "Preview only"}
                     </span>
                   </span>
-                  <span className="shrink-0 text-[var(--cv-primary)]">→</span>
+                  <span className="shrink-0 text-violet-500">→</span>
                 </button>
               ))}
             </div>
@@ -99,7 +99,7 @@ function WorkspaceSelect() {
             )}
 
             <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
-              <Link to="/" className="font-bold text-[var(--cv-primary)] transition hover:text-cyan-400">
+              <Link to="/" className="font-bold text-violet-500 transition hover:text-cyan-400">
                 ← Return to CodeVerse
               </Link>
             </p>

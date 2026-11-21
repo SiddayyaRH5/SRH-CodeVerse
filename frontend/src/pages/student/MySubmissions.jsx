@@ -115,7 +115,7 @@ function MySubmissions() {
       <section className="mb-8 overflow-hidden rounded-3xl border border-[var(--cv-border,rgba(128,128,128,0.2))] bg-[var(--cv-surface,#ffffff)] p-6 shadow-sm sm:p-8">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[var(--cv-primary)]">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-violet-500">
               Your coding journey
             </p>
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -240,7 +240,7 @@ function MySubmissions() {
                       <td className="max-w-xs px-5 py-5">
                         <Link
                           to={`/problems/${item.problemId}`}
-                          className="font-semibold hover:text-[var(--cv-primary)]"
+                          className="font-semibold hover:text-violet-600"
                         >
                           {item.problemTitle || `Problem #${item.problemId}`}
                         </Link>
@@ -276,7 +276,7 @@ function MySubmissions() {
                     <div className="min-w-0">
                       <Link
                         to={`/problems/${item.problemId}`}
-                        className="font-semibold hover:text-[var(--cv-primary)]"
+                        className="font-semibold hover:text-violet-600"
                       >
                         {item.problemTitle || `Problem #${item.problemId}`}
                       </Link>

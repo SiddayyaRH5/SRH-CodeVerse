@@ -1,11 +1,10 @@
-import CourseLessonDetail from '../pages/student/CourseLessonDetail'
+﻿import CourseLessonDetail from '../pages/student/CourseLessonDetail'
 import { Routes, Route } from "react-router-dom"
 import PageLayout from "../components/layout/PageLayout"
 import ProtectedRoute from "./ProtectedRoute"
 import WorkspaceAccess from "../features/workspace/WorkspaceAccess"
 import WorkspaceRouter from "../features/workspace/WorkspaceRouter"
 import WorkspaceSelect from "../features/workspace/WorkspaceSelect"
-import DemoPortalSelect from "../features/workspace/DemoPortalSelect"
 import Landing from "../pages/student/Landing"
 import Login from "../pages/student/Login"
 import OAuthCallback from "../pages/student/OAuthCallback"
@@ -13,9 +12,6 @@ import Register from "../pages/student/Register"
 import Problems from "../pages/student/Problems"
 import Dashboard from "../pages/student/Dashboard"
 import TrainerDashboard from "../pages/trainer/TrainerDashboard"
-import TrainerCourses from "../pages/trainer/TrainerCourses"
-import TrainerAssignments from "../pages/trainer/TrainerAssignments"
-import TrainerBatches from "../pages/trainer/TrainerBatches"
 import TrainerProblems from "../pages/trainer/TrainerProblems"
 import ProblemForm from "../pages/trainer/ProblemForm"
 import ProblemDetail from "../pages/student/ProblemDetail"
@@ -37,7 +33,7 @@ import LearningPath from "../pages/student/LearningPath"
 import Certificates from "../pages/student/Certificates"
 import Courses from "../pages/student/Courses"
 import CourseDetail from "../pages/student/CourseDetail"
-import CourseProblemDetail from "../pages/student/CourseProblemDetail"
+import CourseProblemDetail from "../pages/student/CourseProblemDetail";
 import MySubmissions from "../pages/student/MySubmissions"
 import Announcements from "../pages/student/Announcements"
 import Calendar from "../pages/student/Calendar"
@@ -55,11 +51,6 @@ function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/demo" element={<DemoPortalSelect />} />
-        <Route
-          path="/demo/:portal/*"
-          element={<WorkspaceRouter />}
-        />
         <Route
           path="/workspace/select"
           element={
@@ -80,14 +71,14 @@ function AppRoutes() {
         />
         <Route path="/courses" element={<Courses />} />
         <Route path="/courses/:slug" element={<CourseDetail />} />
-        <Route
-          path="/courses/:slug/lessons/:lessonId"
-          element={
-            <ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}>
-              <CourseLessonDetail />
-            </ProtectedRoute>
-          }
-        />
+<Route
+  path="/courses/:slug/lessons/:lessonId"
+  element={
+    <ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}>
+      <CourseLessonDetail />
+    </ProtectedRoute>
+  }
+/>
         <Route
           path="/dashboard"
           element={
@@ -104,6 +95,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/trainer/dashboard"
           element={
@@ -112,9 +104,8 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route path="/trainer/courses" element={<ProtectedRoute allowedRoles={["TRAINER"]}><TrainerCourses /></ProtectedRoute>} />
-        <Route path="/trainer/assignments" element={<ProtectedRoute allowedRoles={["TRAINER"]}><TrainerAssignments /></ProtectedRoute>} />
-        <Route path="/trainer/batches" element={<ProtectedRoute allowedRoles={["TRAINER"]}><TrainerBatches /></ProtectedRoute>} />
+
+
         <Route
           path="/trainer/problems"
           element={
@@ -123,38 +114,53 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
         <Route
-          path="/trainer/problems/new"
+            path="/trainer/problems/new"
+            element={
+              <ProtectedRoute allowedRoles={["TRAINER"]}>
+                <ProblemForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/trainer/problems/:id/edit"
+            element={
+              <ProtectedRoute allowedRoles={["TRAINER"]}>
+                <ProblemForm />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/problems/:id"
+            element={
+              <ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}>
+                <ProblemDetail />
+              </ProtectedRoute>
+            }
+          />
+
+
+          <Route
+            path="/leaderboard"
+            element={
+              <ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}>
+                <Leaderboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* <Route
+          path="/trainer/analytics"
           element={
             <ProtectedRoute allowedRoles={["TRAINER"]}>
-              <ProblemForm />
+              <Analytics />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/trainer/problems/:id/edit"
-          element={
-            <ProtectedRoute allowedRoles={["TRAINER"]}>
-              <ProblemForm />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/problems/:id"
-          element={
-            <ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}>
-              <ProblemDetail />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/leaderboard"
-          element={
-            <ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}>
-              <Leaderboard />
-            </ProtectedRoute>
-          }
-        />
+        /> */}
+
+
         <Route
           path="/study-hub"
           element={
@@ -163,6 +169,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
         <Route path="/interview-arena" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><InterviewArena /></ProtectedRoute>} />
         <Route path="/mock-interview" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><MockInterview /></ProtectedRoute>} />
         <Route path="/live-coding" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><LiveCodingArena /></ProtectedRoute>} />
@@ -171,11 +178,12 @@ function AppRoutes() {
         <Route path="/learning-path" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><LearningPath /></ProtectedRoute>} />
         <Route path="/certificates" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><Certificates /></ProtectedRoute>} />
         <Route path="/playground" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><Playground /></ProtectedRoute>} />
-        <Route path="/trainer/profile" element={<ProtectedRoute allowedRoles={["TRAINER"]}><TrainerProfile /></ProtectedRoute>} />
+
+<Route path="/trainer/profile" element={<ProtectedRoute allowedRoles={[ "TRAINER" ]}><TrainerProfile /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><Profile /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><Settings /></ProtectedRoute>} />
-        <Route path="/announcements" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><Announcements /></ProtectedRoute>} />
-        <Route path="/calendar" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><Calendar /></ProtectedRoute>} />
+<Route path="/announcements" element={<ProtectedRoute allowedRoles={[ "STUDENT", "TRAINER" ]}><Announcements /></ProtectedRoute>} />
+        <Route path="/calendar" element={<ProtectedRoute allowedRoles={[ "STUDENT", "TRAINER" ]}><Calendar /></ProtectedRoute>} />
         <Route
           path="/my-submissions"
           element={
@@ -192,6 +200,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/trainer/students"
           element={
@@ -200,6 +209,16 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+  path="/courses/:slug/problems/:problemId"
+  element={
+    <ProtectedRoute allowedRoles={['STUDENT', 'TRAINER']}>
+      <CourseProblemDetail />
+    </ProtectedRoute>
+  }
+/>
+
         <Route
           path="/achievements"
           element={
@@ -208,6 +227,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/trainer/students/:username"
           element={
@@ -216,6 +236,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
         {/* Catch-all: unknown URLs always render a real page, never a blank shell. */}
         <Route path="*" element={<NotFound />} />
       </Routes>

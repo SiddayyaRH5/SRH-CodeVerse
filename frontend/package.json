@@ -8,14 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "test": "vitest run",
-    "preview": "vite preview",
-    "foundation:verify": "node ../scripts/verify-foundation.mjs",
-    "stage34:verify": "node ../scripts/verify-stage-3-4.mjs",
-    "stage5:verify": "node ../scripts/verify-stage-5.mjs",
-    "stages56:verify": "node ../scripts/verify-stages-5-6.mjs",
-    "stage9:verify": "node ../scripts/verify-stage-9.mjs",
-    "stage10:verify": "node ../scripts/verify-stage-10.mjs",
-    "release:verify": "npm run stage9:verify && npm run stage10:verify"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

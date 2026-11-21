@@ -7,7 +7,7 @@ import { setTodaysChallenge } from "../../api/dailyChallengeApi"
 function Panel({ title, children, className = "" }) {
   return (
     <div className={`cv-panel rounded-2xl p-4 ${className}`}>
-      <p className="text-[var(--cv-primary)] text-sm mb-3">{title}</p>
+      <p className="text-violet-500 text-sm mb-3">{title}</p>
       {children}
     </div>
   )
@@ -16,7 +16,7 @@ function Panel({ title, children, className = "" }) {
 function StatBox({ label, value }) {
   return (
     <div className="border border-[var(--cv-border)] rounded-lg p-4 font-mono flex-1">
-      <p className="text-[var(--cv-primary)] text-xs mb-1">{label}</p>
+      <p className="text-violet-500 text-xs mb-1">{label}</p>
       <p className="text-[var(--cv-text)] text-2xl">{value}</p>
     </div>
   )
@@ -53,7 +53,7 @@ function SetDailyChallengeCard() {
   return (
     <Panel title="Set Daily Challenge" className="mb-6">
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 text-sm">
-        {message && <p className="text-[var(--cv-primary)]">{message}</p>}
+        {message && <p className="text-violet-500">{message}</p>}
 
         <select
           value={selectedId}
@@ -146,10 +146,9 @@ function TrainerDashboard() {
 
         <Panel title="Quick Actions">
           <div className="flex flex-col gap-2 text-sm">
-            <Link to="/trainer/problems/new" className="text-[var(--cv-primary)] hover:underline">+ Create Problem</Link>
-            <Link to="/trainer/courses" className="text-[var(--cv-muted)] hover:text-[var(--cv-text)]">Course Library</Link>
-            <Link to="/trainer/assignments" className="text-[var(--cv-muted)] hover:text-[var(--cv-text)]">Assignments</Link>
-            <Link to="/trainer/batches" className="text-[var(--cv-muted)] hover:text-[var(--cv-text)]">Training Batches</Link>
+            <Link to="/trainer/problems/new" className="text-violet-500 hover:underline">
+              + Create Problem
+            </Link>
             <Link to="/trainer/problems" className="text-[var(--cv-muted)] hover:text-[var(--cv-text)]">
               Manage Problems
             </Link>
@@ -166,7 +165,7 @@ function TrainerDashboard() {
       {/* Recent Submissions */}
       <Panel title="Recent Submissions" className="mb-6">
         <div className="text-sm">
-          <div className="grid grid-cols-4 text-[var(--cv-primary)] pb-2 border-b border-[var(--cv-border)] mb-2">
+          <div className="grid grid-cols-4 text-violet-500 pb-2 border-b border-[var(--cv-border)] mb-2">
             <span>Student</span>
             <span>Problem</span>
             <span>Status</span>

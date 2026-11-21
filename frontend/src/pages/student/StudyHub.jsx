@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { getDashboard } from "../../api/dashboardApi"
 import DifficultyBadge from "../../components/common/DifficultyBadge"
 import {
   getBookmarks, toggleBookmark, getNotes, saveNote, getWeeklyGoal, setWeeklyGoal
 } from "../../utils/srhStudy"
-import { SkeletonCards } from "../../components/common/Skeleton"
 
 function FocusTimer() {
   const [mode, setMode] = useState("focus")
@@ -59,33 +58,16 @@ function FocusTimer() {
   )
 }
 
-export default function StudyHub() {
+function StudyHub() {
   const [bookmarks, setBookmarks] = useState(getBookmarks())
   const [notes, setNotes] = useState(getNotes())
   const [selectedNote, setSelectedNote] = useState(null)
   const [noteText, setNoteText] = useState("")
   const [goal, setGoal] = useState(getWeeklyGoal())
-  const [solved, setSolved] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-
-  const loadDashboard = useCallback(async () => {
-    setLoading(true)
-    setError("")
-    try {
-      const res = await getDashboard()
-      const solvedValue = res.data?.problemsSolved
-      setSolved(solvedValue === undefined ? null : solvedValue)
-    } catch (err) {
-      setError(err.response?.data?.message || "Unable to load dashboard.")
-      setSolved(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const [solved, setSolved] = useState(0)
 
   useEffect(() => {
-    loadDashboard()
+    getDashboard().then((res) => setSolved(res.data?.problemsSolved || 0)).catch(() => {})
     const refresh = () => {
       setBookmarks(getBookmarks())
       setNotes(getNotes())
@@ -96,10 +78,10 @@ export default function StudyHub() {
       window.removeEventListener("srh-bookmarks-changed", refresh)
       window.removeEventListener("srh-notes-changed", refresh)
     }
-  }, [loadDashboard])
+  }, [])
 
   const noteCount = Object.keys(notes).length
-  const goalProgress = solved === null ? 0 : Math.min(100, Math.round((solved / Math.max(goal, 1)) * 100))
+  const goalProgress = Math.min(100, Math.round((solved / Math.max(goal, 1)) * 100))
   const snippets = useMemo(() => [
     ["Two Pointer", "int left = 0, right = arr.length - 1;\nwhile (left < right) {\n    // compare and move pointers\n}"],
     ["HashMap Frequency", "Map<Integer, Integer> freq = new HashMap<>();\nfor (int value : arr) {\n    freq.merge(value, 1, Integer::sum);\n}"],
@@ -125,88 +107,66 @@ export default function StudyHub() {
         <p className="text-sm text-[var(--color-text-secondary)] mt-1">Your private workspace for focused coding practice.</p>
       </div>
 
-      {loading ? (
+      <div className="grid lg:grid-cols-3 gap-4 mb-6">
+        <FocusTimer />
+        <section className="lg:col-span-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="font-semibold">Weekly Forge Goal 🎯</h2>
+              <p className="text-xs text-[var(--color-text-secondary)]">Keep a realistic target and build consistency.</p>
+            </div>
+            <select value={goal} onChange={(e) => { const v = Number(e.target.value); setGoal(v); setWeeklyGoal(v) }}
+              className="bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm">
+              {[3,5,7,10,14].map((v) => <option key={v} value={v}>{v} problems</option>)}
+            </select>
+          </div>
+          <div className="flex justify-between text-sm mb-2">
+            <span>{Math.min(solved, goal)} / {goal} target</span>
+            <span className="text-[var(--color-forge-500)] font-semibold">{goalProgress}%</span>
+          </div>
+          <div className="h-3 bg-[var(--color-bg-tertiary)] rounded-full overflow-hidden">
+            <div className="h-full bg-[var(--color-forge-500)] rounded-full transition-all" style={{ width: `${goalProgress}%` }} />
+          </div>
+          <p className="text-xs text-[var(--color-text-secondary)] mt-3">Tip: pair one Easy problem with one Medium problem during each focused session.</p>
+        </section>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-4 mb-6">
         <section className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-5">
-          <SkeletonCards count={5} />
-        </section>
-      ) : error ? (
-        <section className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6">
-          <h2 className="mt-5 text-lg font-bold">Unable to load dashboard</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--cv-muted)]">
-            {error}
-          </p>
-          <button
-            type="button"
-            onClick={loadDashboard}
-            className="mt-6 cv-primary-btn !px-4 !py-2.5 text-sm"
-          >
-            Try again
-          </button>
-        </section>
-      ) : (
-        <>
-          <div className="grid lg:grid-cols-3 gap-4 mb-6">
-            <FocusTimer />
-            <section className="lg:col-span-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="font-semibold">Weekly Forge Goal 🎯</h2>
-                  <p className="text-xs text-[var(--color-text-secondary)]">Keep a realistic target and build consistency.</p>
+          <div className="flex items-center justify-between mb-4">
+            <div><h2 className="font-semibold">Saved Problems 🔖</h2><p className="text-xs text-[var(--color-text-secondary)]">{bookmarks.length} bookmarked</p></div>
+            <Link to="/problems" className="text-xs text-[var(--color-forge-500)] hover:underline">Browse problems →</Link>
+          </div>
+          {bookmarks.length === 0 ? <p className="text-sm text-[var(--color-text-secondary)] py-6 text-center">Bookmark problems you want to revisit.</p> :
+            <div className="space-y-2 max-h-72 overflow-auto">
+              {bookmarks.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
+                  <Link to={`/problems/${p.id}`} className="min-w-0">
+                    <p className="font-medium text-sm truncate">{p.title}</p>
+                    <p className="text-xs text-[var(--color-text-secondary)]">{p.topic} · {p.estimatedTimeMinutes} min</p>
+                  </Link>
+                  <div className="flex items-center gap-2">
+                    <DifficultyBadge difficulty={p.difficulty} />
+                    <button onClick={() => toggleBookmark(p)} className="text-lg" title="Remove bookmark">★</button>
+                  </div>
                 </div>
-                <select value={goal} onChange={(e) => { const v = Number(e.target.value); setGoal(v); setWeeklyGoal(v) }}
-                  className="bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm">
-                  {[3,5,7,10,14].map((v) => <option key={v} value={v}>{v} problems</option>)}
-                </select>
-              </div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>{solved === null ? "—" : solved} / {goal} target</span>
-                <span className="text-[var(--color-forge-500)] font-semibold">{goalProgress}%</span>
-              </div>
-              <div className="h-3 bg-[var(--color-bg-tertiary)] rounded-full overflow-hidden">
-                <div className="h-full bg-[var(--color-forge-500)] rounded-full transition-all" style={{ width: `${goalProgress}%` }} />
-              </div>
-              <p className="text-xs text-[var(--color-text-secondary)] mt-3">Tip: pair one Easy problem with one Medium problem during each focused session.</p>
-            </section>
-          </div>
+              ))}
+            </div>}
+        </section>
 
-          <div className="grid lg:grid-cols-2 gap-4 mb-6">
-            <section className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div><h2 className="font-semibold">Saved Problems 🔖</h2><p className="text-xs text-[var(--color-text-secondary)]">{bookmarks.length} bookmarked</p></div>
-                <Link to="/problems" className="text-xs text-[var(--color-forge-500)] hover:underline">Browse problems →</Link>
-              </div>
-              {bookmarks.length === 0 ? <p className="text-sm text-[var(--color-text-secondary)] py-6 text-center">Bookmark problems you want to revisit.</p> :
-                <div className="space-y-2 max-h-72 overflow-auto">
-                  {bookmarks.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
-                      <Link to={`/problems/${p.id}`} className="min-w-0">
-                        <p className="font-medium text-sm truncate">{p.title}</p>
-                        <p className="text-xs text-[var(--color-text-secondary)]">{p.topic} · {p.estimatedTimeMinutes} min</p>
-                      </Link>
-                      <div className="flex items-center gap-2">
-                        <DifficultyBadge difficulty={p.difficulty} />
-                        <button onClick={() => toggleBookmark(p)} className="text-lg" title="Remove bookmark">★</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>}
-            </section>
-
-            <section className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-5">
-              <div className="mb-4"><h2 className="font-semibold">Problem Notes 📝</h2><p className="text-xs text-[var(--color-text-secondary)]">{noteCount} saved notes · stored privately in your browser</p></div>
-              {bookmarks.length === 0 ? <p className="text-sm text-[var(--color-text-secondary)] py-6 text-center">Open a problem and use Notes to capture your approach.</p> :
-                <div className="space-y-2 max-h-72 overflow-auto">
-                  {bookmarks.map((p) => (
-                    <button key={p.id} onClick={() => openNote(p.id)} className="w-full text-left p-3 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] hover:border-[var(--color-forge-500)]">
-                      <div className="flex justify-between gap-2"><span className="text-sm font-medium truncate">{p.title}</span><span>{notes[String(p.id)] ? "✓" : "＋"}</span></div>
-                      <p className="text-xs text-[var(--color-text-secondary)] mt-1">{notes[String(p.id)] ? notes[String(p.id)].slice(0, 90) : "Add your approach, mistakes, or key insight."}</p>
-                    </button>
-                  ))}
-                </div>}
-            </section>
-          </div>
-        </>
-      )}
+        <section className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-5">
+          <div className="mb-4"><h2 className="font-semibold">Problem Notes 📝</h2><p className="text-xs text-[var(--color-text-secondary)]">{noteCount} saved notes · stored privately in your browser</p></div>
+          {bookmarks.length === 0 ? <p className="text-sm text-[var(--color-text-secondary)] py-6 text-center">Open a problem and use Notes to capture your approach.</p> :
+            <div className="space-y-2 max-h-72 overflow-auto">
+              {bookmarks.map((p) => (
+                <button key={p.id} onClick={() => openNote(p.id)} className="w-full text-left p-3 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] hover:border-[var(--color-forge-500)]">
+                  <div className="flex justify-between gap-2"><span className="text-sm font-medium truncate">{p.title}</span><span>{notes[String(p.id)] ? "✓" : "＋"}</span></div>
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-1">{notes[String(p.id)] ? notes[String(p.id)].slice(0, 90) : "Add your approach, mistakes, or key insight."}</p>
+                </button>
+              ))}
+            </div>}
+        </section>
+      </div>
 
       {selectedNote != null && (
         <section className="bg-[var(--color-bg-secondary)] border border-[var(--color-forge-500)]/40 rounded-xl p-5 mb-6">
@@ -237,3 +197,5 @@ export default function StudyHub() {
     </div>
   )
 }
+
+export default StudyHub

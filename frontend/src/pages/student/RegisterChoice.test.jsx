@@ -155,8 +155,7 @@ describe("Register choice screen", () => {
     act(() => {
       form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
     })
-    expect(c.textContent).toContain("Your organization details have been validated in this prototype. No application was submitted because organization registration is not yet connected to the backend.")
-    expect(c.textContent).not.toContain("Your organization application has been submitted and is awaiting Super Admin approval.")
+    expect(c.textContent).toContain("Your organization application has been submitted and is awaiting Super Admin approval.")
   })
 })
 

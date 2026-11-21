@@ -11,7 +11,7 @@ import EmptyState from "../../components/common/EmptyState"
 import { SkeletonList } from "../../components/common/Skeleton"
 
 const CATEGORY_STYLES = {
-  ASSIGNMENT: "border-violet-500/30 bg-violet-500/10 text-[var(--cv-primary)]",
+  ASSIGNMENT: "border-violet-500/30 bg-violet-500/10 text-violet-600",
   GRADE: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600",
   ANNOUNCEMENT: "border-cyan-500/30 bg-cyan-500/10 text-cyan-600",
   SYSTEM: "border-slate-500/30 bg-slate-500/10 text-slate-500",
@@ -87,7 +87,7 @@ function Notifications() {
     <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
       <section className="mb-8 flex flex-col gap-5 rounded-3xl border border-[var(--cv-border)] bg-[var(--cv-surface)] p-6 shadow-sm sm:flex-row sm:items-end sm:justify-between sm:p-8">
         <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[var(--cv-primary)]">
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-violet-500">
             Stay on top of your work
           </p>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Notifications</h1>
@@ -134,7 +134,7 @@ function Notifications() {
             aria-pressed={category === entry.id}
             className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
               category === entry.id
-                ? "border-violet-500 bg-violet-500/10 text-[var(--cv-primary)]"
+                ? "border-violet-500 bg-violet-500/10 text-violet-600"
                 : "border-[var(--cv-border)] text-[var(--cv-muted)] hover:bg-black/5"
             }`}
           >
@@ -190,7 +190,7 @@ function Notifications() {
                       {String(item.category || "SYSTEM").toUpperCase()}
                     </span>
                     {!item.read && (
-                      <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-bold text-[var(--cv-primary)]">
+                      <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-bold text-violet-600">
                         New
                       </span>
                     )}
