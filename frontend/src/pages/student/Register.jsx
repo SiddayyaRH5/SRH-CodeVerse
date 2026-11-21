@@ -520,11 +520,7 @@ function Register() {
                       <span className="min-w-0">
                         <span className="block font-bold">{type.title}</span>
                         <span className="mt-0.5 block text-xs text-[var(--cv-muted)]">{type.description}</span>
-                        {!type.real && (
-                          <span className="mt-1 inline-block rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">
-                            Prototype
-                          </span>
-                        )}
+                        null
                       </span>
                     </button>
                   ))}
@@ -542,9 +538,7 @@ function Register() {
                       <span className="mt-0.5 block text-xs text-[var(--cv-muted)]">
                         Apply to register an organization (requires Super Admin approval).
                       </span>
-                      <span className="mt-1 inline-block rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">
-                        Prototype
-                      </span>
+                      null
                     </span>
                   </button>
                 </div>

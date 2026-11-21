@@ -73,7 +73,7 @@ describe("Register choice screen", () => {
     expect(text).toContain("Professional")
     expect(text).toContain("Trainer")
     expect(text).toContain("Organization")
-    expect(text).toContain("Prototype")
+    expect(text).not.toContain("Prototype")
   })
 
   it("shows the real Student registration form after choosing Student", () => {
