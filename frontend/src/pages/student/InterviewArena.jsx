@@ -51,7 +51,7 @@ export default function InterviewArena() {
   const [form, setForm] = useState({
     category: searchParams.get("category") || "JAVA",
     difficulty: "MIXED",
-    questionCount: 10,
+    questionCount: 5,
     durationMinutes: 20,
     mode: "TIMED",
   })
@@ -82,20 +82,37 @@ export default function InterviewArena() {
 
   useEffect(() => { loadOverview() }, [loadOverview])
 
+  const selectedCategory = useMemo(
+    () => categories.find((item) => item.code === form.category),
+    [categories, form.category],
+  )
+  const availableQuestions = Number(selectedCategory?.questionCount) || 0
+  const maxQuestions = Math.max(5, Math.min(30, availableQuestions))
+
+  const selectCategory = (code) => {
+    const category = categories.find((item) => item.code === code)
+    const limit = Math.max(5, Math.min(30, Number(category?.questionCount) || 5))
+    setForm((current) => ({
+      ...current,
+      category: code,
+      questionCount: Math.min(Math.max(5, Number(current.questionCount) || 5), limit),
+    }))
+  }
+
   const sessionId = session?.id
   const sessionSeconds = session?.remainingSeconds
 
   useEffect(() => {
-    if (view !== "session" || !sessionId) return undefined
+    if (view !== "session" || !sessionId || session?.mode !== "TIMED") return undefined
     setRemaining(sessionSeconds || 0)
     const timer = setInterval(() => {
       setRemaining((current) => Math.max(0, current - 1))
     }, 1000)
     return () => clearInterval(timer)
-  }, [view, sessionId, sessionSeconds])
+  }, [view, sessionId, sessionSeconds, session?.mode])
 
   useEffect(() => {
-    if (view !== "session" || !session || remaining > 0 || autoSubmitted.current) return
+    if (view !== "session" || !session || session.mode !== "TIMED" || remaining > 0 || autoSubmitted.current) return
     autoSubmitted.current = true
     setBusy(true)
     submitInterviewSession(session.id)
@@ -110,13 +127,19 @@ export default function InterviewArena() {
   }, [remaining, view, session, loadOverview])
 
   const start = async () => {
+    if (availableQuestions < 5) {
+      setError("This category does not have enough questions yet. Please choose another category.")
+      return
+    }
+    const requestedCount = Math.min(Math.max(5, Number(form.questionCount) || 5), maxQuestions)
+    setForm((current) => ({ ...current, questionCount: requestedCount }))
     setBusy(true)
     setError("")
     try {
       const response = await startInterviewSession({
         category: form.category,
         difficulty: form.difficulty,
-        questionCount: Number(form.questionCount),
+        questionCount: requestedCount,
         durationMinutes: Number(form.durationMinutes),
         mode: form.mode,
       })
@@ -216,8 +239,8 @@ export default function InterviewArena() {
             <h1 className="text-2xl font-black">Interview in progress</h1>
           </div>
           <div className="flex items-center gap-3">
-            <span className={`rounded-xl px-3 py-2 font-mono text-sm font-bold ${remaining <= 60 ? "bg-red-500/10 text-red-400" : "bg-violet-500/10 text-violet-400"}`}>
-              ⏱ {formatTime(remaining)}
+            <span className={`rounded-xl px-3 py-2 font-mono text-sm font-bold ${session.mode === "TIMED" ? (remaining <= 60 ? "bg-red-500/10 text-red-400" : "bg-violet-500/10 text-violet-400") : "bg-emerald-500/10 text-emerald-400"}`}>
+              {session.mode === "TIMED" ? `⏱ ${formatTime(remaining)}` : "Practice mode"}
             </span>
             <button type="button" className="cv-primary-btn !px-4 !py-2.5 text-xs" disabled={busy} onClick={submit}>
               {busy ? "Submitting…" : "Submit interview"}
@@ -506,7 +529,7 @@ export default function InterviewArena() {
                   <button
                     key={category.code}
                     type="button"
-                    onClick={() => setForm((current) => ({ ...current, category: category.code }))}
+                    onClick={() => selectCategory(category.code)}
                     className={`cv-panel text-left transition ${
                       form.category === category.code ? "border-violet-500/60 ring-1 ring-violet-500/30" : "hover:border-violet-500/30"
                     }`}
@@ -537,7 +560,14 @@ export default function InterviewArena() {
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-bold text-[var(--cv-muted)]">Questions</span>
-                  <input type="number" min="5" max="30" className="cv-input w-full" value={form.questionCount} onChange={(event) => setForm((current) => ({ ...current, questionCount: event.target.value }))} />
+                  <input type="number" min="5" max={maxQuestions} className="cv-input w-full" value={form.questionCount} onChange={(event) => setForm((current) => ({ ...current, questionCount: event.target.value }))} />
+                  <p className="mt-1 text-[11px] text-[var(--cv-muted)]">
+                    {categories.length === 0
+                      ? "Loading question bank…"
+                      : availableQuestions >= 5
+                        ? `${availableQuestions} available · choose 5–${maxQuestions}`
+                        : "No questions available for this category yet."}
+                  </p>
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-bold text-[var(--cv-muted)]">Duration (minutes)</span>
@@ -549,7 +579,7 @@ export default function InterviewArena() {
                     {MODES.map((item) => <option key={item} value={item}>{item}</option>)}
                   </select>
                 </label>
-                <button type="button" className="cv-primary-btn w-full !py-3 text-sm" disabled={busy} onClick={start}>
+                <button type="button" className="cv-primary-btn w-full !py-3 text-sm" disabled={busy || availableQuestions < 5} onClick={start}>
                   {busy ? "Starting…" : "Start interview"}
                 </button>
                 <p className="text-[11px] leading-5 text-[var(--cv-muted)]">

@@ -206,7 +206,7 @@ function StudentForm() {
         </div>
         <button
           disabled={loading}
-          className="cv-primary-btn w-full !py-3.5 disabled:cursor-not-allowed disabled:opacity-60"
+          className="cv-primary-btn w-full !py-3.5 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50"
         >
           {loading ? "Creating account..." : "Create Student Account"} →
         </button>

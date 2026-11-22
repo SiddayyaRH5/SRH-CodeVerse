@@ -323,7 +323,7 @@ function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="cv-primary-btn flex w-full items-center justify-center gap-2 !py-4 disabled:cursor-not-allowed disabled:opacity-60"
+                className="cv-primary-btn flex w-full items-center justify-center gap-2 !py-4 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50"
               >
                 {loading ? (
                   <>
