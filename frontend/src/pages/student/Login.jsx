@@ -280,8 +280,8 @@ function Login() {
                 </svg>
 
                 <span className="flex items-center gap-2">
-                  <span className="block">Continue with</span>
-                  <span className="block">GitHub</span>
+                  <span>Continue with</span>
+                  <span>GitHub</span>
                 </span>
               </button>
             </div>
