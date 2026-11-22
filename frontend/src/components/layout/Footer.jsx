@@ -1,11 +1,4 @@
 import { Link } from "react-router-dom"
-import {
-  MapPin,
-  Phone,
-  Mail,
-  MessageCircle,
-  Send,
-} from "lucide-react"
 
 function Footer() {
   const year = new Date().getFullYear()
@@ -17,30 +10,10 @@ function Footer() {
     ["Leaderboard", "/leaderboard"],
   ]
 
-  const platformLinks = [
-    ["Live Arena", "/live-coding"],
-    ["Interview Arena", "/interview-arena"],
-    ["Analytics", "/analytics"],
-    ["Certificates", "/certificates"],
-  ]
-
-  const socialLinks = [
-    {
-      label: "LinkedIn",
-      url: "https://www.linkedin.com/in/siddayyahiremath/",
-    },
-    {
-      label: "GitHub",
-      url: "https://github.com/SiddayyaRH5",
-    },
-    {
-      label: "WhatsApp",
-      url: "https://wa.me/918088285205",
-    },
-    {
-      label: "Telegram",
-      url: "https://t.me/siddusrh",
-    },
+  const contactLinks = [
+    ["Bangalore, India", "https://maps.google.com/?q=Bangalore+India"],
+    ["+91 8088285205", "tel:+918088285205"],
+    ["siddusrh@gmail.com", "mailto:siddusrh@gmail.com"],
   ]
 
   return (
@@ -59,27 +32,54 @@ function Footer() {
 
           <p className="cv-footer-description">
             Your space to learn, practice, and grow as a developer.
-            Build skills, solve challenges, and turn knowledge into code.
           </p>
 
           <p className="cv-footer-tagline">
             EDUCATE. <span>SOLVE.</span> SUBMIT.
           </p>
 
-          {/* Social Icons */}
+          {/* Social Links — text only, no icons */}
           <div className="cv-footer-socials">
-            {socialLinks.map(({ label, url, icon: Icon }) => (
-              <a
-                key={label}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={label}
-                title={label}
-              >
-              {label}
-              </a>
-            ))}
+            <a
+              key="linkedin"
+              href="https://www.linkedin.com/in/siddayyahiremath/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="LinkedIn"
+              title="LinkedIn"
+            >
+              LinkedIn
+            </a>
+            <a
+              key="github"
+              href="https://github.com/SiddayyaRH5"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GitHub"
+              title="GitHub"
+            >
+              GitHub
+            </a>
+            <a
+              key="whatsapp"
+              href="https://wa.me/918088285205"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="WhatsApp"
+              title="WhatsApp"
+            >
+              WhatsApp
+            </a>
+            <a
+              key="telegram"
+              href="https://t.me/siddusrh"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Telegram"
+              title="Telegram"
+            >
+              Telegram
+            </a>
           </div>
         </div>
 
@@ -93,38 +93,21 @@ function Footer() {
           ))}
         </div>
 
-        {/* Platform */}
-        <div className="cv-footer-column">
-          <h3>Platform</h3>
-          {platformLinks.map(([label, path]) => (
-            <Link key={path} to={path}>
-              {label}
-            </Link>
-          ))}
-        </div>
-
         {/* Contact */}
         <div className="cv-footer-column cv-footer-contact">
           <h3>Contact</h3>
-
-          <a
-            href="https://maps.google.com/?q=Bangalore+India"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <MapPin size={16} />
-            <span>Bangalore, India</span>
-          </a>
-
-          <a href="tel:+918088285205">
-            <Phone size={16} />
-            <span>+91 8088285205</span>
-          </a>
-
-          <a href="mailto:siddusrh@gmail.com">
-            <Mail size={16} />
-            <span>siddusrh@gmail.com</span>
-          </a>
+          {contactLinks.map(([label, url]) => (
+            <a
+              key={label}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={label}
+              title={label}
+            >
+              {label}
+            </a>
+          ))}
         </div>
 
       </div>
