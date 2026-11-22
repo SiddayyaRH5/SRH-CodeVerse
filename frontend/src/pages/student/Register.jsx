@@ -173,8 +173,8 @@ function StudentForm() {
             <path fill="#EA4335" d="M12 4.78c1.77 0 3.35.61 4.6 1.81l3.44-3.44C17.95 1.2 15.24 0 12 0 7.29 0 3.24 2.89 1.26 6.69l3.97 3.01c.95-2.87 3.62-4.92 6.77-4.92z" />
           </svg>
           <span className="flex items-center gap-2">
-            <span className="block">Continue with</span>
-            <span className="block">Google</span>
+            <span>Continue with</span>
+            <span>Google</span>
           </span>
         </button>
         {/* GitHub button */}

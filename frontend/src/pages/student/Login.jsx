@@ -262,8 +262,8 @@ function Login() {
                 </svg>
 
                 <span className="flex items-center gap-2">
-                  <span className="block">Continue with</span>
-                  <span className="block">Google</span>
+                  <span>Continue with</span>
+                  <span>Google</span>
                 </span>
               </button>
 
