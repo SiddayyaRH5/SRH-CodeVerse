@@ -22,6 +22,12 @@ const ACCOUNT_TYPES = [
     description: "Independent trainers and organization-linked instructors.",
     real: false,
   },
+  {
+    id: "organization",
+    title: "Organization",
+    description: "Company training programs and team-based learning.",
+    real: false,
+  },
 ]
 
 function StudentForm() {
@@ -280,53 +286,84 @@ function Register() {
       <div className="cv-hero-orb cv-orb-cyan" aria-hidden="true" />
 
       <div className="cv-auth-shell relative z-10">
-        <section className="cv-auth-visual relative overflow-hidden">
-          <span className="cv-auth-orb one" aria-hidden="true" />
-          <span className="cv-auth-orb two" aria-hidden="true" />
+        <section className="cv-auth-layout">
+          {/* Left panel: gradient + branding */}
+          <section className="cv-auth-visual-left">
+            <span className="cv-auth-orb one" aria-hidden="true" />
+            <span className="cv-auth-orb two" aria-hidden="true" />
 
-          <div className="relative z-10 max-w-sm self-start">
-            <p className="text-sm font-bold text-white/75">START YOUR JOURNEY</p>
-            <h1 className="mt-4 text-5xl font-black leading-[0.94] tracking-tight sm:text-6xl">
-              Learn.
-              <br />
-              Practice.
-              <br />
-              <span className="text-cyan-200">Build.</span>
-              <br />
-              <span className="text-violet-100">Grow.</span>
-            </h1>
-            <p className="mt-5 leading-7 text-white/80">
-              Join SRH CodeVerse and turn every solved problem into progress you can see.
-            </p>
-          </div>
-        </section>
+            <div className="relative z-10 max-w-sm self-start gradient-panel">
+              <p className="text-sm font-bold text-white/75">START YOUR JOURNEY</p>
+              <h1 className="mt-4 text-5xl font-black leading-[0.94] tracking-tight sm:text-6xl">
+                Learn.
+                <br />
+                Practice.
+                <br />
+                <span className="text-cyan-200">Build.</span>
+                <br />
+                <span className="text-violet-100">Grow.</span>
+              </h1>
+              <p className="mt-5 leading-7 text-white/80">
+                Join SRH CodeVerse and turn every solved problem into progress you can see.
+              </p>
+            </div>
+          </section>
 
-        <section className="cv-auth-form-side min-w-0">
-          <div className="mb-10 flex flex-wrap items-center justify-between gap-4 sm:mb-12">
-            <Link to="/" className="flex items-center gap-2.5">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-cyan-400 font-black text-white shadow-lg">
-                {"</>"}
+          {/* Right panel: account type selection */}
+          <section className="cv-auth-form-side min-w-0">
+            <div className="mb-10 flex flex-wrap items-center justify-between gap-4 sm:mb-12">
+              <Link to="/" className="flex items-center gap-2.5">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-cyan-400 font-black text-white shadow-lg">
+                  {"</>"}
+                </span>
+                <span className="leading-none">
+                  <b className="block">SRH</b>
+                  <b className="cv-brand-gradient block">CodeVerse</b>
+                </span>
+              </Link>
+              <span className="text-sm text-[var(--cv-muted)]">
+                Already here?{" "} <Link to="/login" className="font-bold text-violet-500 transition hover:text-cyan-400">Login</Link>
               </span>
-              <span className="leading-none">
-                <b className="block">SRH</b>
-                <b className="cv-brand-gradient block">CodeVerse</b>
-              </span>
-            </Link>
-            <span className="text-sm text-[var(--cv-muted)]">
-              Already here?{" "} <Link to="/login" className="font-bold text-violet-500 transition hover:text-cyan-400">Login</Link>
-            </span>
-          </div>
+            </div>
 
-          <div className="mx-auto w-full max-w-md min-w-0">
-            <p className="cv-kicker">CREATE ACCOUNT</p>
-            <h2 className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">
-              Build your <span className="cv-gradient-text">future.</span>
-            </h2>
-            <p className="mt-3 text-[var(--cv-muted)]">
-              Create your Student account to start learning and practicing.
-            </p>
-            <StudentForm />
-          </div>
+            <div className="mx-auto w-full max-w-md min-w-0">
+              <p className="cv-kicker">CREATE ACCOUNT</p>
+              <h2 className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">
+                Build your <span className="cv-gradient-text">future.</span>
+              </h2>
+              <p className="mt-3 text-[var(--cv-muted)]">
+                Create your account to start learning and practicing.
+              </p>
+
+              {/* Account type cards */}
+              <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {ACCOUNT_TYPES.map((type) => (
+                  <div
+                    key={type.id}
+                    className="cv-panel rounded-2xl border border-[var(--color-border)] bg-[var(--cv-surface)]/50 p-4 lg:p-6 hover:bg-[var(--cv-surface)]/80 transition-colors duration-300"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <p className="text-[10px] font-black uppercase tracking-wide text-[var(--cv-muted)]">{type.id}</p>
+                        <h2 className="mt-1 text-xl font-black">{type.title}</h2>
+                        <p className="mt-1 text-sm text-[var(--cv-muted)]">{type.description}</p>
+                      </div>
+                      <div className="mt-1 flex shrink-0 items-center gap-2">
+                        <svg
+                          className="h-5 w-5 text-violet-400"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M5 3a2 2 0 012-4h10a2 2 0 012 4v14a2 2 0 01-2 2H7a2 2 0 01-2-2V3zM5 9a2 2 0 012-4h2.5a2 2 0 012 4v4a2 2 0 01-2 2H7a2 2 0 01-2-2v-4zm4.5 5a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1v-2z" />
+                        </svg>
+                        <span className="text-xs font-bold text-[var(--cv-muted)]">{type.real ? "Real" : "Prototype"}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
         </section>
       </div>
     </main>

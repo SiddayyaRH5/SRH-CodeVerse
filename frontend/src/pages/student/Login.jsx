@@ -250,7 +250,7 @@ function Login() {
 
               <button
                 type="button"
-                onClick={() => window.location.assign(OAUTH_INITIATION_URLS.google)}
+                onClick={() => window.location.href = "/oauth/callback?provider=google"}
                 title="Google sign-in"
                 className="cv-social-btn flex w-full items-center justify-start gap-2.5 py-2.5 px-5 rounded-lg border border-gray-700 bg-gray-900 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors duration-150 whitespace-nowrap"
               >
@@ -271,7 +271,7 @@ function Login() {
 
               <button
                 type="button"
-                onClick={() => window.location.assign(OAUTH_INITIATION_URLS.github)}
+                onClick={() => window.location.href = "/oauth/callback?provider=github"}
                 title="GitHub sign-in"
                 className="cv-social-btn flex w-full items-center justify-start gap-2.5 py-2.5 px-5 rounded-lg border border-gray-700 bg-gray-900 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors duration-150 whitespace-nowrap"
               >
