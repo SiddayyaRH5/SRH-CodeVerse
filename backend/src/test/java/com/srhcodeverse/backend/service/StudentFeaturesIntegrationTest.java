@@ -319,6 +319,16 @@ class StudentFeaturesIntegrationTest {
     }
 
     @Test
+    void interviewStartCapsRequestToAvailableQuestions() {
+        User user = student("cap");
+        Map<String, Object> session = interviewService.start(
+                user.getUsername(), "JAVA", "MIXED", 10, 20, "TIMED");
+        int served = ((Number) session.get("questionCount")).intValue();
+        assertTrue(served >= 5 && served <= 10);
+        assertEquals(served, list(session.get("questions")).size());
+    }
+
+    @Test
     void certificateAssessmentIssuanceAndVerificationAreBackendControlled() {
         User user = student("cert");
 

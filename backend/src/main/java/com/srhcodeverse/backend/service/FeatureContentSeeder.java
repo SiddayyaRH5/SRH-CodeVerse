@@ -4,7 +4,6 @@ import com.srhcodeverse.backend.entity.*;
 import com.srhcodeverse.backend.repository.*;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +15,6 @@ import java.util.Optional;
  * when its unique slug is missing.
  */
 @Component
-@ConditionalOnProperty(name = "codeverse.features.seed-on-startup", havingValue = "true", matchIfMissing = true)
 public class FeatureContentSeeder implements ApplicationRunner {
 
     private final RoadmapRepository roadmapRepository;

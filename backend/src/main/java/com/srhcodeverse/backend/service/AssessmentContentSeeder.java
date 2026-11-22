@@ -9,7 +9,6 @@ import com.srhcodeverse.backend.repository.CertificateQuestionRepository;
 import com.srhcodeverse.backend.repository.InterviewQuestionRepository;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +19,6 @@ import java.util.List;
  * assessments. Content is only inserted when a category/definition is empty.
  */
 @Component
-@ConditionalOnProperty(name = "codeverse.features.seed-on-startup", havingValue = "true", matchIfMissing = true)
 public class AssessmentContentSeeder implements ApplicationRunner {
 
     private final InterviewQuestionRepository questionRepository;

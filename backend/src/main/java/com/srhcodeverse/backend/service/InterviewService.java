@@ -131,10 +131,13 @@ public class InterviewService {
         if (pool.size() < count) {
             pool = questionRepository.findByActiveTrueAndCategoryOrderByIdAsc(cat);
         }
-        if (pool.size() < count) {
-            throw new IllegalArgumentException("Not enough questions are available for this category yet ("
-                    + pool.size() + " available, " + count + " requested)");
+        if (pool.size() < 5) {
+            throw new IllegalArgumentException("At least 5 interview questions are required for this category ("
+                    + pool.size() + " available)");
         }
+        // Serve a full round even when the requested size exceeds the current
+        // question bank. The session records the number actually served.
+        count = Math.min(count, pool.size());
         List<InterviewQuestion> selected = new ArrayList<>(pool);
         Collections.shuffle(selected);
         selected = selected.subList(0, count);
@@ -182,7 +185,7 @@ public class InterviewService {
                 .orElseThrow(() -> new IllegalArgumentException("Interview session not found"));
         if (!"IN_PROGRESS".equals(session.getStatus()))
             throw new IllegalArgumentException("This interview session is already submitted");
-        if (LocalDateTime.now().isAfter(session.getExpiresAt())) {
+        if ("TIMED".equals(session.getMode()) && LocalDateTime.now().isAfter(session.getExpiresAt())) {
             session.setStatus("EXPIRED");
             sessionRepository.save(session);
             throw new IllegalArgumentException("Time is up for this interview session");
@@ -216,7 +219,8 @@ public class InterviewService {
                 .orElseThrow(() -> new IllegalArgumentException("Interview session not found"));
         if (!"IN_PROGRESS".equals(session.getStatus()))
             throw new IllegalArgumentException("This interview session has already been submitted");
-        boolean timedOut = LocalDateTime.now().isAfter(session.getExpiresAt());
+        boolean timedOut = "TIMED".equals(session.getMode())
+                && LocalDateTime.now().isAfter(session.getExpiresAt());
         return scoreAndSave(session, timedOut);
     }
 
@@ -226,7 +230,7 @@ public class InterviewService {
         InterviewSession session = sessionRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new IllegalArgumentException("Interview session not found"));
         if ("IN_PROGRESS".equals(session.getStatus())) {
-            if (LocalDateTime.now().isAfter(session.getExpiresAt())) {
+            if ("TIMED".equals(session.getMode()) && LocalDateTime.now().isAfter(session.getExpiresAt())) {
                 scoreAndSave(session, true);
             } else {
                 throw new IllegalArgumentException("Submit the interview before viewing the result");

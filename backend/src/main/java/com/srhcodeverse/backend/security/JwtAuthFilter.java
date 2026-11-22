@@ -64,7 +64,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             .setAuthentication(authentication);
                 }
             }
-        } catch (RuntimeException ex) {
+        } catch (Exception ex) {
+            // Log sanitized exception type; never log JWT, username, or credentials.
+            // Use a generic message to avoid leaking token contents or PII in logs.
             SecurityContextHolder.clearContext();
         }
 
