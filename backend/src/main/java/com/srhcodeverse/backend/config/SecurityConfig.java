@@ -162,6 +162,7 @@ public SecurityFilterChain securityFilterChain(
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/health/live", "/api/health/ready").permitAll()
+                        .requestMatchers("/api/certificates/verify/**").permitAll()
                         .requestMatchers("/api/courses/*/progress").authenticated()
                         .requestMatchers("/api/courses/**").permitAll()
                         .requestMatchers("/api/problems/*/imported-data")

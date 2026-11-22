@@ -1,310 +1,650 @@
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { Link, useNavigate, useParams } from "react-router-dom"
+import {
+  completeLearningLesson,
+  enrollLearningCourse,
+  getLearningBookmarks,
+  getLearningCourse,
+  getLearningCourses,
+  getLearningLesson,
+  getLearningProgress,
+  getLearningRecommendations,
+  getMyLearning,
+  saveLessonNote,
+  toggleLessonBookmark,
+} from "../../api/learningApi"
 
-import { useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
-import { getProblems } from "../../api/problemApi"
-import { getDashboard } from "../../api/dashboardApi"
-
-const PATH = [
-  {
-    id: "java",
-    title: "Java Foundations",
-    icon: "☕",
-    topics: ["java", "oop", "strings", "arrays", "collections", "exception"],
-    description:
-      "Build confidence with core Java, OOP and everyday problem-solving.",
-  },
-  {
-    id: "dsa",
-    title: "DSA & Problem Solving",
-    icon: "🧠",
-    topics: [
-      "dsa",
-      "array",
-      "arrays",
-      "string",
-      "strings",
-      "linked",
-      "stack",
-      "queue",
-      "tree",
-      "sorting",
-      "search",
-    ],
-    description:
-      "Strengthen algorithms and data structures through progressively harder problems.",
-  },
-  {
-    id: "sql",
-    title: "SQL & Databases",
-    icon: "🗄️",
-    topics: ["sql", "database", "jdbc", "mysql"],
-    description:
-      "Practice the database skills expected in real full-stack development.",
-  },
-  {
-    id: "spring",
-    title: "Spring Boot Backend",
-    icon: "🌱",
-    topics: ["spring", "spring boot", "springboot", "rest", "api", "hibernate", "jpa"],
-    description:
-      "Move from Java fundamentals into REST APIs, persistence and backend architecture.",
-  },
-  {
-    id: "fullstack",
-    title: "Full-Stack Builder",
-    icon: "🚀",
-    topics: ["react", "javascript", "frontend", "web", "html", "css", "full stack"],
-    description:
-      "Connect frontend skills with backend knowledge and ship complete applications.",
-  },
-]
-
-function normalize(value) {
-  return String(value || "").toLowerCase().trim()
+function ProgressBar({ value }) {
+  return (
+    <div className="h-2 overflow-hidden rounded-full bg-[var(--cv-surface-2)]">
+      <div
+        className="h-full rounded-full bg-gradient-to-r from-violet-500 via-blue-500 to-cyan-400 transition-all duration-500"
+        style={{ width: `${Math.max(0, Math.min(100, value || 0))}%` }}
+      />
+    </div>
+  )
 }
 
-function matchesTopic(problem, topics) {
-  const topic = normalize(problem.topic)
-  return topics.some((item) => topic.includes(item))
+function parseQuiz(raw) {
+  if (!raw) return []
+  try {
+    const value = JSON.parse(raw)
+    return Array.isArray(value) ? value : []
+  } catch {
+    return []
+  }
 }
 
-function LearningPath() {
-  const [problems, setProblems] = useState([])
-  const [dashboard, setDashboard] = useState(null)
+function Quiz({ questions }) {
+  const [answers, setAnswers] = useState({})
+  if (!questions.length) return null
+  return (
+    <div className="mt-4 space-y-4">
+      {questions.map((question, index) => {
+        const selected = answers[index]
+        return (
+          <div key={`${question.question}-${index}`} className="rounded-xl border border-[var(--color-border)] p-4">
+            <p className="text-sm font-bold">{index + 1}. {question.question}</p>
+            <div className="mt-3 grid gap-2">
+              {(question.options || []).map((option, optionIndex) => {
+                const isSelected = selected === optionIndex
+                const isCorrect = question.answer === optionIndex
+                const reveal = selected !== undefined
+                const tone = !reveal
+                  ? "border-[var(--color-border)]"
+                  : isCorrect
+                    ? "border-emerald-500/50 bg-emerald-500/10"
+                    : isSelected
+                      ? "border-red-500/50 bg-red-500/10"
+                      : "border-[var(--color-border)]"
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setAnswers((current) => ({ ...current, [index]: optionIndex }))}
+                    className={`rounded-lg border px-3 py-2 text-left text-sm ${tone}`}
+                  >
+                    {option}
+                  </button>
+                )
+              })}
+            </div>
+            {selected !== undefined && (
+              <p className={`mt-2 text-xs font-bold ${selected === question.answer ? "text-emerald-500" : "text-red-400"}`}>
+                {selected === question.answer ? "Correct" : `Not quite — the answer is: ${(question.options || [])[question.answer]}`}
+              </p>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+export default function LearningPath() {
+  const [courses, setCourses] = useState([])
+  const [progress, setProgress] = useState(null)
+  const [my, setMy] = useState([])
+  const [bookmarks, setBookmarks] = useState([])
+  const [recommendations, setRecommendations] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [search, setSearch] = useState("")
+  const [category, setCategory] = useState("ALL")
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError("")
+    try {
+      const [courseResponse, progressResponse, myResponse, bookmarkResponse, recommendationResponse] =
+        await Promise.all([
+          getLearningCourses({ search: search || undefined, category: category === "ALL" ? undefined : category }),
+          getLearningProgress(),
+          getMyLearning(),
+          getLearningBookmarks(),
+          getLearningRecommendations(),
+        ])
+      setCourses(courseResponse.data.items || [])
+      setProgress(progressResponse.data)
+      setMy(myResponse.data.items || [])
+      setBookmarks(bookmarkResponse.data.items || [])
+      setRecommendations(recommendationResponse.data.items || [])
+    } catch (err) {
+      setError(err?.response?.data?.message || "Unable to load the learning path.")
+    } finally {
+      setLoading(false)
+    }
+  }, [search, category])
 
   useEffect(() => {
-    Promise.all([getProblems(), getDashboard()])
-      .then(([problemResponse, dashboardResponse]) => {
-        setProblems(problemResponse.data || [])
-        setDashboard(dashboardResponse.data || null)
-      })
-      .catch((error) => {
-        console.error("Failed to load learning path:", error)
-        setProblems([])
-        setDashboard(null)
-      })
-      .finally(() => setLoading(false))
-  }, [])
+    const timer = setTimeout(load, 250)
+    return () => clearTimeout(timer)
+  }, [load])
 
-  const stages = useMemo(
-    () =>
-      PATH.map((stage, index) => {
-        const relevant = problems.filter((problem) =>
-          matchesTopic(problem, stage.topics)
-        )
-
-        const solved = relevant.filter((problem) => problem.solved).length
-        const coverage = relevant.length
-          ? Math.round((solved / relevant.length) * 100)
-          : 0
-
-        const target = relevant.length
-          ? Math.max(3, Math.ceil(relevant.length * 0.7))
-          : 0
-
-        const completed = relevant.length > 0 && solved >= target
-
-        return {
-          ...stage,
-          index,
-          relevant,
-          solved,
-          coverage,
-          target,
-          completed,
-        }
-      }),
-    [problems]
+  const categories = useMemo(
+    () => ["ALL", ...Array.from(new Set(courses.map((course) => course.category)))],
+    [courses],
   )
 
-  const next = stages.find((stage) => !stage.completed) || stages[stages.length - 1]
+  return (
+    <main className="cv-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <header className="cv-reveal">
+        <p className="cv-kicker">STRUCTURED LEARNING</p>
+        <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">Learning Path</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--cv-muted)] sm:text-base">
+              Real lessons with explanations, runnable examples, exercises and quizzes. Completion and notes
+              are stored against your account, and recommendations are generated from your actual practice data.
+            </p>
+          </div>
+          <span className="cv-pill w-fit">{progress?.overallPercent ?? 0}% overall</span>
+        </div>
+      </header>
 
-  const overall = stages.length
-    ? Math.round(
-        stages.reduce((sum, stage) => sum + stage.coverage, 0) / stages.length
-      )
-    : 0
+      <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="cv-stat-card rounded-2xl p-5">
+          <p className="text-xs font-semibold tracking-wide text-[var(--cv-muted)]">ENROLLED COURSES</p>
+          <p className="mt-2 text-3xl font-black">{progress?.enrolledCourses ?? 0}</p>
+          <p className="mt-1 text-xs text-[var(--cv-muted)]">{my.length} in progress or completed</p>
+        </div>
+        <div className="cv-stat-card rounded-2xl p-5">
+          <p className="text-xs font-semibold tracking-wide text-[var(--cv-muted)]">LESSONS COMPLETED</p>
+          <p className="mt-2 text-3xl font-black">{progress?.completedLessons ?? 0}</p>
+          <p className="mt-1 text-xs text-[var(--cv-muted)]">of {progress?.totalLessons ?? 0} in enrolled courses</p>
+        </div>
+        <div className="cv-stat-card rounded-2xl p-5">
+          <p className="text-xs font-semibold tracking-wide text-[var(--cv-muted)]">BOOKMARKS</p>
+          <p className="mt-2 text-3xl font-black">{progress?.bookmarks ?? 0}</p>
+          <p className="mt-1 text-xs text-[var(--cv-muted)]">Saved lessons for revision</p>
+        </div>
+        <div className="cv-stat-card rounded-2xl p-5">
+          <p className="text-xs font-semibold tracking-wide text-[var(--cv-muted)]">RECOMMENDATIONS</p>
+          <p className="mt-2 text-3xl font-black">{recommendations.length}</p>
+          <p className="mt-1 text-xs text-[var(--cv-muted)]">Rule-based, from your activity</p>
+        </div>
+      </section>
 
-  const streak = dashboard?.forgeStreakCurrent ?? 0
+      {recommendations.length > 0 && (
+        <section className="cv-panel mt-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-black">Recommended next</h2>
+              <p className="text-xs text-[var(--cv-muted)]">
+                Generated by transparent rules from solved problems, failed submissions, course progress and interview scores.
+              </p>
+            </div>
+            <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-black uppercase text-violet-400">
+              Rule based
+            </span>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {recommendations.slice(0, 4).map((item, index) => (
+              <Link
+                key={`${item.type}-${item.title}-${index}`}
+                to={item.href || "/problems"}
+                className="rounded-xl border border-[var(--color-border)] bg-[var(--cv-surface-2)]/40 p-4 transition hover:border-violet-500/40"
+              >
+                <p className="text-[10px] font-black uppercase tracking-wide text-violet-400">{item.type}</p>
+                <p className="mt-1 text-sm font-bold">{item.title}</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--cv-muted)]">{item.reason}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
-  if (loading) {
+      {my.length > 0 && (
+        <section className="cv-panel mt-6">
+          <h2 className="text-lg font-black">Continue learning</h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {my.map((item) => (
+              <Link key={item.slug} to={`/learning-path/courses/${item.slug}`} className="rounded-xl border border-[var(--color-border)] p-4 hover:border-violet-500/40">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-bold">{item.title}</p>
+                  <span className="text-xs font-black text-violet-400">{item.progressPercent}%</span>
+                </div>
+                <ProgressBar value={item.progressPercent} />
+                <p className="mt-2 text-xs text-[var(--cv-muted)]">
+                  {item.completedLessons}/{item.totalLessons} lessons · {item.currentLessonTitle || "Ready to start"}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="mt-6">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div>
+            <h2 className="text-xl font-black">Course library</h2>
+            <p className="text-xs text-[var(--cv-muted)]">Structured modules with real lesson content.</p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              className="cv-input"
+              placeholder="Search courses…"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+            <select className="cv-input" value={category} onChange={(event) => setCategory(event.target.value)}>
+              {categories.map((item) => <option key={item} value={item}>{item === "ALL" ? "All categories" : item}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            {error}
+            <button type="button" className="ml-3 font-bold underline" onClick={load}>Retry</button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="cv-panel h-64 animate-pulse rounded-2xl" />)}
+          </div>
+        ) : courses.length === 0 ? (
+          <div className="cv-panel mt-5 py-14 text-center">
+            <p className="text-4xl">📚</p>
+            <h3 className="mt-3 text-lg font-black">No courses found</h3>
+            <p className="mt-1 text-sm text-[var(--cv-muted)]">Try another search or category.</p>
+          </div>
+        ) : (
+          <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {courses.map((course) => (
+              <Link key={course.slug} to={`/learning-path/courses/${course.slug}`} className="cv-panel flex h-full flex-col transition hover:-translate-y-0.5 hover:border-violet-500/40">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-violet-400">
+                    {course.category}
+                  </span>
+                  <span className="text-[10px] font-bold uppercase text-[var(--cv-muted)]">{course.difficulty}</span>
+                </div>
+                <h3 className="mt-4 text-xl font-black">{course.title}</h3>
+                <p className="mt-2 flex-1 text-sm leading-6 text-[var(--cv-muted)]">{course.shortDescription}</p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {course.skillsGained.slice(0, 3).map((skill) => (
+                    <span key={skill} className="rounded-md bg-[var(--cv-surface-2)] px-2 py-1 text-[11px] text-[var(--cv-muted)]">{skill}</span>
+                  ))}
+                </div>
+                <div className="mt-4">
+                  <div className="mb-2 flex justify-between text-xs">
+                    <span className="text-[var(--cv-muted)]">{course.lessonCount} lessons</span>
+                    <strong>{course.progressPercent}%</strong>
+                  </div>
+                  <ProgressBar value={course.progressPercent} />
+                </div>
+                <p className="mt-3 text-xs font-bold text-violet-400">
+                  {course.enrolled ? "Continue course →" : "Open course →"}
+                </p>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {bookmarks.length > 0 && (
+        <section className="cv-panel mt-6">
+          <h2 className="text-lg font-black">Bookmarked lessons</h2>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {bookmarks.map((bookmark) => (
+              <Link
+                key={bookmark.lessonId}
+                to={`/learning-path/lessons/${bookmark.lessonId}`}
+                className="rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm hover:border-violet-500/40"
+              >
+                <span className="font-bold">{bookmark.title}</span>
+                <span className="ml-2 text-xs text-[var(--cv-muted)]">{bookmark.courseTitle}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+    </main>
+  )
+}
+
+export function CourseOverview() {
+  const { slug } = useParams()
+  const navigate = useNavigate()
+  const [course, setCourse] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError("")
+    try {
+      const response = await getLearningCourse(slug)
+      setCourse(response.data)
+    } catch (err) {
+      setError(err?.response?.data?.message || "Unable to load this course.")
+    } finally {
+      setLoading(false)
+    }
+  }, [slug])
+
+  useEffect(() => { load() }, [load])
+
+  const enroll = async () => {
+    setBusy(true)
+    setError("")
+    try {
+      const response = await enrollLearningCourse(slug)
+      setCourse(response.data)
+    } catch (err) {
+      setError(err?.response?.data?.message || "Unable to enroll in this course.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (loading) return <main className="cv-page"><div className="cv-panel h-64 animate-pulse rounded-2xl" /></main>
+  if (!course) {
     return (
       <main className="cv-page">
-        <div className="cv-panel h-64 animate-pulse rounded-2xl" />
+        <div className="cv-panel">
+          <p className="text-sm text-red-400">{error || "Course not found."}</p>
+          <button type="button" className="cv-secondary-btn mt-4 !px-4 !py-2 text-xs" onClick={load}>Retry</button>
+        </div>
       </main>
     )
   }
 
   return (
-    <main className="cv-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Page heading */}
-      <header className="cv-reveal">
-        <p className="cv-kicker">PERSONALIZED LEARNING PATH</p>
-
-        <div className="mt-3 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-          <div className="min-w-0">
-            <h1 className="text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
-              Your Developer Journey
-            </h1>
-
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--cv-muted)] sm:text-base">
-              A learning path that reacts to the problems you actually solve.
-              Finish each stage to progress through your CodeVerse journey.
-            </p>
+    <main className="cv-page mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <Link to="/learning-path" className="text-xs font-bold text-violet-400 hover:text-violet-300">← Learning path</Link>
+      <div className="cv-panel mt-4">
+        <p className="cv-kicker">{course.category} COURSE</p>
+        <h1 className="mt-2 text-3xl font-black sm:text-4xl">{course.title}</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--cv-muted)]">{course.detailedDescription}</p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-xl bg-[var(--cv-surface-2)]/50 p-3">
+            <p className="text-[10px] font-black uppercase tracking-wide text-[var(--cv-muted)]">Lessons</p>
+            <p className="mt-1 text-lg font-black">{course.completedLessons}/{course.totalLessons}</p>
           </div>
-
-          <div className="cv-pill w-fit shrink-0">
-            ⚡ {overall}% journey coverage
+          <div className="rounded-xl bg-[var(--cv-surface-2)]/50 p-3">
+            <p className="text-[10px] font-black uppercase tracking-wide text-[var(--cv-muted)]">Progress</p>
+            <p className="mt-1 text-lg font-black">{course.progressPercent}%</p>
+          </div>
+          <div className="rounded-xl bg-[var(--cv-surface-2)]/50 p-3">
+            <p className="text-[10px] font-black uppercase tracking-wide text-[var(--cv-muted)]">Estimated time</p>
+            <p className="mt-1 text-lg font-black">{course.estimatedDurationMinutes || 0} min</p>
           </div>
         </div>
-      </header>
-
-      {/* Summary cards */}
-      <section
-        className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
-        aria-label="Learning path overview"
-      >
-        <div className="cv-stat-card min-w-0 rounded-2xl p-5">
-          <p className="text-xs font-semibold tracking-wide text-[var(--cv-muted)]">
-            NEXT RECOMMENDATION
-          </p>
-          <p className="mt-2 text-xl font-black">
-            {next?.title || "All stages"}
-          </p>
-          <p className="mt-2 text-xs text-[var(--cv-muted)]">
-            {next?.solved || 0} solved · {next?.coverage || 0}% coverage
-          </p>
-        </div>
-
-        <div className="cv-stat-card min-w-0 rounded-2xl p-5">
-          <p className="text-xs font-semibold tracking-wide text-[var(--cv-muted)]">
-            CURRENT STREAK
-          </p>
-          <p className="mt-2 text-3xl font-black">{streak} 🔥</p>
-          <p className="mt-1 text-xs text-[var(--cv-muted)]">
-            Keep one focused practice session going each day.
-          </p>
-        </div>
-
-        <div className="cv-stat-card min-w-0 rounded-2xl p-5 sm:col-span-2 xl:col-span-1">
-          <p className="text-xs font-semibold tracking-wide text-[var(--cv-muted)]">
-            CERTIFICATE TRACK
-          </p>
-          <p className="mt-2 text-xl font-black">
-            {stages.filter((stage) => stage.completed).length} / {stages.length} ready
-          </p>
-          <Link
-            to="/certificates"
-            className="mt-2 inline-block text-xs font-bold text-violet-500 hover:text-violet-400"
-          >
-            View certificates →
-          </Link>
-        </div>
-      </section>
-
-      {/* Stage cards */}
-      <section className="relative mt-10" aria-label="Learning stages">
-        <div className="space-y-5">
-          {stages.map((stage) => (
-            <article
-              key={stage.id}
-              className="cv-panel cv-reveal min-w-0 overflow-hidden rounded-2xl p-5 sm:p-6 lg:p-7"
-              style={{ animationDelay: `${stage.index * 70}ms` }}
+        <ProgressBar value={course.progressPercent} />
+        <div className="mt-4 flex flex-wrap gap-2">
+          {!course.enrolled ? (
+            <button type="button" className="cv-primary-btn !px-4 !py-2.5 text-xs" disabled={busy} onClick={enroll}>
+              {busy ? "Enrolling…" : "Enroll in course"}
+            </button>
+          ) : course.currentLessonId ? (
+            <button
+              type="button"
+              className="cv-primary-btn !px-4 !py-2.5 text-xs"
+              onClick={() => navigate(`/learning-path/lessons/${course.currentLessonId}`)}
             >
-              <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-center">
-                {/* Icon and text are in normal document flow.
-                    This prevents the icon from covering the heading. */}
-                <div className="flex min-w-0 items-start gap-4 sm:gap-5">
-                  <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-2xl ${
-                      stage.completed
-                        ? "border-emerald-500/30 bg-emerald-500/10"
-                        : "border-violet-500/25 bg-violet-500/10"
-                    }`}
-                    aria-hidden="true"
-                  >
-                    {stage.completed ? "✓" : stage.icon}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                      <h2 className="break-words text-lg font-black leading-snug sm:text-xl">
-                        {stage.title}
-                      </h2>
-
-                      <span
-                        className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
-                          stage.completed
-                            ? "bg-emerald-500/10 text-emerald-500"
-                            : "bg-violet-500/10 text-violet-500"
-                        }`}
-                      >
-                        {stage.completed ? "Completed" : `Stage ${stage.index + 1}`}
-                      </span>
-                    </div>
-
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--cv-muted)]">
-                      {stage.description}
-                    </p>
-
-                    <div className="mt-5 flex flex-wrap gap-2">
-                      <Link
-                        to="/problems"
-                        className="cv-secondary-btn !rounded-xl !px-4 !py-2.5 text-xs"
-                      >
-                        Practice this stage →
-                      </Link>
-
-                      {stage.completed && (
-                        <Link
-                          to="/certificates"
-                          className="cv-primary-btn !rounded-xl !px-4 !py-2.5 text-xs"
-                        >
-                          View certificates
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progress panel */}
-                <div className="min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--cv-surface-2)]/40 p-4 lg:border-0 lg:bg-transparent lg:p-0">
-                  <div className="flex items-center justify-between gap-3 text-xs">
-                    <span className="text-[var(--cv-muted)]">
-                      Problem mastery
-                    </span>
-                    <strong className="shrink-0">{stage.coverage}%</strong>
-                  </div>
-
-                  <div
-                    className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--cv-surface-2)]"
-                    role="progressbar"
-                    aria-label={`${stage.title} problem mastery`}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={stage.coverage}
-                  >
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-violet-500 via-blue-500 to-cyan-400 transition-all duration-500"
-                      style={{ width: `${stage.coverage}%` }}
-                    />
-                  </div>
-
-                  <p className="mt-2 text-[11px] leading-5 text-[var(--cv-muted)]">
-                    {stage.solved} solved
-                    {stage.relevant.length
-                      ? ` · ${stage.target} target`
-                      : " · No matching problems yet"}
-                  </p>
-                </div>
-              </div>
-            </article>
-          ))}
+              Continue: {course.currentLessonTitle}
+            </button>
+          ) : null}
         </div>
-      </section>
+        {course.learningObjectives.length > 0 && (
+          <div className="mt-5">
+            <h2 className="text-sm font-black">Learning objectives</h2>
+            <ul className="mt-2 grid gap-1 text-sm text-[var(--cv-muted)] sm:grid-cols-2">
+              {course.learningObjectives.map((objective) => <li key={objective}>• {objective}</li>)}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {error && <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
+
+      <div className="mt-6 space-y-4">
+        {course.modules.map((module) => (
+          <section key={module.name} className="cv-panel">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-black">{module.name}</h2>
+              <span className="text-xs text-[var(--cv-muted)]">{module.completedLessons}/{module.totalLessons} · {module.progressPercent}%</span>
+            </div>
+            <ul className="mt-3 space-y-2">
+              {module.lessons.map((lesson) => (
+                <li key={lesson.id}>
+                  <Link
+                    to={`/learning-path/lessons/${lesson.id}`}
+                    className="flex items-start justify-between gap-3 rounded-xl border border-[var(--color-border)] px-4 py-3 hover:border-violet-500/40"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border text-[11px] font-black ${
+                        lesson.completed ? "border-emerald-500 bg-emerald-500 text-white" : "border-[var(--cv-border)]"
+                      }`}>
+                        {lesson.completed ? "✓" : ""}
+                      </span>
+                      <div>
+                        <p className="text-sm font-bold">{lesson.title}</p>
+                        <p className="mt-0.5 text-xs text-[var(--cv-muted)]">{lesson.description}</p>
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-xs text-[var(--cv-muted)]">{lesson.estimatedMinutes} min</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
     </main>
   )
 }
 
-export default LearningPath
+export function LessonView() {
+  const { lessonId } = useParams()
+  const navigate = useNavigate()
+  const [lesson, setLesson] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState("")
+  const [noteStatus, setNoteStatus] = useState("")
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError("")
+    try {
+      const response = await getLearningLesson(lessonId)
+      setLesson(response.data)
+      setNote(response.data.note || "")
+    } catch (err) {
+      setError(err?.response?.data?.message || "Unable to load this lesson.")
+    } finally {
+      setLoading(false)
+    }
+  }, [lessonId])
+
+  useEffect(() => { load() }, [load])
+
+  const quiz = useMemo(() => parseQuiz(lesson?.quiz), [lesson])
+
+  const toggleComplete = async () => {
+    setBusy(true)
+    setError("")
+    try {
+      const response = await completeLearningLesson(lessonId, !lesson.completed)
+      setLesson(response.data)
+    } catch (err) {
+      setError(err?.response?.data?.message || "Unable to update lesson progress.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const toggleBookmark = async () => {
+    setBusy(true)
+    try {
+      const response = await toggleLessonBookmark(lessonId)
+      setLesson((current) => ({ ...current, bookmarked: response.data.bookmarked }))
+    } catch (err) {
+      setError(err?.response?.data?.message || "Unable to update bookmark.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const saveNote = async () => {
+    setBusy(true)
+    setNoteStatus("")
+    try {
+      await saveLessonNote(lessonId, note)
+      setNoteStatus("Note saved")
+      setTimeout(() => setNoteStatus(""), 2000)
+    } catch (err) {
+      setError(err?.response?.data?.message || "Unable to save your note.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (loading) return <main className="cv-page"><div className="cv-panel h-64 animate-pulse rounded-2xl" /></main>
+  if (!lesson) {
+    return (
+      <main className="cv-page">
+        <div className="cv-panel">
+          <p className="text-sm text-red-400">{error || "Lesson not found."}</p>
+          <button type="button" className="cv-secondary-btn mt-4 !px-4 !py-2 text-xs" onClick={load}>Retry</button>
+        </div>
+      </main>
+    )
+  }
+
+  return (
+    <main className="cv-page mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link to={`/learning-path/courses/${lesson.courseSlug}`} className="text-xs font-bold text-violet-400 hover:text-violet-300">
+          ← {lesson.courseTitle}
+        </Link>
+        <span className="text-xs text-[var(--cv-muted)]">Lesson {lesson.position} of {lesson.totalLessons}</span>
+      </div>
+
+      <article className="cv-panel mt-4">
+        <p className="cv-kicker">{lesson.moduleName}</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight">{lesson.title}</h1>
+        <p className="mt-2 text-sm text-[var(--cv-muted)]">{lesson.description}</p>
+
+        {lesson.learningObjectives.length > 0 && (
+          <div className="mt-5 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+            <p className="text-[10px] font-black uppercase tracking-wide text-violet-400">You will learn</p>
+            <ul className="mt-2 space-y-1 text-sm text-[var(--cv-muted)]">
+              {lesson.learningObjectives.map((objective) => <li key={objective}>• {objective}</li>)}
+            </ul>
+          </div>
+        )}
+
+        <div className="mt-6 whitespace-pre-line text-sm leading-7 text-[var(--cv-text)]">{lesson.lessonContent}</div>
+
+        {lesson.codeExample && (
+          <div className="mt-6">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-wide text-[var(--cv-muted)]">Example</p>
+            <pre className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--cv-surface-2)] p-4 text-xs leading-6">
+              <code>{lesson.codeExample}</code>
+            </pre>
+            {lesson.expectedOutput && (
+              <p className="mt-2 text-xs text-[var(--cv-muted)]">
+                <span className="font-bold text-[var(--cv-text)]">Expected output:</span> {lesson.expectedOutput}
+              </p>
+            )}
+          </div>
+        )}
+
+        {lesson.exercise && (
+          <div className="mt-6 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+            <p className="text-[10px] font-black uppercase tracking-wide text-cyan-400">Exercise</p>
+            <p className="mt-1 text-sm leading-6">{lesson.exercise}</p>
+          </div>
+        )}
+
+        {lesson.commonMistakes && (
+          <div className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+            <p className="text-[10px] font-black uppercase tracking-wide text-amber-500">Common mistakes</p>
+            <p className="mt-1 text-sm leading-6 text-[var(--cv-muted)]">{lesson.commonMistakes}</p>
+          </div>
+        )}
+
+        {quiz.length > 0 && (
+          <div className="mt-6">
+            <h2 className="text-lg font-black">Check your understanding</h2>
+            <Quiz questions={quiz} />
+          </div>
+        )}
+
+        {lesson.resources.length > 0 && (
+          <div className="mt-6">
+            <h2 className="text-sm font-black">Resources</h2>
+            <ul className="mt-2 space-y-1">
+              {lesson.resources.map((resource) => {
+                const [label, url] = resource.split("|")
+                return (
+                  <li key={resource}>
+                    {url ? (
+                      <a href={url} target={url.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className="text-sm font-bold text-violet-400 hover:text-violet-300">
+                        {label} ↗
+                      </a>
+                    ) : (
+                      <span className="text-sm text-[var(--cv-muted)]">{label}</span>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
+
+        <div className="mt-8 flex flex-wrap gap-2">
+          <button type="button" disabled={busy} onClick={toggleComplete} className={lesson.completed ? "cv-secondary-btn !px-4 !py-2.5 text-xs" : "cv-primary-btn !px-4 !py-2.5 text-xs"}>
+            {lesson.completed ? "Mark as incomplete" : "Mark lesson complete"}
+          </button>
+          <button type="button" disabled={busy} onClick={toggleBookmark} className="cv-secondary-btn !px-4 !py-2.5 text-xs">
+            {lesson.bookmarked ? "★ Bookmarked" : "☆ Bookmark"}
+          </button>
+        </div>
+
+        {error && <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
+
+        <div className="mt-6 rounded-xl border border-[var(--color-border)] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-black">Your notes</h2>
+            {noteStatus && <span className="text-xs font-bold text-emerald-500">{noteStatus}</span>}
+          </div>
+          <textarea
+            className="cv-input mt-2 min-h-28 w-full resize-y"
+            placeholder="Write a short note, a question or a reminder…"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+          <button type="button" disabled={busy} onClick={saveNote} className="cv-secondary-btn mt-2 !px-4 !py-2 text-xs">
+            Save note
+          </button>
+        </div>
+      </article>
+
+      <div className="mt-5 flex flex-wrap justify-between gap-2">
+        <button
+          type="button"
+          disabled={!lesson.previousLessonId}
+          onClick={() => navigate(`/learning-path/lessons/${lesson.previousLessonId}`)}
+          className="cv-secondary-btn !px-4 !py-2.5 text-xs disabled:opacity-40"
+        >
+          ← Previous lesson
+        </button>
+        <button
+          type="button"
+          disabled={!lesson.nextLessonId}
+          onClick={() => navigate(`/learning-path/lessons/${lesson.nextLessonId}`)}
+          className="cv-primary-btn !px-4 !py-2.5 text-xs disabled:opacity-40"
+        >
+          Next lesson →
+        </button>
+      </div>
+    </main>
+  )
+}

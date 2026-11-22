@@ -27,8 +27,9 @@ import Playground from "../pages/student/Playground"
 import LiveCodingArena from "../pages/student/LiveCodingArena"
 import MockInterview from "../pages/student/MockInterview"
 import Analytics from "../pages/student/Analytics"
-import LearningPath from "../pages/student/LearningPath"
+import LearningPath, { CourseOverview, LessonView } from "../pages/student/LearningPath"
 import Certificates from "../pages/student/Certificates"
+import CertificateVerify from "../pages/student/CertificateVerify"
 import Courses from "../pages/student/Courses"
 import CourseDetail from "../pages/student/CourseDetail"
 import CourseProblemDetail from "../pages/student/CourseProblemDetail";
@@ -159,7 +160,11 @@ function AppRoutes() {
         <Route path="/analytics" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><Analytics /></ProtectedRoute>} />
         <Route path="/roadmap" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><Roadmap /></ProtectedRoute>} />
         <Route path="/learning-path" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><LearningPath /></ProtectedRoute>} />
+        <Route path="/learning-path/courses/:slug" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><CourseOverview /></ProtectedRoute>} />
+        <Route path="/learning-path/lessons/:lessonId" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><LessonView /></ProtectedRoute>} />
         <Route path="/certificates" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><Certificates /></ProtectedRoute>} />
+        {/* Public certificate verification: no authentication required. */}
+        <Route path="/verify/:verificationCode" element={<CertificateVerify />} />
         <Route path="/playground" element={<ProtectedRoute allowedRoles={["STUDENT", "TRAINER"]}><Playground /></ProtectedRoute>} />
 
 <Route path="/trainer/profile" element={<ProtectedRoute allowedRoles={[ "TRAINER" ]}><TrainerProfile /></ProtectedRoute>} />
