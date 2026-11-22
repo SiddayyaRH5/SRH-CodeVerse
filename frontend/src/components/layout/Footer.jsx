@@ -79,7 +79,7 @@ function Footer() {
   const socialLinks = [
     {
       label: "LinkedIn",
-      url: "YOUR_LINKEDIN_URL",
+      url: "https://www.linkedin.com/in/siddayyahiremath/",
       icon: "linkedin",
     },
     {
@@ -94,7 +94,7 @@ function Footer() {
     },
     {
       label: "Telegram",
-      url: "YOUR_TELEGRAM_URL",
+      url: "https://t.me/siddusrh",
       icon: "telegram",
     },
   ];
