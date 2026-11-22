@@ -16,6 +16,8 @@
     "axios": "^1.19.0",
     "canvas": "^3.2.3",
     "canvas-confetti": "^1.9.4",
+    "lucide": "^1.77.0",
+    "lucide-react": "1.77.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-is": "^19.3.0",
