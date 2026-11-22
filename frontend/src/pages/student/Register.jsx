@@ -1,8 +1,3 @@
-import { useRef, useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
-import { OAUTH_INITIATION_URLS, registerUser } from "../../api/authApi"
-import { useAuth } from "../../context/AuthContext"
-
 const ACCOUNT_TYPES = [
   {
     id: "student",
@@ -26,7 +21,7 @@ const ACCOUNT_TYPES = [
 
 function StudentForm() {
   const [form, setForm] = useState({ username: "", email: "", password: "" })
-  const [error, setError] = useState("")
+  const [error, setError] = useState("") 
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const submittingRef = useRef(false)
@@ -56,7 +51,7 @@ function StudentForm() {
         err.response?.data?.message ||
           (err.code === "ECONNABORTED"
             ? "The server is taking longer than expected. Check your account status before trying signup again."
-            : "Registration failed"),
+            : "Registration failed")
       )
     } finally {
       submittingRef.current = false
@@ -138,9 +133,7 @@ function StudentForm() {
             <div className="mt-2 flex items-center gap-2">
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--cv-surface-2)]">
                 <div
-                  className={`h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-400 transition-all ${
-                    strength === "Strong" ? "w-full" : strength === "Good" ? "w-2/3" : "w-1/3"
-                  }`}
+                  className={`h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-400 transition-all ${strength === "Strong" ? "w-full" : strength === "Good" ? "w-2/3" : "w-1/3"}`}
                 />
               </div>
               <span className="text-[10px] text-[var(--cv-muted)]">{strength}</span>
@@ -155,42 +148,52 @@ function StudentForm() {
         </button>
       </form>
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {/* Google button */}
         <button
           type="button"
           onClick={() => window.location.assign(OAUTH_INITIATION_URLS.google)}
           title="Google sign-in"
-          className="cv-secondary-btn relative min-h-[92px] w-full !px-7 !py-5 text-base"
+          className="cv-social-btn flex w-full items-center justify-center gap-2 py-2.5 px-5 rounded-lg border border-gray-700 bg-gray-900 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors duration-150"
         >
-          <span className="text-center leading-7">
+          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path fill="#EA4335" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.51h6.44c-.28 1.45-1.12 2.68-2.37 3.5v2.92h3.84c2.25-2.07 3.58-5.12 3.58-8.59z" />
+            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.94-2.93l-3.84-2.92c-1.08.72-2.46 1.15-4.1 1.15-3.15 0-5.82-2.13-6.77-5H1.26v3.01C3.24 21.11 7.29 24 12 24z" />
+            <path fill="#FBBC05" d="M5.23 14.3c-.24-.72-.38-1.5-.38-2.3s.14-1.58.38-2.3V6.69H1.26C.46 8.29 0 10.08 0 12s.46 3.71 1.26 5.31l3.97-3.01z" />
+            <path fill="#EA4335" d="M12 4.78c1.77 0 3.35.61 4.6 1.81l3.44-3.44C17.95 1.2 15.24 0 12 0 7.29 0 3.24 2.89 1.26 6.69l3.97 3.01c.95-2.87 3.62-4.92 6.77-4.92z" />
+          </svg>
+          <span className="flex-1">
             <span className="block">Continue with</span>
             <span className="block">Google</span>
           </span>
         </button>
+        {/* GitHub button */}
         <button
           type="button"
           onClick={() => window.location.assign(OAUTH_INITIATION_URLS.github)}
           title="GitHub sign-in"
-          className="cv-secondary-btn relative min-h-[92px] w-full !px-7 !py-5 text-base"
+          className="cv-social-btn flex w-full items-center justify-center gap-2 py-2.5 px-5 rounded-lg border border-gray-700 bg-gray-900 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors duration-150"
         >
-          <span className="text-center leading-7">
+          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path fill="currentColor" d="M12 .297a12 12 0 0 0-3.79 23.385c.6.111.82-.261.82-.577v-2.234c-3.338.726-4.043-1.416-4.043-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.807 1.305 3.492.998.108-.776.418-1.305.762-1.605-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.322 3.301 1.23a11.5 11.5 0 0 1 6.008 0c2.292-1.552 3.299-1.23 3.299-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.91 1.235 3.221 0 4.61-2.807 5.623-5.479 5.921.43.372.814 1.102.814 2.222v3.293c0 .319.216.694.825.576A12 12 0 0 0 12 .297z" />
+          </svg>
+          <span className="flex-1">
             <span className="block">Continue with</span>
             <span className="block">GitHub</span>
           </span>
         </button>
       </div>
-
     </>
   )
 }
 
 function PrototypeForm({ title, fields, onBack }) {
   const [values, setValues] = useState(() => Object.fromEntries(fields.map((f) => [f.name, ""])))
-  const [error, setError] = useState("")
+  const [error, setError] = useState("") 
   const [submitted, setSubmitted] = useState(false)
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    setError("")
+    setError("") 
     // Basic required-field validation only. No backend call is made.
     for (const field of fields) {
       if (field.required && !String(values[field.name] || "").trim()) {
@@ -212,8 +215,7 @@ function PrototypeForm({ title, fields, onBack }) {
         {fields.map((field) => (
           <div key={field.name}>
             <label className="mb-2 block text-sm font-medium text-[var(--cv-muted)]">
-              {field.label}
-              {field.required ? " *" : ""}
+              {field.label}{field.required ? " *" : ""}
             </label>
             {field.type === "select" ? (
               <select
@@ -255,15 +257,13 @@ function PrototypeForm({ title, fields, onBack }) {
             role="status"
             className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-sm text-amber-300"
           >
-            Form validated. No account was created because the backend does not yet support this
-            account type. See the API contract document for the required endpoint.
+            Form validated. No account was created because the backend does not yet support this account type. See the API contract document for the required endpoint.
           </div>
         )}
         <button type="submit" className="cv-primary-btn w-full !py-3.5">
           {submitted ? "Validated (prototype)" : `Create ${title} Account`} →
         </button>
       </form>
-
     </>
   )
 }
@@ -294,28 +294,6 @@ function Register() {
               Join SRH CodeVerse and turn every solved problem into progress you can see.
             </p>
           </div>
-
-          <div className="cv-mini-code relative z-10">
-            <div className="mb-3 text-xs text-white/50">learning_path.json</div>
-            <div className="font-mono text-xs leading-7 sm:text-sm">
-              {"{"}
-              <br />
-              <span className="inline-block pl-4">
-                <span className="text-pink-200">"path"</span>:{" "}
-                <span className="text-cyan-200">"Full Stack Developer"</span>,
-              </span>
-              <br />
-              <span className="inline-block pl-4">
-                <span className="text-pink-200">"streak"</span>: <span className="text-amber-200">7</span>,
-              </span>
-              <br />
-              <span className="inline-block pl-4">
-                <span className="text-pink-200">"next"</span>: <span className="text-cyan-200">"Spring Boot"</span>
-              </span>
-              <br />
-              {"}"}
-            </div>
-          </div>
         </section>
 
         <section className="cv-auth-form-side min-w-0">
@@ -330,10 +308,7 @@ function Register() {
               </span>
             </Link>
             <span className="text-sm text-[var(--cv-muted)]">
-              Already here?{" "}
-              <Link to="/login" className="font-bold text-violet-500 transition hover:text-cyan-400">
-                Login
-              </Link>
+              Already here?{" "} <Link to="/login" className="font-bold text-violet-500 transition hover:text-cyan-400">Login</Link>
             </span>
           </div>
 
@@ -345,7 +320,6 @@ function Register() {
             <p className="mt-3 text-[var(--cv-muted)]">
               Create your Student account to start learning and practicing.
             </p>
-
             <StudentForm />
           </div>
         </section>
