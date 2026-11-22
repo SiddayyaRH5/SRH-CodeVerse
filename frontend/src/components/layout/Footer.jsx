@@ -1,78 +1,107 @@
-import { Link } from "react-router-dom"
+
+import { Link } from "react-router-dom";
+
+const Icon = ({ name, size = 18 }) => {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+  };
+
+  const icons = {
+    location: (
+      <>
+        <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+        <circle cx="12" cy="10" r="2.5" />
+      </>
+    ),
+    phone: (
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.14 1.03.4 2.03.78 2.98a2 2 0 0 1-.45 2.11L8.17 10.1a16 16 0 0 0 5.73 5.73l1.29-1.29a2 2 0 0 1 2.11-.45c.95.38 1.95.64 2.98.78A2 2 0 0 1 22 16.92Z" />
+    ),
+    mail: (
+      <>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m3 7 9 6 9-6" />
+      </>
+    ),
+    linkedin: (
+      <>
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M8 10v7M8 7h.01M12 17v-4a3 3 0 0 1 6 0v4M12 10v7" />
+      </>
+    ),
+    github: (
+      <>
+        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.75c0 5.42 3.3 6.62 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+      </>
+    ),
+    whatsapp: (
+      <>
+        <path d="M20.5 11.5a8.5 8.5 0 0 1-12.1 7.7L3 21l1.8-5.2A8.5 8.5 0 1 1 20.5 11.5Z" />
+        <path d="M8 7.5c.3-.6.6-.6 1-.6h.6c.2 0 .4.2.5.5l.8 1.8c.1.3.1.5-.1.7l-.6.8c-.2.2-.2.4 0 .6a8 8 0 0 0 2.8 2.8c.3.2.4.2.6 0l.8-1c.2-.2.4-.2.7-.1l1.8.8c.3.1.5.3.5.5v.6c0 .4-.1.7-.6 1a3 3 0 0 1-2 .5 9 9 0 0 1-4.1-1.9 10 10 0 0 1-3.2-3.7 4 4 0 0 1 .5-3.3Z" />
+      </>
+    ),
+    telegram: (
+      <>
+        <path d="m22 3-7.5 18-4.2-5.1L22 3Z" />
+        <path d="m22 3-17 7.5 9.3 3.4" />
+        <path d="m4.5 10.5 1.2 6 4.3-4.6" />
+      </>
+    ),
+  };
+
+  return <svg {...common}>{icons[name]}</svg>;
+};
 
 function Footer() {
-  const year = new Date().getFullYear()
+  const year = new Date().getFullYear();
 
   const exploreLinks = [
     ["Courses", "/courses"],
     ["Practice", "/problems"],
     ["Learning Path", "/learning-path"],
     ["Leaderboard", "/leaderboard"],
-  ]
+  ];
 
-  const contactLinks = [
-    ["Bangalore, India", "https://maps.google.com/?q=Bangalore+India"],
-    ["+91 8088285205", "tel:+918088285205"],
-    ["siddusrh@gmail.com", "mailto:siddusrh@gmail.com"],
-  ]
+  const platformLinks = [
+    ["Live Arena", "/live-coding"],
+    ["Interview Arena", "/interview-arena"],
+    ["Analytics", "/analytics"],
+    ["Certificates", "/certificates"],
+  ];
 
-  // Inline SVG icons (no external dependencies)
-  const svgSize = 18
-  const svgStroke = 2
-
-  const linkedinSvg = `
-    <svg width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${svgStroke}" aria-hidden="true">
-      <path d="M16 8a6 6 0 0 1 6 6v7h-4v7h-2v-7A6 6 0 0 1 5 14v-7H3"/>
-      <rect x="2" y="9" width="4" height="12"/>
-      <circle cx="4" cy="4" r="2"/>
-    </svg>`
-
-  const githubSvg = `
-    <svg width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${svgStroke}" aria-hidden="true">
-      <path d="M9 19c-5 1.5-5-2.5-7-3a5.5 5.5 0 0 0 2.3-3.2h-1.8a4.5 4.5 0 0 0 2.4 1.4 4.5 4.5 0 0 0 1.2-2.8 4.5 4.5 0 0 0-1.6-1.2h-.8a5.5 5.5 0 0 0-2.3 3.2c.3-2.3 2.6-3.2 4.9-1.5a4.5 4.5 0 0 0 1.1 1.7zM7.5 3.2c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V3.2M12 1a10 10 0 0 1 10 10l2.4 2.5a.5.5 0 0 1-.3.8l-2.3 2.2a4.5 4.5 0 0 1-1.9.5H5.2a4.5 4.5 0 0 1-.9-1.8l-2.3-2.2a.5.5 0 0 1-.3-.8L12 11.5a5.5 5.5 0 0 1-.8-.2M2.5 5c.4 1 1 1.8 2 1.6h6.8c1.1 0 2-.9 2-1.6V5.5a.5.5 0 1 1 1 1H6a.5.5 0 0 1-.5-.5V5z"/>
-    </svg>`
-
-  const twitterSvg = `
-    <svg width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${svgStroke}" aria-hidden="true">
-      <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 2 18.4l-1.96-.98A10.68 10.68 0 0 1 4.53 2.34A4.52 4.52 0 0 0 2.08.48a4.49 4.49 0 0 0-1.07 3.16 4.5 4.5 0 0 0 1.4 1.65c.66 1.07 1.64 1.85 2.94 2.06a4.48 4.48 0 0 0 3.97-.64 4.5 4.5 0 0 0 1.17-1.31A4.52 4.52 0 0 0 23 3z"/>
-      <ellipse cx="12" cy="1" rx="10" fill="none" stroke="currentColor" stroke-width="3"/>
-    </svg>`
-
-  const whatsappSvg = `
-    <svg width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${svgStroke}" aria-hidden="true">
-      <path d="M22 3.188c-.445.022-.87.038-1.305.038-2.05 0-3.692.93-4.6 2.28.924.944 1.367 2.227 1.518 3.608a6.662 6.662 0 0 0 1.885 2.448c.292.408.527.862.71 1.282.144.32.243.653.217.982-.02.3-.057.574-.088.865-.027.255.016.516.032.737a9.154 9.154 0 0 1-.028 1.313c.016.542.043.985.052 1.338.009.33.018.639.022.913.004.253.01.515.018.736.01.253 0 .515-.018.736-.032a9.145 9.145 0 0 1 .028 1.313c-.016.542-.043.985-.052 1.338-.009.33-.018.639-.022.913a11.223 11.223 0 0 0 .022.913c.032.253.057.574.088.865.027.255.057.574.088.865a11.25 11.25 0 0 0 .022.913c.018.253.032.515.032.736a9.169 9.169 0 0 1 .022 1.313c.057.33.088.639.088.865.027.255.057.574.088.865a11.224 11.224 0 0 0 .052 1.338c.027.255.032.574.088.865.057.255.088.865.088.865a11.113 11.113 0 0 0 .088.865c.057.33.057.639.057.913a11.181 11.181 0 0 0 .022 1.313c.016.542.043.985.052 1.338.009.33.018.639.022.913c.004.253.01.515.018.736a11.183 11.183 0 0 1 .022 1.313c.016.33.018.639.018.913a11.158 11.158 0 0 0 .022 1.313c.032.253.057.574.057.865a11.127 11.127 0 0 0 .022 1.313c.057.33.088.639.057.913a11.168 11.168 0 0 0 .022 1.313c.016.33.018.639.018.913a11.127 11.127 0 0 0 .022 1.313c.032.253.057.574.057.865a11.118 11.118 0 0 0 .022 1.313c.057.33.088.639.057.913c.027.255.057.574.057.865a11.101 11.101 0 0 0 .052 1.338c.027.255.032.574.057.865.057.255.088.865.088.865a11.092 11.092 0 0 0 .022 1.313c.016.542.043.985.052 1.338.009.33.018.639.022.913a10.969 10.969 0 0 1-.022 1.313c-.016.33-.018.639-.032.913a10.638 10.638 0 0 1-.052 1.338c-.027.255-.057.574-.057.913a10.618 10.618 0 0 1-.052 1.338c-.027.255-.057.574-.057.913a10.493 10.493 0 0 1-.052 1.338c-.027.255-.088.639-.088.913a10.841 10.841 0 0 1-.022 1.313c.016.33.018.639.018.913a10.887 10.887 0 0 0 .022 1.313c.032.253.057.574.057.865a10.747 10.747 0 0 0 .052 1.338c.027.255.057.574.057.913a10.923 10.923 0 0 0 .022 1.313c.016.33.032.639.032.913a10.829 10.829 0 0 0 .022 1.313c.032.253.057.574.057.865"/>
-    <path d="M2.5 14.5c.445.022.87.038 1.305.038 2.05 0 3.692-.93 4.6-2.28.924-.944 1.367-2.227 1.518-3.608a6.662 6.662 0 0 0-1.885 2.448c-.292.408-.527.862-.71 1.282-.144.32-.243.653-.217.982.02.3.057.574.088.865.027.255-.016.516-.032.737a9.154 9.154 0 0 1-.028 1.313c-.016.542-.043.985-.052 1.338-.009.33-.018.639-.022.913-.004.253-.01.515-.018.736a9.145 9.145 0 0 1-.028 1.313c.016.542.043.985-.052 1.338-.009.33-.018.639-.022.913a11.223 11.223 0 0 0-.022.913c-.032.253-.057.574-.088.865-.027.255-.057.574-.088.865a11.25 11.25 0 0 0-.022.913c-.018.253-.032.515-.032.736a9.169 9.169 0 0 1-.022 1.313c-.016.542-.043.985-.052 1.338-.009.33-.018.639-.022.913a11.224 11.224 0 0 0-.022.913c-.032.253-.057.574-.088.865-.027.255-.057.574-.088.865a11.25 11.25 0 0 0-.022.913c-.018.253-.032.515-.032.736a9.169 9.169 0 0 1-.022 1.313c-.016.542-.043.985-.052 1.338-.009.33-.018.639-.022.913a11.223 11.223 0 0 0-.022.913c-.016.33-.018.639-.032.913a10.638 10.638 0 0 1-.052 1.338c-.027.255-.057.574-.057.913a10.618 10.618 0 0 1-.052 1.338c-.027.255-.057.574-.057.913a10.493 10.493 0 0 1-.052 1.338c-.027.255-.088.639-.088.913a11.241 11.241 0 0 0-.022 1.313c-.018.253-.032.515-.032.736a9.169 9.169 0 0 1-.022 1.313c-.016.542-.043.985-.052 1.338-.009.33-.018.639-.022.913a11.223 11.223 0 0 0-.022.913c-.016.33-.018.639-.032.913a10.638 10.638 0 0 1-.052 1.338c-.027.255-.057.574-.057.913a10.493 10.493 0 0 1-.052 1.338c-.027.255-.088.639-.088.913a10.841 10.841 0 0 0-.022 1.313c.016.33.018.639.018.913a10.887 10.887 0 0 0-.022 1.313c-.032.253-.057.574-.057.865a10.747 10.747 0 0 0-.052 1.338c-.027.255-.057.574-.057.913a10.923 10.923 0 0 0-.022 1.313c.016.33.032.639.032.913a10.829 10.829 0 0 0-.022 1.313c.032.253.057.574.057.865"/>
-    <path d="M2.5 14.5c.445.022.87.038 1.305.038 2.05 0 3.692-.93 4.6-2.28.924-.944 1.367-2.227 1.518-3.608a6.662 6.662 0 0 0-1.885 2.448c-.292.408-.527.862-.71 1.282-.144.32-.243.653-.217.982.02.3.057.574.088.865.027.255-.016.516-.032.737a9.154 9.154 0 0 1-.028 1.313c-.016.542-.043.985-.052 1.338-.009.33-.018.639-.022.913-.004.253-.01.515-.018.736a9.145 9.145 0 0 1-.028 1.313c.016.542.043.985-.052 1.338-.009.33-.018.639-.022.913-.004.253-.01.515-.018.736a9.145 9.145 0 0 1-.028 1.313c.016.542.043.985-.052 1.338-.009.33-.018.639-.022.913a11.223 11.223 0 0 0-.022.913c-.032.253-.057.574-.088.865-.027.255-.057.574-.088.865a11.25 11.25 0 0 0-.022.913c-.018.253-.032.515-.032.736a9.169 9.169 0 0 1-.022 1.313c-.016.542-.043.985-.052 1.338-.009.33-.018.639-.022.913a11.224 11.224 0 0 0-.022.913c-.016.33-.018.639-.032.913a10.638 10.638 0 0 1-.052 1.338c-.027.255-.057.574-.057.913a10.493 10.493 0 0 1-.052 1.338c-.027.255-.088.639-.088.913a11.241 11.241 0 0 0-.022 1.313c-.018.253-.032.515-.032.736a9.169 9.169 0 0 1-.022 1.313c-.016.542-.043.985-.052 1.338-.009.33-.018.639-.022.913a11.224 11.224 0 0 0-.022.913c-.016.33-.018.639-.032.913a10.638 10.638 0 0 1-.052 1.338c-.027.255-.057.574-.057.913a10.493 10.493 0 0 1-.052 1.338c-.027.255-.088.639-.088.913a10.841 10.841 0 0 0-.022 1.313c.016.33.018.639.018.913a10.887 10.887 0 0 0-.022 1.313c-.032.253-.057.574-.057.865a10.747 10.747 0 0 0-.052 1.338c-.027.255-.057.574-.057.913a10.923 10.923 0 0 0-.022 1.313c.016.33.032.639.032.913a10.829 10.829 0 0 0-.022 1.313c.032.253.057.574.057.865"/>
-  </svg>`
-
-  const telegramSvg = `
-    <svg width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${svgStroke}" aria-hidden="true">
-      <path d="M18.5 17.586.5 5.914a1 1 0 0 0-1.414-.586H3.5a1 1 0 0 0-.5.853l3.5 3.5a1 1 0 0 0 .853.353H17a1 1 0 0 0 .353-.853L18.5 17.586ZM10 16l3.5 3.5a1 1 0 0 1-.853.353H9.5a1 1 0 0 1-.5-.853l3.5-3.5M19 5.25a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5ZM2.5 14.5c.445.022.87.038 1.305.038 2.05 0 3.692-.93 4.6-2.28.924-.944 1.367-2.227 1.518-3.608a6.662 6.662 0 0 0-1.885 2.448c.292.408-.527.862-.71 1.282-.144.32-.243.653-.217.982.02.3.057.574.088.865.027.255-.016.516-.032.737a9.154 9.154 0 0 1-.028 1.313c-.016.542-.043.985-.052 1.338-.009.33-.018.639-.022.913-.004.253-.01.515-.018.736a9.145 9.145 0 0 1-.028 1.313c.016.542.043.985-.052 1.338-.009.33-.018.639-.022.913-.004.253-.01.515-.018.736a9.145 9.145 0 0 1-.028 1.313c.016.542.043.985-.052 1.338-.009.33-.018.639-.022.913-.004.253-.01.515-.018.736a9.145 9.145 0 0 1-.028 1.313c.016.542.043.985-.052 1.338-.009.33-.018.639-.022.913a10.851 10.851 0 0 0 .581 1.293 8.497 8.497 0 0 0 .836.388 8.446 8.446 0 0 0 .332-.957 8.317 8.317 0 0 0-.925-.654 8.355 8.355 0 0 0-.664-.185 8.411 8.411 0 0 0-.323-.363 8.362 8.362 0 0 0-.303-.981 8.415 8.415 0 0 0-.18-.511Z"/>
-    </svg>`
-
-  const locationSvg = `
-    <svg width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${svgStroke}" aria-hidden="true">
-      <circle cx="9" cy="21" r="1"/>
-      <path d="M13.5 21.5a3.5 3.5 0 0 1-3.5-3.5V9a3.5 3.5 0 0 1 3.5-3.5h5a3.5 3.5 0 0 1 3.5 3.5v7.586a3.5 3.5 0 0 1-.113 2.414z"/>
-      <polyline points="22 12 18 12 15 21"/>
-    </svg>`
-
-  const phoneSvg = `
-    <svg width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${svgStroke}" aria-hidden="true">
-      <path d="M22 16.923a1 1 0 0 1 .806 1.817 1 1 0 0 0 1.233-.312 1 1 0 0 1 1.47 2.5h1a1 1 0 0 1 0 1.2h-1a1 1 0 0 1-1.47-2.5A6.5 6.5 0 0 0 16 9.5c0-2.228 1.708-3.35 3.572-2.538.378-.172.678-.37.86-.605a1 1 0 0 1 1.232 1.168 1 1 0 0 1-.31 1.817M2 21l4.587-4.172a1 1 0 0 1 .684.246l.044.021 1.055 1.005a1 1 0 0 1.527 1.289L13.686 5.887a1 1 0 0 1-.111-1.55 1 1 0 0 1 .6-.756c.558-.628.9 -.834 1.097-.98a1 1 0 0 1 1.196 1.543l3.028 2.755a1 1 0 0 1 .097.178l1.07 1.07a1 1 0 0 1-1.07 1.07L14.885 15.083a1 1 0 0 1-.713.018 1 1 0 0 1-.72-.186l-3.028-2.755a1 1 0 0 0-.998-.027 1 1 0 0 1-.568-.374l-.99-.893a1 1 0 0 0-.645-.312 1 1 0 0 1-.288-.616L2 21Z"/>
-      <circle cx="12" cy="7" r="2"/>
-    </svg>`
-
-  const emailSvg = `
-    <svg width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${svgStroke}" aria-hidden="true">
-      <path d="M4 4c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H6c-.5 0-1-.4-1-1V6c0-.5.5-1 1-1h12c.5 0 1 .4 1 1v12c0 1.1.9 2 2 2h2c1.1 0 2-.9 2-2V6c0-.5-.5-1-1-1H6c-.5 0-1 .4-1 1v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4Z"/>
-      <polyline points="22,6 12,13 2,6"/>
-    </svg>`
+  const socialLinks = [
+    {
+      label: "LinkedIn",
+      url: "YOUR_LINKEDIN_URL",
+      icon: "linkedin",
+    },
+    {
+      label: "GitHub",
+      url: "https://github.com/SiddayyaRH5",
+      icon: "github",
+    },
+    {
+      label: "WhatsApp",
+      url: "https://wa.me/918088285205",
+      icon: "whatsapp",
+    },
+    {
+      label: "Telegram",
+      url: "YOUR_TELEGRAM_URL",
+      icon: "telegram",
+    },
+  ];
 
   return (
     <footer className="cv-footer" id="footer">
       <div className="cv-footer-inner">
-
         {/* Brand */}
         <div className="cv-footer-main">
           <Link to="/" className="cv-footer-brand">
@@ -85,54 +114,27 @@ function Footer() {
 
           <p className="cv-footer-description">
             Your space to learn, practice, and grow as a developer.
+            Build skills, solve challenges, and turn knowledge into code.
           </p>
 
           <p className="cv-footer-tagline">
             EDUCATE. <span>SOLVE.</span> SUBMIT.
           </p>
 
-          {/* Social Links with icons */}
           <div className="cv-footer-socials">
-            <a
-              key="linkedin"
-              href="https://www.linkedin.com/in/siddayyahiremath/"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="LinkedIn"
-              title="LinkedIn"
-            >
-              {linkedinSvg}
-            </a>
-            <a
-              key="github"
-              href="https://github.com/SiddayyaRH5"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="GitHub"
-              title="GitHub"
-            >
-              {githubSvg}
-            </a>
-            <a
-              key="whatsapp"
-              href="https://wa.me/918088285205"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="WhatsApp"
-              title="WhatsApp"
-            >
-              {whatsappSvg}
-            </a>
-            <a
-              key="telegram"
-              href="https://t.me/siddusrh"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Telegram"
-              title="Telegram"
-            >
-              {telegramSvg}
-            </a>
+            {socialLinks.map(({ label, url, icon }) => (
+              <a
+                key={label}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                title={label}
+                className="cv-footer-social-link"
+              >
+                <Icon name={icon} size={18} />
+              </a>
+            ))}
           </div>
         </div>
 
@@ -146,43 +148,56 @@ function Footer() {
           ))}
         </div>
 
-        {/* Contact */}
-        <div className="cv-footer-column cv-footer-contact">
-          <h3>Contact</h3>
-          {contactLinks.map(([label, url]) => (
-            <a
-              key={label}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={label}
-              title={label}
-            >
-              <span>
-                {label}
-              </span>
-            </a>
+        {/* Platform */}
+        <div className="cv-footer-column cv-footer-platform">
+          <h3>Platform</h3>
+          {platformLinks.map(([label, path]) => (
+            <Link key={path} to={path}>
+              {label}
+            </Link>
           ))}
         </div>
 
+        {/* Contact */}
+        <div className="cv-footer-column cv-footer-contact">
+          <h3>Contact</h3>
+
+          <a
+            href="https://maps.google.com/?q=Bangalore+India"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Icon name="location" size={16} />
+            <span>Bangalore, India</span>
+          </a>
+
+          <a href="tel:+918088285205">
+            <Icon name="phone" size={16} />
+            <span>+91 8088285205</span>
+          </a>
+
+          <a href="mailto:siddusrh@gmail.com">
+            <Icon name="mail" size={16} />
+            <span>siddusrh@gmail.com</span>
+          </a>
+        </div>
       </div>
 
-      {/* Bottom */}
       <div className="cv-footer-bottom">
         <p>© {year} SRH CodeVerse. All rights reserved.</p>
 
         <a
           href="#top"
           onClick={(e) => {
-            e.preventDefault()
-            window.scrollTo({ top: 0, behavior: "smooth" })
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: "smooth" });
           }}
         >
           Back to top ↑
         </a>
       </div>
     </footer>
-  )
+  );
 }
 
-export default Footer
+export default Footer;
