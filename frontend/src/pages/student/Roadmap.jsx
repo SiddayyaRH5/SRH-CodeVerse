@@ -277,7 +277,14 @@ export default function Roadmap() {
       })
       setCatalog(response.data)
     } catch (err) {
-      setError(err?.response?.data?.message || "Unable to load roadmaps.")
+      // 401 = session expired/invalid; clear auth and redirect to login
+      if (err?.response?.status === 401) {
+        setError("")
+        // Let the axios interceptor handle the unauthorized flow
+        // The AuthProvider will redirect to /login?reason=session-expired
+      } else {
+        setError(err?.response?.data?.message || "Unable to load roadmaps.")
+      }
     } finally {
       setLoading(false)
     }

@@ -268,7 +268,12 @@ export default function Certificates() {
       setCatalog(catalogResponse.data)
       setEarned(myResponse.data.items || [])
     } catch (err) {
-      setError(err?.response?.data?.message || "Unable to load certificates.")
+      // 401 = session expired/invalid; let axios interceptor handle unauthorized flow
+      if (err?.response?.status === 401) {
+        setError("")
+      } else {
+        setError(err?.response?.data?.message || "Unable to load certificates.")
+      }
     } finally {
       setLoading(false)
     }

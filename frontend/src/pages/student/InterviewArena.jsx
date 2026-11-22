@@ -69,7 +69,12 @@ export default function InterviewArena() {
       setHistory(historyResponse.data.items || [])
       setAnalytics(analyticsResponse.data)
     } catch (err) {
-      setError(err?.response?.data?.message || "Unable to load the interview arena.")
+      // 401 = session expired/invalid; let axios interceptor handle unauthorized flow
+      if (err?.response?.status === 401) {
+        setError("")
+      } else {
+        setError(err?.response?.data?.message || "Unable to load the interview arena.")
+      }
     } finally {
       setLoading(false)
     }

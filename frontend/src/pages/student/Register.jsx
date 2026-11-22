@@ -1,3 +1,8 @@
+import { useRef, useState } from "react"
+import { useNavigate, Link } from "react-router-dom"
+import { OAUTH_INITIATION_URLS, registerUser } from "../../api/authApi"
+import { useAuth } from "../../context/AuthContext"
+
 const ACCOUNT_TYPES = [
   {
     id: "student",
@@ -153,15 +158,15 @@ function StudentForm() {
           type="button"
           onClick={() => window.location.assign(OAUTH_INITIATION_URLS.google)}
           title="Google sign-in"
-          className="cv-social-btn flex w-full items-center justify-center gap-2 py-2.5 px-5 rounded-lg border border-gray-700 bg-gray-900 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors duration-150"
+          className="cv-social-btn flex w-full items-center justify-start gap-2.5 py-2.5 px-5 rounded-lg border border-gray-700 bg-gray-900 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors duration-150 whitespace-nowrap"
         >
-          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path fill="#EA4335" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.51h6.44c-.28 1.45-1.12 2.68-2.37 3.5v2.92h3.84c2.25-2.07 3.58-5.12 3.58-8.59z" />
             <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.94-2.93l-3.84-2.92c-1.08.72-2.46 1.15-4.1 1.15-3.15 0-5.82-2.13-6.77-5H1.26v3.01C3.24 21.11 7.29 24 12 24z" />
             <path fill="#FBBC05" d="M5.23 14.3c-.24-.72-.38-1.5-.38-2.3s.14-1.58.38-2.3V6.69H1.26C.46 8.29 0 10.08 0 12s.46 3.71 1.26 5.31l3.97-3.01z" />
             <path fill="#EA4335" d="M12 4.78c1.77 0 3.35.61 4.6 1.81l3.44-3.44C17.95 1.2 15.24 0 12 0 7.29 0 3.24 2.89 1.26 6.69l3.97 3.01c.95-2.87 3.62-4.92 6.77-4.92z" />
           </svg>
-          <span className="flex-1">
+          <span className="flex items-center gap-2">
             <span className="block">Continue with</span>
             <span className="block">Google</span>
           </span>
@@ -171,12 +176,12 @@ function StudentForm() {
           type="button"
           onClick={() => window.location.assign(OAUTH_INITIATION_URLS.github)}
           title="GitHub sign-in"
-          className="cv-social-btn flex w-full items-center justify-center gap-2 py-2.5 px-5 rounded-lg border border-gray-700 bg-gray-900 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors duration-150"
+          className="cv-social-btn flex w-full items-center justify-start gap-2.5 py-2.5 px-5 rounded-lg border border-gray-700 bg-gray-900 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors duration-150 whitespace-nowrap"
         >
-          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path fill="currentColor" d="M12 .297a12 12 0 0 0-3.79 23.385c.6.111.82-.261.82-.577v-2.234c-3.338.726-4.043-1.416-4.043-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.807 1.305 3.492.998.108-.776.418-1.305.762-1.605-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.322 3.301 1.23a11.5 11.5 0 0 1 6.008 0c2.292-1.552 3.299-1.23 3.299-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.91 1.235 3.221 0 4.61-2.807 5.623-5.479 5.921.43.372.814 1.102.814 2.222v3.293c0 .319.216.694.825.576A12 12 0 0 0 12 .297z" />
           </svg>
-          <span className="flex-1">
+          <span className="flex items-center gap-2">
             <span className="block">Continue with</span>
             <span className="block">GitHub</span>
           </span>

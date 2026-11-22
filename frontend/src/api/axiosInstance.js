@@ -119,6 +119,11 @@ export function setUnauthorizedHandler(handler) {
 /**
  * Clears the invalid session exactly once, even when several requests fail
  * with 401 at the same time.
+ *
+ * - Removes the JWT token from localStorage so subsequent requests fail cleanly.
+ * - Clears the response cache to prevent stale data.
+ * - Calls the registered unauthorized handler, which should sign the user out
+ *   and redirect to the login page.
  */
 export function notifyUnauthorized() {
   if (handlingUnauthorized) return
@@ -141,6 +146,24 @@ export function notifyUnauthorized() {
   if (unauthorizedHandler) unauthorizedHandler()
 }
 
+/**
+ * Handles a 401 response from the API. This is called from the axios response
+ * interceptor. It ensures the session is invalidated and the user is redirected
+ * to the login page.
+ *
+ * @param {Object} error - The axios error object.
+ * @param {string} pageName - The name of the page making the request, for logging.
+ */
+export function handleUnauthorizedResponse(error, pageName) {
+  const status = error.response?.status
+  const url = error.config?.url ?? ""
+
+  // 401 and not a public auth path → session expired/invalid
+  if (status === 401 && !isPublicAuthRequest(url)) {
+    notifyUnauthorized()
+  }
+}
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -149,7 +172,7 @@ axiosInstance.interceptors.response.use(
 
     // 403 means "authenticated but not allowed" — never an expired session.
     if (status === 401 && !isPublicAuthRequest(url)) {
-      notifyUnauthorized()
+      handleUnauthorizedResponse(error, error.config?.pageName ?? "unknown")
     }
 
     return Promise.reject(error)
