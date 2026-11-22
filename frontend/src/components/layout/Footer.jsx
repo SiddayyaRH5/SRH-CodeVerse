@@ -3,8 +3,6 @@ import {
   MapPin,
   Phone,
   Mail,
-  Linkedin,
-  Github,
   MessageCircle,
   Send,
 } from "lucide-react"
@@ -30,22 +28,18 @@ function Footer() {
     {
       label: "LinkedIn",
       url: "https://www.linkedin.com/in/siddayyahiremath/",
-      icon: Linkedin,
     },
     {
       label: "GitHub",
       url: "https://github.com/SiddayyaRH5",
-      icon: Github,
     },
     {
       label: "WhatsApp",
       url: "https://wa.me/918088285205",
-      icon: MessageCircle,
     },
     {
       label: "Telegram",
       url: "https://t.me/siddusrh",
-      icon: Send,
     },
   ]
 
@@ -83,7 +77,7 @@ function Footer() {
                 aria-label={label}
                 title={label}
               >
-                <Icon size={17} strokeWidth={2} />
+              {label}
               </a>
             ))}
           </div>
