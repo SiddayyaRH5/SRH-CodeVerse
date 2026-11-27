@@ -1,7 +1,77 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate, Link, useSearchParams } from "react-router-dom"
-import { loginUser, OAUTH_INITIATION_URLS } from "../../api/authApi"
+import { loginUser, OAUTH_INITIATION_URLS, getOAuthProviders } from "../../api/authApi"
 import { useAuth } from "../../context/AuthContext"
+
+const GoogleIcon = () => (
+  <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.51h6.44c-.28 1.45-1.12 2.68-2.37 3.5v2.92h3.84c2.25-2.07 3.58-5.12 3.58-8.59z" />
+    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.94-2.93l-3.84-2.92c-1.08.72-2.46 1.15-4.1 1.15-3.15 0-5.82-2.13-6.77-5H1.26v3.01C3.24 21.11 7.29 24 12 24z" />
+    <path fill="#FBBC05" d="M5.23 14.3c-.24-.72-.38-1.5-.38-2.3s.14-1.58.38-2.3V6.69H1.26C.46 8.29 0 10.08 0 12s.46 3.71 1.26 5.31l3.97-3.01z" />
+    <path fill="#EA4335" d="M12 4.78c1.77 0 3.35.61 4.6 1.81l3.44-3.44C17.95 1.2 15.24 0 12 0 7.29 0 3.24 2.89 1.26 6.69l3.97 3.01c.95-2.87 3.62-4.92 6.77-4.92z" />
+  </svg>
+)
+
+const GitHubIcon = () => (
+  <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path fill="currentColor" d="M12 .297a12 12 0 0 0-3.79 23.385c.6.111.82-.261.82-.577v-2.234c-3.338.726-4.043-1.416-4.043-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.807 1.305 3.492.998.108-.776.418-1.305.762-1.605-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.322 3.301 1.23a11.5 11.5 0 0 1 6.008 0c2.292-1.552 3.299-1.23 3.299-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.91 1.235 3.221 0 4.61-2.807 5.623-5.479 5.921.43.372.814 1.102.814 2.222v3.293c0 .319.216.694.825.576A12 12 0 0 0 12 .297z" />
+  </svg>
+)
+
+function SocialButtons() {
+  const [visible, setVisible] = useState(false)
+  const [available, setAvailable] = useState(null)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true))
+    getOAuthProviders()
+      .then((data) => {
+        const keys = Object.keys(data || {}).filter((key) => data[key])
+        setAvailable(keys)
+      })
+      .catch(() => setAvailable([]))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  const allProviders = [
+    { key: "google", label: "Continue with Google", icon: <GoogleIcon />, url: OAUTH_INITIATION_URLS.google },
+    { key: "github", label: "Continue with GitHub", icon: <GitHubIcon />, url: OAUTH_INITIATION_URLS.github },
+  ]
+
+  const providers = available
+    ? allProviders.filter((provider) => available.includes(provider.key))
+    : []
+
+  if (!providers.length) return null
+
+  return (
+    <div className="flex flex-col gap-3">
+      {providers.map((provider, index) => (
+        <button
+          key={provider.key}
+          type="button"
+          onClick={() => window.location.assign(provider.url)}
+          title={`${provider.key === "google" ? "Google" : "GitHub"} sign-in`}
+          style={{ transitionDelay: visible ? `${index * 100}ms` : "0ms" }}
+          className={`cv-secondary-btn group relative !flex w-full !min-h-0 items-center justify-center gap-3 overflow-hidden !px-6 !py-3.5 text-[15px] font-medium
+            transform transition-all duration-500 ease-out
+            hover:-translate-y-0.5 hover:border-violet-400/60 hover:shadow-lg hover:shadow-violet-500/20
+            active:translate-y-0 active:scale-[0.98]
+            focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50
+            before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:w-1/2 before:-translate-x-full
+            before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent
+            before:transition-transform before:duration-700 hover:before:translate-x-[250%]
+            ${visible ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"}`}
+        >
+          <span className="transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-6deg]">
+            {provider.icon}
+          </span>
+          <span>{provider.label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
 
 function Login() {
   const [searchParams] = useSearchParams()
@@ -266,7 +336,7 @@ function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="cv-primary-btn flex w-full items-center justify-center gap-2 !py-4 disabled:cursor-not-allowed disabled:opacity-60"
+                className="cv-primary-btn flex w-full items-center justify-center gap-2 !py-4 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50"
               >
                 {loading ? (
                   <>
@@ -291,40 +361,7 @@ function Login() {
               <span className="h-px flex-1 bg-[var(--cv-border)]" />
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => window.location.assign(OAUTH_INITIATION_URLS.google)}
-                title="Google sign-in"
-                className="cv-secondary-btn relative min-h-[92px] w-full !px-7 !py-5 text-base"
-              >
-                <svg className="absolute left-6 h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.51h6.44c-.28 1.45-1.12 2.68-2.37 3.5v2.92h3.84c2.25-2.07 3.58-5.12 3.58-8.59z" />
-                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.94-2.93l-3.84-2.92c-1.08.72-2.46 1.15-4.1 1.15-3.15 0-5.82-2.13-6.77-5H1.26v3.01C3.24 21.11 7.29 24 12 24z" />
-                  <path fill="#FBBC05" d="M5.23 14.3c-.24-.72-.38-1.5-.38-2.3s.14-1.58.38-2.3V6.69H1.26C.46 8.29 0 10.08 0 12s.46 3.71 1.26 5.31l3.97-3.01z" />
-                  <path fill="#EA4335" d="M12 4.78c1.77 0 3.35.61 4.6 1.81l3.44-3.44C17.95 1.2 15.24 0 12 0 7.29 0 3.24 2.89 1.26 6.69l3.97 3.01c.95-2.87 3.62-4.92 6.77-4.92z" />
-                </svg>
-                <span className="text-center leading-7">
-                  <span className="block">Continue with</span>
-                  <span className="block">Google</span>
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => window.location.assign(OAUTH_INITIATION_URLS.github)}
-                title="GitHub sign-in"
-                className="cv-secondary-btn relative min-h-[92px] w-full !px-7 !py-5 text-base"
-              >
-                <svg className="absolute left-6 h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path fill="currentColor" d="M12 .297a12 12 0 0 0-3.79 23.385c.6.111.82-.261.82-.577v-2.234c-3.338.726-4.043-1.416-4.043-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.807 1.305 3.492.998.108-.776.418-1.305.762-1.605-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.322 3.301 1.23a11.5 11.5 0 0 1 6.008 0c2.292-1.552 3.299-1.23 3.299-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.91 1.235 3.221 0 4.61-2.807 5.623-5.479 5.921.43.372.814 1.102.814 2.222v3.293c0 .319.216.694.825.576A12 12 0 0 0 12 .297z" />
-                </svg>
-                <span className="text-center leading-7">
-                  <span className="block">Continue with</span>
-                  <span className="block">GitHub</span>
-                </span>
-              </button>
-            </div>
+            <SocialButtons />
 
             <p className="mt-7 text-center text-xs text-[var(--cv-muted)]">
               Don&apos;t have an account?{" "}

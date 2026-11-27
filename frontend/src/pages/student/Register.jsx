@@ -1,6 +1,6 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
-import { OAUTH_INITIATION_URLS, registerUser } from "../../api/authApi"
+import { OAUTH_INITIATION_URLS, registerUser, getOAuthProviders } from "../../api/authApi"
 import { useAuth } from "../../context/AuthContext"
 
 const ACCOUNT_TYPES = [
@@ -24,27 +24,77 @@ const ACCOUNT_TYPES = [
   },
 ]
 
-function PrototypeNotice({ title }) {
+const GoogleIcon = () => (
+  <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.51h6.44c-.28 1.45-1.12 2.68-2.37 3.5v2.92h3.84c2.25-2.07 3.58-5.12 3.58-8.59z" />
+    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.94-2.93l-3.84-2.92c-1.08.72-2.46 1.15-4.1 1.15-3.15 0-5.82-2.13-6.77-5H1.26v3.01C3.24 21.11 7.29 24 12 24z" />
+    <path fill="#FBBC05" d="M5.23 14.3c-.24-.72-.38-1.5-.38-2.3s.14-1.58.38-2.3V6.69H1.26C.46 8.29 0 10.08 0 12s.46 3.71 1.26 5.31l3.97-3.01z" />
+    <path fill="#EA4335" d="M12 4.78c1.77 0 3.35.61 4.6 1.81l3.44-3.44C17.95 1.2 15.24 0 12 0 7.29 0 3.24 2.89 1.26 6.69l3.97 3.01c.95-2.87 3.62-4.92 6.77-4.92z" />
+  </svg>
+)
+
+const GitHubIcon = () => (
+  <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path fill="currentColor" d="M12 .297a12 12 0 0 0-3.79 23.385c.6.111.82-.261.82-.577v-2.234c-3.338.726-4.043-1.416-4.043-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.807 1.305 3.492.998.108-.776.418-1.305.762-1.605-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.322 3.301 1.23a11.5 11.5 0 0 1 6.008 0c2.292-1.552 3.299-1.23 3.299-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.91 1.235 3.221 0 4.61-2.807 5.623-5.479 5.921.43.372.814 1.102.814 2.222v3.293c0 .319.216.694.825.576A12 12 0 0 0 12 .297z" />
+  </svg>
+)
+
+function SocialButtons() {
+  const [visible, setVisible] = useState(false)
+  const [available, setAvailable] = useState(null)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true))
+    getOAuthProviders()
+      .then((data) => {
+        const keys = Object.keys(data || {}).filter((key) => data[key])
+        setAvailable(keys)
+      })
+      .catch(() => setAvailable([]))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  const allProviders = [
+    { key: "google", label: "Continue with Google", icon: <GoogleIcon />, url: OAUTH_INITIATION_URLS.google },
+    { key: "github", label: "Continue with GitHub", icon: <GitHubIcon />, url: OAUTH_INITIATION_URLS.github },
+  ]
+
+  const providers = available
+    ? allProviders.filter((provider) => available.includes(provider.key))
+    : []
+
+  if (!providers.length) return null
+
   return (
-    <div
-      role="note"
-      className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-300"
-    >
-      <p className="font-semibold">{title} registration is a frontend prototype.</p>
-      <p className="mt-1 leading-6">
-        The current SRH CodeVerse backend only supports Student registration. This form validates
-        input and documents the required API contract; it does not create a real account or assign
-        any backend role. See{" "}
-        <code className="rounded bg-amber-500/20 px-1 py-0.5 text-xs">
-          frontend/src/features/workspace/API_CONTRACTS.md
-        </code>{" "}
-        for the required endpoints.
-      </p>
+    <div className="flex flex-col gap-3">
+      {providers.map((provider, index) => (
+        <button
+          key={provider.key}
+          type="button"
+          onClick={() => window.location.assign(provider.url)}
+          title={`${provider.key === "google" ? "Google" : "GitHub"} sign-in`}
+          style={{ transitionDelay: visible ? `${index * 100}ms` : "0ms" }}
+          className={`cv-secondary-btn group relative !flex w-full !min-h-0 items-center justify-center gap-3 overflow-hidden !px-6 !py-3.5 text-[15px] font-medium
+            transform transition-all duration-500 ease-out
+            hover:-translate-y-0.5 hover:border-violet-400/60 hover:shadow-lg hover:shadow-violet-500/20
+            active:translate-y-0 active:scale-[0.98]
+            focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50
+            before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:w-1/2 before:-translate-x-full
+            before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent
+            before:transition-transform before:duration-700 hover:before:translate-x-[250%]
+            ${visible ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"}`}
+        >
+          <span className="transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-6deg]">
+            {provider.icon}
+          </span>
+          <span>{provider.label}</span>
+        </button>
+      ))}
     </div>
   )
 }
 
-function StudentForm({ onBack }) {
+function StudentForm() {
   const [form, setForm] = useState({ username: "", email: "", password: "" })
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
@@ -86,10 +136,8 @@ function StudentForm({ onBack }) {
 
   return (
     <>
-      <PrototypeNotice title="Student" />
       <p className="mt-2 text-xs text-[var(--cv-muted)]">
-        Student registration is connected to the real backend (POST /api/auth/register) and always
-        creates a STUDENT account.
+        Student registration is connected to the real backend and always creates a STUDENT account.
       </p>
       {error && (
         <div
@@ -171,40 +219,20 @@ function StudentForm({ onBack }) {
         </div>
         <button
           disabled={loading}
-          className="cv-primary-btn w-full !py-3.5 disabled:cursor-not-allowed disabled:opacity-60"
+          className="cv-primary-btn w-full !py-3.5 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50"
         >
           {loading ? "Creating account..." : "Create Student Account"} →
         </button>
       </form>
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => window.location.assign(OAUTH_INITIATION_URLS.google)}
-          title="Google sign-in"
-          className="cv-secondary-btn relative min-h-[92px] w-full !px-7 !py-5 text-base"
-        >
-          <span className="text-center leading-7">
-            <span className="block">Continue with</span>
-            <span className="block">Google</span>
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={() => window.location.assign(OAUTH_INITIATION_URLS.github)}
-          title="GitHub sign-in"
-          className="cv-secondary-btn relative min-h-[92px] w-full !px-7 !py-5 text-base"
-        >
-          <span className="text-center leading-7">
-            <span className="block">Continue with</span>
-            <span className="block">GitHub</span>
-          </span>
-        </button>
+
+      {/* Divider */}
+      <div className="my-6 flex items-center gap-3 text-xs text-[var(--cv-muted)]">
+        <span className="h-px flex-1 bg-[var(--cv-border)]" />
+        OR
+        <span className="h-px flex-1 bg-[var(--cv-border)]" />
       </div>
-      <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
-        <button type="button" onClick={onBack} className="font-bold text-violet-500 transition hover:text-cyan-400">
-          ← Back to account choices
-        </button>
-      </p>
+
+      <SocialButtons />
     </>
   )
 }
@@ -289,144 +317,12 @@ function PrototypeForm({ title, fields, onBack }) {
           {submitted ? "Validated (prototype)" : `Create ${title} Account`} →
         </button>
       </form>
-      <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
-        <button type="button" onClick={onBack} className="font-bold text-violet-500 transition hover:text-cyan-400">
-          ← Back to account choices
-        </button>
-      </p>
-    </>
-  )
-}
 
-const PROFESSIONAL_FIELDS = [
-  { name: "fullName", label: "Full name", required: true, placeholder: "Your full name" },
-  { name: "email", label: "Email address", type: "email", required: true, placeholder: "you@example.com" },
-  { name: "password", label: "Password", type: "password", required: true, minLength: 6 },
-  { name: "confirmPassword", label: "Confirm password", type: "password", required: true, minLength: 6 },
-  {
-    name: "category",
-    label: "Professional category",
-    type: "select",
-    required: true,
-    options: ["Company employee", "Freelancer", "Independent developer", "Project collaborator", "Small project team"],
-  },
-]
-
-const TRAINER_FIELDS = [
-  { name: "fullName", label: "Full name", required: true, placeholder: "Your full name" },
-  { name: "email", label: "Email address", type: "email", required: true, placeholder: "you@example.com" },
-  { name: "password", label: "Password", type: "password", required: true, minLength: 6 },
-  { name: "confirmPassword", label: "Confirm password", type: "password", required: true, minLength: 6 },
-  { name: "invitationCode", label: "Organization invitation code (optional)", placeholder: "Leave blank for independent trainer" },
-]
-
-const ORGANIZATION_FIELDS = [
-  { name: "organizationName", label: "Organization name", required: true },
-  { name: "officialEmail", label: "Official email", type: "email", required: true },
-  { name: "contactPerson", label: "Contact person", required: true },
-  { name: "contactNumber", label: "Contact number", required: true },
-  {
-    name: "organizationType",
-    label: "Organization type",
-    type: "select",
-    required: true,
-    options: ["Company", "Education", "Non-profit", "Government", "Other"],
-  },
-  { name: "website", label: "Website (optional)", type: "url", placeholder: "https://example.com" },
-  { name: "reason", label: "Reason for joining", required: true, placeholder: "Why do you want to join SRH CodeVerse?" },
-]
-
-function OrganizationForm({ onBack }) {
-  const [values, setValues] = useState(() => Object.fromEntries(ORGANIZATION_FIELDS.map((f) => [f.name, ""])))
-  const [error, setError] = useState("")
-  const [submitted, setSubmitted] = useState(false)
-
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    setError("")
-    for (const field of ORGANIZATION_FIELDS) {
-      if (field.required && !String(values[field.name] || "").trim()) {
-        setError(`${field.label} is required.`)
-        return
-      }
-    }
-    setSubmitted(true)
-  }
-
-  return (
-    <>
-      <PrototypeNotice title="Organization" />
-      <p className="mt-2 text-xs text-[var(--cv-muted)]">
-        Organization registration is an application flow. It does not create an account or grant any
-        role until a Super Admin approves it.
-      </p>
-      <form onSubmit={handleSubmit} className="mt-7 space-y-4">
-        {ORGANIZATION_FIELDS.map((field) => (
-          <div key={field.name}>
-            <label className="mb-2 block text-sm font-medium text-[var(--cv-muted)]">
-              {field.label}
-              {field.required ? " *" : ""}
-            </label>
-            {field.type === "select" ? (
-              <select
-                value={values[field.name]}
-                onChange={(e) => setValues({ ...values, [field.name]: e.target.value })}
-                className="cv-input"
-                required={field.required}
-              >
-                <option value="">Select…</option>
-                {field.options.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type={field.type || "text"}
-                placeholder={field.placeholder || field.label}
-                value={values[field.name]}
-                onChange={(e) => setValues({ ...values, [field.name]: e.target.value })}
-                className="cv-input"
-                required={field.required}
-              />
-            )}
-          </div>
-        ))}
-        {error && (
-          <div
-            role="alert"
-            className="rounded-xl border border-red-500/20 bg-red-500/10 p-3.5 text-sm text-red-400"
-          >
-            {error}
-          </div>
-        )}
-        {submitted && (
-          <div
-            role="status"
-            className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-sm text-emerald-300"
-          >
-            Your organization application has been submitted and is awaiting Super Admin approval.
-          </div>
-        )}
-        <button type="submit" className="cv-primary-btn w-full !py-3.5">
-          {submitted ? "Submitted (prototype)" : "Submit Organization Application"} →
-        </button>
-      </form>
-      <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
-        <button type="button" onClick={onBack} className="font-bold text-violet-500 transition hover:text-cyan-400">
-          ← Back to account choices
-        </button>
-      </p>
     </>
   )
 }
 
 function Register() {
-  const [choice, setChoice] = useState(null)
-
-  const goBack = () => setChoice(null)
-
   return (
     <main className="cv-auth-page relative overflow-hidden">
       <div className="cv-hero-orb cv-orb-purple" aria-hidden="true" />
@@ -496,79 +392,15 @@ function Register() {
           </div>
 
           <div className="mx-auto w-full max-w-md min-w-0">
-            {!choice && (
-              <>
-                <p className="cv-kicker">CREATE ACCOUNT</p>
-                <h2 className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">
-                  Build your <span className="cv-gradient-text">future.</span>
-                </h2>
-                <p className="mt-3 text-[var(--cv-muted)]">
-                  Choose the account type that fits you. You can always explore other portals later.
-                </p>
+            <p className="cv-kicker">CREATE ACCOUNT</p>
+            <h2 className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">
+              Build your <span className="cv-gradient-text">future.</span>
+            </h2>
+            <p className="mt-3 text-[var(--cv-muted)]">
+              Create your Student account to start learning and practicing.
+            </p>
 
-                <div className="mt-7 grid gap-3">
-                  {ACCOUNT_TYPES.map((type) => (
-                    <button
-                      key={type.id}
-                      type="button"
-                      onClick={() => setChoice(type.id)}
-                      className="cv-secondary-btn flex w-full items-start gap-3 !px-4 !py-4 text-left"
-                    >
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-violet-600 to-cyan-400 font-black text-white">
-                        {type.title.charAt(0)}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block font-bold">{type.title}</span>
-                        <span className="mt-0.5 block text-xs text-[var(--cv-muted)]">{type.description}</span>
-                        {!type.real && (
-                          <span className="mt-1 inline-block rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">
-                            Prototype
-                          </span>
-                        )}
-                      </span>
-                    </button>
-                  ))}
-
-                  <button
-                    type="button"
-                    onClick={() => setChoice("organization")}
-                    className="cv-secondary-btn flex w-full items-start gap-3 !px-4 !py-4 text-left"
-                  >
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-cyan-500 to-violet-600 font-black text-white">
-                      O
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block font-bold">Organization</span>
-                      <span className="mt-0.5 block text-xs text-[var(--cv-muted)]">
-                        Apply to register an organization (requires Super Admin approval).
-                      </span>
-                      <span className="mt-1 inline-block rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">
-                        Prototype
-                      </span>
-                    </span>
-                  </button>
-                </div>
-
-                <p className="mt-5 text-center text-xs text-[var(--cv-muted)]">
-                  By creating an account, you agree to use CodeVerse responsibly and respect the community.
-                </p>
-              </>
-            )}
-
-            {choice === "student" && <StudentForm onBack={goBack} />}
-            {choice === "professional" && (
-              <PrototypeForm
-                title="Professional"
-                fields={PROFESSIONAL_FIELDS}
-                onBack={goBack}
-              />
-            )}
-            {choice === "trainer" && (
-              <PrototypeForm title="Trainer" fields={TRAINER_FIELDS} onBack={goBack} />
-            )}
-            {choice === "organization" && (
-              <OrganizationForm onBack={goBack} />
-            )}
+            <StudentForm />
           </div>
         </section>
       </div>

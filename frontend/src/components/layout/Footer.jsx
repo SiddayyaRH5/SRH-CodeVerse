@@ -16,13 +16,19 @@ function Footer() {
     ["siddusrh@gmail.com", "mailto:siddusrh@gmail.com"],
   ]
 
-  return (
-    <footer className="cv-footer" id="footer">
-      <div className="cv-footer-inner">
+  const socialLinks = [
+    ["LinkedIn", "https://www.linkedin.com/in/siddayyahiremath/"],
+    ["GitHub", "https://github.com/SiddayyaRH5"],
+    ["WhatsApp", "https://wa.me/918088285205"],
+    ["Telegram", "https://t.me/siddusrh"],
+  ]
 
+  return (
+    <footer className="cv-footer cv-footer-compact" id="footer">
+      <div className="cv-footer-inner">
         {/* Brand */}
         <div className="cv-footer-main">
-          <Link to="/" className="cv-footer-brand">
+          <Link to="/" className="cv-footer-brand" aria-label="SRH CodeVerse home">
             <img
               src="/srh-codeverse-logo.png"
               alt="SRH CodeVerse"
@@ -38,48 +44,20 @@ function Footer() {
             EDUCATE. <span>SOLVE.</span> SUBMIT.
           </p>
 
-          {/* Social Links â€” text only, no icons */}
+          {/* Text-only social links */}
           <div className="cv-footer-socials">
-            <a
-              key="linkedin"
-              href="https://www.linkedin.com/in/siddayyahiremath/"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="LinkedIn"
-              title="LinkedIn"
-            >
-              LinkedIn
-            </a>
-            <a
-              key="github"
-              href="https://github.com/SiddayyaRH5"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="GitHub"
-              title="GitHub"
-            >
-              GitHub
-            </a>
-            <a
-              key="whatsapp"
-              href="https://wa.me/918088285205"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="WhatsApp"
-              title="WhatsApp"
-            >
-              WhatsApp
-            </a>
-            <a
-              key="telegram"
-              href="https://t.me/siddusrh"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Telegram"
-              title="Telegram"
-            >
-              Telegram
-            </a>
+            {socialLinks.map(([label, url]) => (
+              <a
+                key={label}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                title={label}
+              >
+                {label}
+              </a>
+            ))}
           </div>
         </div>
 
@@ -109,21 +87,19 @@ function Footer() {
             </a>
           ))}
         </div>
-
       </div>
 
-      {/* Bottom */}
+      {/* Slim bottom bar */}
       <div className="cv-footer-bottom">
-        <p>Â© {year} SRH CodeVerse. All rights reserved.</p>
-
+        <p>© {year} SRH CodeVerse. All rights reserved.</p>
         <a
           href="#top"
-          onClick={(e) => {
-            e.preventDefault()
+          onClick={(event) => {
+            event.preventDefault()
             window.scrollTo({ top: 0, behavior: "smooth" })
           }}
         >
-          Back to top â†‘
+          Back to top ↑
         </a>
       </div>
     </footer>

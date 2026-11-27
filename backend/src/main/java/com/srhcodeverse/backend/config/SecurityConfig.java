@@ -4,6 +4,7 @@ package com.srhcodeverse.backend.config;
 import com.srhcodeverse.backend.security.JwtAuthFilter;
 import com.srhcodeverse.backend.service.CustomOAuth2UserService;
 import com.srhcodeverse.backend.service.OAuth2LoginSuccessHandler;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -69,40 +70,52 @@ public class SecurityConfig {
                         @Value("${spring.security.oauth2.client.registration.github.client-secret}") String githubClientSecret,
                         @Value("${spring.security.oauth2.client.registration.google.redirect-uri}") String googleRedirectUri,
                         @Value("${spring.security.oauth2.client.registration.github.redirect-uri}") String githubRedirectUri) {
-                requireOAuthCredentials("google", googleClientId, googleClientSecret);
-                requireOAuthCredentials("github", githubClientId, githubClientSecret);
+                // OAuth providers are optional and independent: a missing or blank
+                // credential set disables only that provider instead of failing the
+                // whole application startup.
+                List<ClientRegistration> registrations = new ArrayList<>();
 
-                ClientRegistration googleRegistration = ClientRegistration
-                                .withRegistrationId("google")
-                                .clientId(googleClientId)
-                                .clientSecret(googleClientSecret)
-                                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                                .redirectUri(googleRedirectUri)
-                                .scope("openid", "profile", "email")
-                                .authorizationUri("https://accounts.google.com/o/oauth2/v2/auth")
-                                .tokenUri("https://oauth2.googleapis.com/token")
-                                .userInfoUri("https://openidconnect.googleapis.com/v1/userinfo")
-                                .issuerUri("https://accounts.google.com")
-                                .jwkSetUri("https://www.googleapis.com/oauth2/v3/certs")
-                                .userNameAttributeName("sub")
-                                .clientName("Google")
-                                .build();
+                if (hasOAuthCredentials(googleClientId, googleClientSecret)) {
+                    registrations.add(ClientRegistration
+                            .withRegistrationId("google")
+                            .clientId(googleClientId.trim())
+                            .clientSecret(googleClientSecret.trim())
+                            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                            .redirectUri(googleRedirectUri)
+                            .scope("openid", "profile", "email")
+                            .authorizationUri("https://accounts.google.com/o/oauth2/v2/auth")
+                            .tokenUri("https://oauth2.googleapis.com/token")
+                            .userInfoUri("https://openidconnect.googleapis.com/v1/userinfo")
+                            .issuerUri("https://accounts.google.com")
+                            .jwkSetUri("https://www.googleapis.com/oauth2/v3/certs")
+                            .userNameAttributeName("sub")
+                            .clientName("Google")
+                            .build());
+                }
 
-                ClientRegistration githubRegistration = ClientRegistration
-                                .withRegistrationId("github")
-                                .clientId(githubClientId)
-                                .clientSecret(githubClientSecret)
-                                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                                .redirectUri(githubRedirectUri)
-                                .scope("user:email")
-                                .authorizationUri("https://github.com/login/oauth/authorize")
-                                .tokenUri("https://github.com/login/oauth/access_token")
-                                .userInfoUri("https://api.github.com/user")
-                                .userNameAttributeName("id")
-                                .clientName("GitHub")
-                                .build();
+                if (hasOAuthCredentials(githubClientId, githubClientSecret)) {
+                    registrations.add(ClientRegistration
+                            .withRegistrationId("github")
+                            .clientId(githubClientId.trim())
+                            .clientSecret(githubClientSecret.trim())
+                            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                            .redirectUri(githubRedirectUri)
+                            .scope("user:email")
+                            .authorizationUri("https://github.com/login/oauth/authorize")
+                            .tokenUri("https://github.com/login/oauth/access_token")
+                            .userInfoUri("https://api.github.com/user")
+                            .userNameAttributeName("id")
+                            .clientName("GitHub")
+                            .build());
+                }
 
-                return new InMemoryClientRegistrationRepository(googleRegistration, githubRegistration);
+                if (registrations.isEmpty()) {
+                        // No OAuth provider is configured; expose a repository that
+                        // reports no registrations so the application still starts.
+                        return registrationId -> null;
+                }
+                return new InMemoryClientRegistrationRepository(
+                        registrations.toArray(new ClientRegistration[0]));
         }
 
         @Bean
@@ -113,12 +126,9 @@ public class SecurityConfig {
                 return oidcUserService;
         }
 
-        private static void requireOAuthCredentials(String provider, String clientId, String clientSecret) {
-                if (clientId == null || clientId.isBlank()
-                                || clientSecret == null || clientSecret.isBlank()) {
-                        throw new IllegalStateException(
-                                        "OAuth client ID and secret must be configured for provider " + provider);
-                }
+        private static boolean hasOAuthCredentials(String clientId, String clientSecret) {
+                return clientId != null && !clientId.isBlank()
+                                && clientSecret != null && !clientSecret.isBlank();
         }
 
         @Bean
@@ -162,6 +172,7 @@ public SecurityFilterChain securityFilterChain(
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/health/live", "/api/health/ready").permitAll()
+                        .requestMatchers("/api/certificates/verify/**").permitAll()
                         .requestMatchers("/api/courses/*/progress").authenticated()
                         .requestMatchers("/api/courses/**").permitAll()
                         .requestMatchers("/api/problems/*/imported-data")

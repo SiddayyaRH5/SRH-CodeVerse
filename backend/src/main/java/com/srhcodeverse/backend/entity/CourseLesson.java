@@ -51,5 +51,17 @@ public class CourseLesson {
     @Column(columnDefinition = "TEXT")
     private String quiz;
 
+    @Column(name = "learning_objectives", columnDefinition = "TEXT")
+    private String learningObjectives;
+
+    @Column(name = "common_mistakes", columnDefinition = "TEXT")
+    private String commonMistakes;
+
+    @Column(name = "expected_output", columnDefinition = "TEXT")
+    private String expectedOutput;
+
+    @Column(columnDefinition = "TEXT")
+    private String resources;
+
     private Integer estimatedMinutes;
 }

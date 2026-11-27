@@ -113,7 +113,7 @@ function Navbar() {
                 navigate(`/problems?search=${encodeURIComponent(query)}`)
               }
               placeholder="Search courses, problems..."
-              className="w-[220px] cv-input !rounded-full !py-2.5 !pl-9 !pr-4 text-xs"
+              className="cv-input rounded-full py-2.5 px-4 text-sm max-w-[220px]"
             />
           </div>
 

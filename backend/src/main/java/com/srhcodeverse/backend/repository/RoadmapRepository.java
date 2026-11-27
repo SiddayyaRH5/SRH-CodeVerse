@@ -1,0 +1,11 @@
+package com.srhcodeverse.backend.repository;
+
+import com.srhcodeverse.backend.entity.Roadmap;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+import java.util.Optional;
+
+public interface RoadmapRepository extends JpaRepository<Roadmap, Long> {
+    Optional<Roadmap> findBySlug(String slug);
+    List<Roadmap> findByActiveTrueOrderBySortOrderAsc();
+}
