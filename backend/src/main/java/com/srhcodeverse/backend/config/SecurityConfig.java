@@ -180,7 +180,8 @@ public SecurityFilterChain securityFilterChain(
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/health/live", "/api/health/ready").permitAll()
                         .requestMatchers("/api/certificates/verify/**").permitAll()
-                        .requestMatchers("/api/courses/*/progress").authenticated()
+                        .requestMatchers("/api/payments/webhook").permitAll()
+                        .requestMatchers("/api/courses/*/progress", "/api/courses/*/enroll").authenticated()
                         .requestMatchers("/api/courses/**").permitAll()
                         .requestMatchers("/api/problems/*/imported-data")
                                 .hasAnyRole("STUDENT", "TRAINER", "ADMIN")

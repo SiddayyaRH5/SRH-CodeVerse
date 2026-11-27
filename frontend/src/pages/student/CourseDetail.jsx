@@ -1,11 +1,13 @@
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
   getCourse,
   updateCourseProgress,
   getCourseProblems,
+  enrollCourse,
+  createPaymentOrder,
 } from '../../api/courseApi'
 
 function CourseDetail() {
@@ -19,6 +21,26 @@ function CourseDetail() {
   const [openModule, setOpenModule] = useState(1)
   const [tab, setTab] = useState('lessons')
   const [selectedProject, setSelectedProject] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState('')
+  const checkoutInFlight = useRef(false)
+
+  const paid = String(course?.courseType || '').toUpperCase() === 'PAID'
+  const eligible = course?.eligible !== false
+  const locked = paid && !eligible
+  const priceLabel = paid
+    ? (() => {
+        try {
+          return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: course?.currency || 'INR',
+            maximumFractionDigits: 0,
+          }).format(Number(course?.price) || 0)
+        } catch {
+          return `${course?.currency || 'INR'} ${Number(course?.price) || 0}`
+        }
+      })()
+    : 'FREE'
 
   useEffect(() => {
     let cancelled = false
@@ -76,6 +98,10 @@ function CourseDetail() {
   }, [course])
 
   const toggleLesson = async (lesson) => {
+    if (locked) {
+      setError('This lesson requires a verified payment.')
+      return
+    }
     if (!user) {
       navigate('/login')
       return
@@ -96,6 +122,53 @@ function CourseDetail() {
         err.response?.data?.message ||
           'Could not update lesson progress.'
       )
+    }
+  }
+
+  const handleEnroll = async () => {
+    if (!user) {
+      navigate('/login')
+      return
+    }
+    setBusy(true)
+    setNotice('')
+    setError('')
+    try {
+      const response = await enrollCourse(slug)
+      setCourse(response.data)
+      setNotice('You are enrolled. Happy learning!')
+    } catch (err) {
+      setError(err.response?.data?.message || 'Enrollment could not be completed.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handlePurchase = async () => {
+    if (checkoutInFlight.current) return
+    if (!user) {
+      navigate('/login')
+      return
+    }
+    checkoutInFlight.current = true
+    setBusy(true)
+    setNotice('')
+    setError('')
+    try {
+      await createPaymentOrder(slug)
+      setNotice('Checkout is not enabled yet. Access will unlock only after the backend verifies a captured payment.')
+    } catch (err) {
+      setError(err.response?.data?.message || 'Purchases are not available right now.')
+    } finally {
+      // Re-read entitlement from the server after checkout closes or fails.
+      try {
+        const response = await getCourse(slug)
+        setCourse(response.data)
+      } catch {
+        // Keep the existing course/notice when the status refresh fails.
+      }
+      checkoutInFlight.current = false
+      setBusy(false)
     }
   }
 
@@ -150,11 +223,30 @@ function CourseDetail() {
           ← All Courses
         </Link>
 
+        {(course.thumbnailUrl || course.thumbnail) && (
+          <div className="mt-5 aspect-video max-h-80 overflow-hidden rounded-2xl border border-[var(--cv-border)] bg-[var(--cv-surface-2)]">
+            <img
+              src={course.thumbnailUrl || course.thumbnail}
+              alt={`${course.title} course thumbnail`}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        )}
+
         <div className="flex flex-col lg:flex-row justify-between gap-8 mt-5">
           <div className="max-w-3xl">
-            <span className="text-[10px] font-black tracking-widest text-violet-600">
-              {course.category} · {course.level}
-            </span>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-[10px] font-black tracking-widest text-violet-600">
+                {course.category} · {course.level}
+              </span>
+              <span
+                className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wide ${
+                  paid ? 'bg-amber-400 text-slate-900' : 'bg-emerald-500 text-white'
+                }`}
+              >
+                {paid ? 'Paid' : 'Free'}
+              </span>
+            </div>
 
             <h1 className="text-4xl sm:text-5xl font-black mt-2">
               {course.title}
@@ -197,10 +289,41 @@ function CourseDetail() {
             </div>
 
             <p className="text-xs text-[var(--cv-muted)] mt-3">
+              By {course.instructor || 'SRH CodeVerse'}
+            </p>
+
+            <p className="text-xs text-[var(--cv-muted)] mt-3">
               {course.lessonCount ?? (course.lessons || []).length} lessons
               {' · '}
               {course.problemCount ?? 0} practice tasks
             </p>
+
+            <div className="mt-4 flex items-center justify-between gap-4 flex-wrap">
+              <span className="text-2xl font-black">{priceLabel}</span>
+              {paid && !eligible ? (
+                <button
+                  type="button"
+                  onClick={handlePurchase}
+                  disabled={busy || course.enrollmentEnabled === false}
+                  className="cv-primary-btn !py-3 text-sm disabled:opacity-60"
+                >
+                  {busy ? 'Working...' : 'Buy this course'}
+                </button>
+              ) : !paid && course.enrollmentEnabled !== false && !(course.progressPercent > 0) ? (
+                <button
+                  type="button"
+                  onClick={handleEnroll}
+                  disabled={busy}
+                  className="cv-primary-btn !py-3 text-sm disabled:opacity-60"
+                >
+                  {busy ? 'Enrolling...' : 'Enroll for free'}
+                </button>
+              ) : (
+                <span className="text-xs font-bold text-emerald-500">
+                  {paid ? 'You have access' : 'You are enrolled'}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -235,6 +358,18 @@ function CourseDetail() {
       {error && (
         <p className="mt-4 text-sm text-red-500" role="alert">
           {error}
+        </p>
+      )}
+
+      {notice && (
+        <p className="mt-4 text-sm text-emerald-500" role="status">
+          {notice}
+        </p>
+      )}
+
+      {locked && paid && (
+        <p className="mt-4 text-sm text-amber-500" role="status">
+          Lessons unlock after a verified payment. No access is granted from browser state alone.
         </p>
       )}
 
@@ -285,6 +420,7 @@ function CourseDetail() {
                         <button
                           type="button"
                           onClick={() => toggleLesson(lesson)}
+                          disabled={locked}
                           aria-label={
                             lesson.completed
                               ? `Mark ${lesson.title} incomplete`
@@ -300,12 +436,21 @@ function CourseDetail() {
                         </button>
 
                         <div className="flex-1 min-w-0">
-                          <Link
-  to={`/courses/${slug}/lessons/${lesson.id}`}
-  className="text-sm font-bold hover:text-violet-600 transition-colors"
->
-  {lesson.title}
-</Link>
+                          {locked ? (
+                            <span
+                              className="text-sm font-bold text-[var(--cv-muted)]"
+                              aria-label={`${lesson.title} is locked`}
+                            >
+                              🔒 {lesson.title}
+                            </span>
+                          ) : (
+                            <Link
+                              to={`/courses/${slug}/lessons/${lesson.id}`}
+                              className="text-sm font-bold hover:text-violet-600 transition-colors"
+                            >
+                              {lesson.title}
+                            </Link>
+                          )}
                           <p className="text-xs text-[var(--cv-muted)] mt-1">
                             {lesson.description}
                           </p>

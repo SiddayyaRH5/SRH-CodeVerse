@@ -4,6 +4,14 @@ import { Link } from "react-router-dom"
 import { getCourses } from "../../api/courseApi"
 
 const LEVELS = ["ALL", "Beginner", "Intermediate", "Advanced"]
+const ACCESS = ["ALL", "FREE", "PAID"]
+const SORTS = [
+  { value: "featured", label: "Featured" },
+  { value: "title", label: "Title A-Z" },
+  { value: "duration", label: "Shortest first" },
+  { value: "price-asc", label: "Price: low to high" },
+  { value: "price-desc", label: "Price: high to low" },
+]
 
 const COURSE_ICONS = {
   java: "☕",
@@ -20,12 +28,28 @@ const COURSE_ICONS = {
 
 function getCourseIcon(course) {
   const text = `${course.title || ""} ${course.category || ""}`.toLowerCase()
-
   const match = Object.keys(COURSE_ICONS).find(
     (key) => key !== "default" && text.includes(key)
   )
-
   return COURSE_ICONS[match || "default"]
+}
+
+function isPaid(course) {
+  return String(course.courseType || "").toUpperCase() === "PAID"
+}
+
+function formatPrice(course) {
+  const amount = isPaid(course) ? Number(course.price) || 0 : 0
+  const currency = course.currency || "INR"
+  try {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(amount)
+  } catch {
+    return `${currency} ${amount}`
+  }
 }
 
 function Courses() {
@@ -35,6 +59,8 @@ function Courses() {
   const [query, setQuery] = useState("")
   const [category, setCategory] = useState("ALL")
   const [level, setLevel] = useState("ALL")
+  const [access, setAccess] = useState("ALL")
+  const [sort, setSort] = useState("featured")
   const [brokenImages, setBrokenImages] = useState({})
 
   useEffect(() => {
@@ -76,16 +102,19 @@ function Courses() {
   const filtered = useMemo(() => {
     const search = query.toLowerCase().trim()
 
-    return courses.filter((course) => {
+    const result = courses.filter((course) => {
       const matchesCategory =
         category === "ALL" || course.category === category
-
       const matchesLevel = level === "ALL" || course.level === level
+      const matchesAccess =
+        access === "ALL" ||
+        (access === "PAID" ? isPaid(course) : !isPaid(course))
 
       const searchableText = [
         course.title,
         course.shortDescription,
         course.category,
+        course.instructor,
       ]
         .filter(Boolean)
         .join(" ")
@@ -94,10 +123,37 @@ function Courses() {
       return (
         matchesCategory &&
         matchesLevel &&
+        matchesAccess &&
         (!search || searchableText.includes(search))
       )
     })
-  }, [courses, category, level, query])
+
+    const sorted = [...result]
+    if (sort === "title") {
+      sorted.sort((a, b) => (a.title || "").localeCompare(b.title || ""))
+    } else if (sort === "duration") {
+      sorted.sort(
+        (a, b) =>
+          (Number(a.estimatedDurationMinutes) || 0) -
+          (Number(b.estimatedDurationMinutes) || 0)
+      )
+    } else if (sort === "price-asc" || sort === "price-desc") {
+      sorted.sort((a, b) => {
+        const left = isPaid(a) ? Number(a.price) || 0 : 0
+        const right = isPaid(b) ? Number(b.price) || 0 : 0
+        return sort === "price-asc" ? left - right : right - left
+      })
+    }
+    return sorted
+  }, [courses, category, level, access, query, sort])
+
+  const clearFilters = () => {
+    setQuery("")
+    setCategory("ALL")
+    setLevel("ALL")
+    setAccess("ALL")
+    setSort("featured")
+  }
 
   if (loading) {
     return (
@@ -107,14 +163,21 @@ function Courses() {
           <div className="mt-4 h-10 w-80 max-w-full rounded bg-slate-700/50" />
           <div className="mt-3 h-4 w-96 max-w-full rounded bg-slate-700/30" />
 
-          <div className="mt-8 h-20 rounded-2xl bg-slate-700/20" />
+          <div className="mt-8 h-24 rounded-2xl bg-slate-700/20" />
 
           <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((item) => (
               <div
                 key={item}
-                className="h-80 rounded-3xl border border-[var(--cv-border)] bg-[var(--cv-surface-2)]"
-              />
+                className="overflow-hidden rounded-3xl border border-[var(--cv-border)] bg-[var(--cv-surface-2)]"
+              >
+                <div className="aspect-video bg-slate-700/40" />
+                <div className="space-y-3 p-5">
+                  <div className="h-5 w-2/3 rounded bg-slate-700/40" />
+                  <div className="h-3 w-full rounded bg-slate-700/30" />
+                  <div className="h-3 w-4/5 rounded bg-slate-700/30" />
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -145,7 +208,6 @@ function Courses() {
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header */}
       <header className="mb-8">
         <p className="cv-kicker">SRH CODEVERSE ACADEMY</p>
 
@@ -167,10 +229,9 @@ function Courses() {
         </div>
       </header>
 
-      {/* Search and filters */}
       <section className="mb-8 rounded-2xl border border-[var(--cv-border)] bg-[var(--cv-surface)] p-4 sm:p-5">
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_220px_190px]">
-          <div className="min-w-0">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="min-w-0 sm:col-span-2 lg:col-span-1">
             <label
               htmlFor="course-search"
               className="mb-2 block text-xs font-semibold text-[var(--cv-muted)]"
@@ -227,6 +288,48 @@ function Courses() {
               ))}
             </select>
           </div>
+
+          <div className="min-w-0">
+            <label
+              htmlFor="course-access"
+              className="mb-2 block text-xs font-semibold text-[var(--cv-muted)]"
+            >
+              ACCESS
+            </label>
+            <select
+              id="course-access"
+              value={access}
+              onChange={(event) => setAccess(event.target.value)}
+              className="cv-input w-full min-w-0"
+            >
+              {ACCESS.map((item) => (
+                <option key={item} value={item}>
+                  {item === "ALL" ? "Free & paid" : item}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="min-w-0">
+            <label
+              htmlFor="course-sort"
+              className="mb-2 block text-xs font-semibold text-[var(--cv-muted)]"
+            >
+              SORT BY
+            </label>
+            <select
+              id="course-sort"
+              value={sort}
+              onChange={(event) => setSort(event.target.value)}
+              className="cv-input w-full min-w-0"
+            >
+              {SORTS.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -234,14 +337,10 @@ function Courses() {
             Showing {filtered.length} of {courses.length} courses
           </p>
 
-          {(query || category !== "ALL" || level !== "ALL") && (
+          {(query || category !== "ALL" || level !== "ALL" || access !== "ALL" || sort !== "featured") && (
             <button
               type="button"
-              onClick={() => {
-                setQuery("")
-                setCategory("ALL")
-                setLevel("ALL")
-              }}
+              onClick={clearFilters}
               className="text-xs font-semibold text-violet-400 hover:text-violet-300"
             >
               Clear filters
@@ -250,7 +349,6 @@ function Courses() {
         </div>
       </section>
 
-      {/* Course cards */}
       {filtered.length > 0 ? (
         <section
           aria-label="Available courses"
@@ -261,13 +359,13 @@ function Courses() {
               100,
               Math.max(0, Number(course.progressPercent) || 0)
             )
-
+            const paid = isPaid(course)
             const durationHours = Math.round(
               (Number(course.estimatedDurationMinutes) || 0) / 60
             )
-
             const icon = getCourseIcon(course)
             const imageFailed = brokenImages[course.slug]
+            const image = course.thumbnailUrl || course.thumbnail
 
             return (
               <Link
@@ -275,12 +373,11 @@ function Courses() {
                 to={`/courses/${course.slug}`}
                 className="group flex min-w-0 flex-col overflow-hidden rounded-3xl border border-[var(--cv-border)] bg-[var(--cv-surface)] transition duration-200 hover:-translate-y-1 hover:border-violet-500/40 hover:shadow-xl hover:shadow-violet-950/10 focus:outline-none focus:ring-2 focus:ring-violet-500"
               >
-                {/* Thumbnail area */}
-                <div className="relative flex h-36 items-center justify-center overflow-hidden border-b border-[var(--cv-border)] bg-gradient-to-br from-violet-600/15 via-[var(--cv-surface-2)] to-cyan-500/10">
-                  {course.thumbnail && !imageFailed ? (
+                <div className="relative aspect-video overflow-hidden border-b border-[var(--cv-border)] bg-gradient-to-br from-violet-600/15 via-[var(--cv-surface-2)] to-cyan-500/10">
+                  {image && !imageFailed ? (
                     <img
-                      src={course.thumbnail}
-                      alt=""
+                      src={image}
+                      alt={`${course.title} course thumbnail`}
                       loading="lazy"
                       onError={() =>
                         setBrokenImages((current) => ({
@@ -291,13 +388,23 @@ function Courses() {
                       className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-violet-500/20 bg-violet-500/10 text-4xl font-black text-violet-300">
+                    <div className="flex h-full w-full items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600/20 to-cyan-500/10 text-5xl font-black text-violet-300">
                       {icon}
                     </div>
                   )}
 
+                  <span
+                    className={`absolute left-4 top-4 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-wide shadow-sm ${
+                      paid
+                        ? "bg-amber-400 text-slate-900"
+                        : "bg-emerald-500 text-white"
+                    }`}
+                  >
+                    {paid ? "Paid" : "Free"}
+                  </span>
+
                   <span className="absolute right-4 top-4 rounded-full border border-violet-400/20 bg-[var(--cv-surface)]/95 px-3 py-1.5 text-[10px] font-bold text-violet-400 shadow-sm">
-                    {course.level || "All levels"}
+                    {course.level || course.difficulty || "All levels"}
                   </span>
                 </div>
 
@@ -308,11 +415,20 @@ function Courses() {
                         {course.category}
                       </span>
                     )}
+                    {course.rating > 0 && (
+                      <span className="rounded-full bg-amber-400/10 px-3 py-1 text-[10px] font-semibold text-amber-400">
+                        ★ {course.rating}
+                      </span>
+                    )}
                   </div>
 
                   <h2 className="text-xl font-black leading-snug transition group-hover:text-violet-400">
                     {course.title}
                   </h2>
+
+                  <p className="mt-2 text-xs font-semibold text-[var(--cv-muted)]">
+                    By {course.instructor || "SRH CodeVerse"}
+                  </p>
 
                   <p className="mt-3 min-h-[4.5rem] text-sm leading-6 text-[var(--cv-muted)]">
                     {course.shortDescription || "Explore lessons and practical exercises in this course."}
@@ -320,28 +436,16 @@ function Courses() {
 
                   <div className="mt-5 grid grid-cols-3 gap-2">
                     <div className="rounded-xl bg-[var(--cv-surface-2)] p-3 text-center">
-                      <p className="text-lg font-black">
-                        {course.lessonCount ?? 0}
-                      </p>
-                      <p className="mt-1 text-[10px] text-[var(--cv-muted)]">
-                        Lessons
-                      </p>
+                      <p className="text-lg font-black">{course.lessonCount ?? 0}</p>
+                      <p className="mt-1 text-[10px] text-[var(--cv-muted)]">Lessons</p>
                     </div>
-
                     <div className="rounded-xl bg-[var(--cv-surface-2)] p-3 text-center">
-                      <p className="text-lg font-black">
-                        {course.problemCount ?? 0}
-                      </p>
-                      <p className="mt-1 text-[10px] text-[var(--cv-muted)]">
-                        Practice
-                      </p>
+                      <p className="text-lg font-black">{course.problemCount ?? 0}</p>
+                      <p className="mt-1 text-[10px] text-[var(--cv-muted)]">Practice</p>
                     </div>
-
                     <div className="rounded-xl bg-[var(--cv-surface-2)] p-3 text-center">
                       <p className="text-lg font-black">{durationHours}h</p>
-                      <p className="mt-1 text-[10px] text-[var(--cv-muted)]">
-                        Learning
-                      </p>
+                      <p className="mt-1 text-[10px] text-[var(--cv-muted)]">Learning</p>
                     </div>
                   </div>
 
@@ -350,7 +454,6 @@ function Courses() {
                       <span className="text-[var(--cv-muted)]">Progress</span>
                       <span className="font-semibold">{progress}%</span>
                     </div>
-
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--cv-surface-2)]">
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-400 transition-all duration-500"
@@ -359,10 +462,13 @@ function Courses() {
                     </div>
                   </div>
 
-                  <div className="mt-6 flex items-center justify-between border-t border-[var(--cv-border)] pt-4 text-sm font-bold text-violet-400">
-                    <span>Explore course</span>
-                    <span className="transition-transform group-hover:translate-x-1">
-                      →
+                  <div className="mt-6 flex items-center justify-between gap-3 border-t border-[var(--cv-border)] pt-4">
+                    <span className="text-base font-black text-[var(--cv-text-primary)]">
+                      {paid ? formatPrice(course) : "FREE"}
+                    </span>
+                    <span className="flex items-center gap-2 text-sm font-bold text-violet-400">
+                      View course
+                      <span className="transition-transform group-hover:translate-x-1">→</span>
                     </span>
                   </div>
                 </div>
@@ -381,11 +487,7 @@ function Courses() {
           </p>
           <button
             type="button"
-            onClick={() => {
-              setQuery("")
-              setCategory("ALL")
-              setLevel("ALL")
-            }}
+            onClick={clearFilters}
             className="cv-primary-btn mt-5 !px-5 !py-3 text-sm"
           >
             Show all courses

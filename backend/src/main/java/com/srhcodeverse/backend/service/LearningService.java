@@ -2,8 +2,10 @@ package com.srhcodeverse.backend.service;
 
 import com.srhcodeverse.backend.entity.*;
 import com.srhcodeverse.backend.repository.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -21,6 +23,7 @@ public class LearningService {
     private final ProblemRepository problemRepository;
     private final SubmissionRepository submissionRepository;
     private final InterviewSessionRepository interviewSessionRepository;
+    private final CoursePricing pricing;
 
     public LearningService(CourseRepository courseRepository,
                            CourseLessonRepository lessonRepository,
@@ -30,7 +33,8 @@ public class LearningService {
                            UserRepository userRepository,
                            ProblemRepository problemRepository,
                            SubmissionRepository submissionRepository,
-                           InterviewSessionRepository interviewSessionRepository) {
+                           InterviewSessionRepository interviewSessionRepository,
+                           CoursePricing pricing) {
         this.courseRepository = courseRepository;
         this.lessonRepository = lessonRepository;
         this.courseProgressRepository = courseProgressRepository;
@@ -40,6 +44,7 @@ public class LearningService {
         this.problemRepository = problemRepository;
         this.submissionRepository = submissionRepository;
         this.interviewSessionRepository = interviewSessionRepository;
+        this.pricing = pricing;
     }
 
     private User user(String username) {
@@ -119,6 +124,11 @@ public class LearningService {
     public Map<String, Object> enroll(String slug, String username) {
         User user = user(username);
         Course c = course(slug);
+        if (!pricing.enrollmentEnabled(c))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Enrollment is disabled for this course");
+        if (!pricing.entitled(c, user))
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                    "This is a paid course. Complete a verified payment before enrolling.");
         CourseProgress progress = courseProgressRepository.findByUserAndCourse(user, c)
                 .orElseGet(() -> {
                     List<CourseLesson> lessons = lessonRepository
@@ -167,6 +177,9 @@ public class LearningService {
         CourseLesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new IllegalArgumentException("Lesson not found"));
         Course c = lesson.getCourse();
+        if (!pricing.entitled(c, user))
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                    "This lesson requires a verified payment for its course.");
         CourseProgress progress = courseProgressRepository.findByUserAndCourse(user, c).orElse(null);
         Set<Long> completed = completedIds(progress);
         List<CourseLesson> lessons = lessonRepository.findByCourseOrderByModuleOrderAscLessonOrderAsc(c);
@@ -212,6 +225,9 @@ public class LearningService {
         CourseLesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new IllegalArgumentException("Lesson not found"));
         Course c = lesson.getCourse();
+        if (!pricing.entitled(c, user))
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                    "This lesson requires a verified payment for its course.");
         CourseProgress progress = courseProgressRepository.findByUserAndCourse(user, c)
                 .orElseGet(() -> CourseProgress.builder()
                         .user(user).course(c).completedLessonIds("").xpEarned(0).build());
@@ -230,6 +246,9 @@ public class LearningService {
         User user = user(username);
         CourseLesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new IllegalArgumentException("Lesson not found"));
+        if (!pricing.entitled(lesson.getCourse(), user))
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                    "This lesson requires a verified payment for its course.");
         Optional<LessonBookmark> existing = bookmarkRepository.findByUserAndLesson(user, lesson);
         if (existing.isPresent()) {
             bookmarkRepository.delete(existing.get());
@@ -244,6 +263,9 @@ public class LearningService {
         User user = user(username);
         CourseLesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new IllegalArgumentException("Lesson not found"));
+        if (!pricing.entitled(lesson.getCourse(), user))
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                    "This lesson requires a verified payment for its course.");
         LessonNote note = noteRepository.findByUserAndLesson(user, lesson)
                 .orElseGet(() -> LessonNote.builder().user(user).lesson(lesson).content("").build());
         note.setContent(content == null ? "" : content.trim());
@@ -403,6 +425,14 @@ public class LearningService {
         item.put("category", c.getCategory());
         item.put("difficulty", c.getDifficulty());
         item.put("level", c.getLevel());
+        item.put("thumbnail", pricing.thumbnail(c));
+        item.put("thumbnailUrl", pricing.thumbnail(c));
+        item.put("instructor", pricing.instructor(c));
+        item.put("courseType", pricing.type(c));
+        item.put("price", pricing.price(c));
+        item.put("currency", pricing.currency(c));
+        item.put("paid", pricing.isPaid(c));
+        item.put("eligible", pricing.entitled(c, user));
         item.put("estimatedDurationMinutes", c.getEstimatedDurationMinutes());
         item.put("lessonCount", lessons.size());
         item.put("skillsGained", RoadmapService.split(c.getSkillsGained()));
@@ -458,6 +488,14 @@ public class LearningService {
         result.put("category", c.getCategory());
         result.put("difficulty", c.getDifficulty());
         result.put("level", c.getLevel());
+        result.put("thumbnail", pricing.thumbnail(c));
+        result.put("thumbnailUrl", pricing.thumbnail(c));
+        result.put("instructor", pricing.instructor(c));
+        result.put("courseType", pricing.type(c));
+        result.put("price", pricing.price(c));
+        result.put("currency", pricing.currency(c));
+        result.put("paid", pricing.isPaid(c));
+        result.put("eligible", pricing.entitled(c, user));
         result.put("estimatedDurationMinutes", c.getEstimatedDurationMinutes());
         result.put("learningObjectives", RoadmapService.split(c.getLearningObjectives()));
         result.put("prerequisites", RoadmapService.split(c.getPrerequisites()));
