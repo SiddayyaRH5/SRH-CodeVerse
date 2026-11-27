@@ -156,4 +156,10 @@ class LearningControllerIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isMethodNotAllowed());
     }
+
+    @Test
+    void unauthenticatedApiRequestsReturnUnauthorizedInsteadOfRedirect() throws Exception {
+        mockMvc.perform(get("/api/learning/my"))
+                .andExpect(status().isUnauthorized());
+    }
 }
