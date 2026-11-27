@@ -546,8 +546,9 @@
 }
 
 .cv-footer-compact .cv-footer-logo {
-  width: 34px;
-  height: 34px;
+  width: 120px;
+  height: 52px;
+  margin-right: 0;
 }
 
 .cv-footer-compact .cv-footer-main {
