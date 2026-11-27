@@ -32,8 +32,9 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     List<Submission> findByStudentAndStatus(
             User student, Submission.Status status);
 
-    @Query("SELECT DISTINCT FUNCTION('DATE', s.submittedAt) FROM Submission s " +
-           "WHERE s.student = :student AND s.status = 'PASSED' AND s.submittedAt IS NOT NULL")
+    @Query("SELECT s.submittedAt FROM Submission s " +
+           "WHERE s.student = :student AND s.status = 'PASSED' AND s.submittedAt IS NOT NULL " +
+           "ORDER BY s.submittedAt")
     List<Object> findDistinctAcceptedSubmissionDatesByStudent(@Param("student") User student);
 
     boolean existsByStudent_UsernameAndProblem_IdAndStatusAndSubmittedAtAfter(
@@ -47,18 +48,15 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
            "WHERE s.student = :student AND s.status = 'PASSED'")
     long countDistinctSolvedProblems(@Param("student") User student);
 
-    @Query("SELECT COUNT(s), FUNCTION('DATE', s.submittedAt) " +
-           "FROM Submission s WHERE s.submittedAt >= :since " +
-           "GROUP BY FUNCTION('DATE', s.submittedAt)")
-    List<Object[]> countSubmissionsByDay(
-            @Param("since") LocalDateTime since);
+    /** Portable alternative to GROUP BY DATE(): fetch only timestamps, aggregate in Java. */
+    @Query("SELECT s.submittedAt FROM Submission s WHERE s.submittedAt >= :since " +
+           "ORDER BY s.submittedAt")
+    List<Object> findSubmissionTimesAfter(@Param("since") LocalDateTime since);
 
-    // Object[] columns are ordered exactly as SELECT: count first, JDBC date second.
-    @Query("SELECT COUNT(s), FUNCTION('DATE', s.submittedAt) " +
-           "FROM Submission s WHERE s.student = :student " +
-           "AND s.submittedAt >= :since " +
-           "GROUP BY FUNCTION('DATE', s.submittedAt)")
-    List<Object[]> countSubmissionsByDayForStudent(
+    /** Per-student variant of findSubmissionTimesAfter; ownership is enforced by caller. */
+    @Query("SELECT s.submittedAt FROM Submission s WHERE s.student = :student " +
+           "AND s.submittedAt >= :since ORDER BY s.submittedAt")
+    List<Object> findSubmissionTimesForStudentAfter(
             @Param("student") User student,
             @Param("since") LocalDateTime since);
 

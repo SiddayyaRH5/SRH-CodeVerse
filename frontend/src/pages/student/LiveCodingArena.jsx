@@ -311,10 +311,10 @@ export default function LiveCodingArena() {
   const diffKey = String(problem?.difficulty || "").toLowerCase()
   const lowTime = seconds < 300
 
-  if (loading) return <div style={isDark ? DARK : LIGHT} className="min-h-screen bg-[var(--ar-page)] text-[color:var(--ar-muted)] grid place-items-center">Loading coding arena...</div>
+  if (loading) return <div style={isDark ? DARK : LIGHT} className="cv-premium-page min-h-screen bg-[var(--ar-page)] text-[color:var(--ar-muted)] grid place-items-center">Loading coding arena...</div>
 
   return (
-    <div style={isDark ? DARK : LIGHT} className="h-screen flex flex-col bg-[var(--ar-page)] text-[color:var(--ar-text)]">
+    <div style={isDark ? DARK : LIGHT} className="cv-arena-shell h-screen flex flex-col bg-[var(--ar-page)] text-[color:var(--ar-text)]">
       {/* ===== Top bar ===== */}
       <header className="flex items-center justify-between gap-4 px-5 h-[68px] border-b border-[color:var(--ar-line)] bg-[var(--ar-panel)] shrink-0">
         <div className="flex items-center gap-4 min-w-0">

@@ -15,7 +15,7 @@ export default function Announcements() {
   if (loading) return <div className="cv-panel animate-pulse h-64" />
 
   return (
-    <div className="cv-page">
+    <div className="cv-page cv-premium-page">
       <div className="flex flex-col lg:flex-row justify-between gap-5 items-start lg:items-end">
         <div>
           <p className="cv-kicker">ANNOUNCEMENTS</p>

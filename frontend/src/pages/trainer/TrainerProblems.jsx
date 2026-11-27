@@ -61,7 +61,7 @@ function TrainerProblems() {
   })
 
   return (
-    <div>
+    <div className="cv-premium-page">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold">Manage Problems</h1>

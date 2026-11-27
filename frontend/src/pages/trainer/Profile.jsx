@@ -18,7 +18,7 @@ export default function TrainerProfile() {
   if (!profile) return <p className="text-[var(--color-danger)]">Failed to load profile</p>
 
   return (
-    <div className="cv-page">
+    <div className="cv-trainer-profile cv-page cv-premium-page">
       <div className="flex flex-col lg:flex-row justify-between gap-5 items-start lg:items-end">
         <div>
           <p className="cv-kicker">PROFILE</p>
@@ -31,11 +31,11 @@ export default function TrainerProfile() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-5 mt-8">
-        <div className="cv-panel overflow-hidden rounded-lg border border-[var(--cv-border)] p-4">
+        <div className="cv-profile-card cv-panel overflow-hidden rounded-lg border border-[var(--cv-border)] p-4">
           <h3 className="text-lg font-bold">Courses Taught</h3>
           <p className="text-[var(--cv-muted)]">Courses assigned to this trainer</p>
         </div>
-        <div className="cv-panel overflow-hidden rounded-lg border border-[var(--cv-border)] p-4">
+        <div className="cv-profile-card cv-panel overflow-hidden rounded-lg border border-[var(--cv-border)] p-4">
           <h3 className="text-lg font-bold">Students</h3>
           <p className="text-[var(--cv-muted)]">Learners under this trainer's guidance</p>
         </div>

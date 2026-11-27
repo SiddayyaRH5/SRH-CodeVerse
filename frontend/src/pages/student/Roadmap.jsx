@@ -45,7 +45,7 @@ function RoadmapCard({ roadmap, onOpen }) {
     <button
       type="button"
       onClick={() => onOpen(roadmap.slug)}
-      className="cv-panel group flex h-full flex-col text-left transition hover:-translate-y-0.5 hover:border-violet-500/40"
+      className="cv-roadmap-card cv-panel group flex h-full flex-col text-left transition hover:-translate-y-0.5 hover:border-violet-500/40"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="grid h-12 w-12 place-items-center rounded-2xl border border-violet-500/20 bg-violet-500/10 text-sm font-black text-violet-400">
@@ -97,7 +97,7 @@ function RoadmapDetail({ roadmap, busy, onBack, onEnroll, onUnenroll, onToggleTo
   const toggleStage = (id) => setOpenStages((current) => ({ ...current, [id]: !current[id] }))
 
   return (
-    <div>
+    <div className="cv-roadmap-detail">
       <button type="button" onClick={onBack} className="cv-secondary-btn mb-5 !px-4 !py-2 text-xs">
         ← Back to roadmap library
       </button>
@@ -156,11 +156,11 @@ function RoadmapDetail({ roadmap, busy, onBack, onEnroll, onUnenroll, onToggleTo
         </div>
       </div>
 
-      <div className="mt-6 space-y-4">
+      <div className="cv-roadmap-timeline mt-6 space-y-4">
         {roadmap.stages.map((stage) => {
           const open = !!openStages[stage.id]
           return (
-            <section key={stage.id} className="cv-panel">
+            <section key={stage.id} className="cv-roadmap-stage cv-panel">
               <button
                 type="button"
                 onClick={() => toggleStage(stage.id)}
@@ -337,7 +337,7 @@ export default function Roadmap() {
 
   if (selectedSlug) {
     return (
-      <main className="cv-page mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="cv-page cv-premium-page mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         {detailLoading && <div className="cv-panel h-64 animate-pulse rounded-2xl" />}
         {!detailLoading && detail && (
           <RoadmapDetail
@@ -369,7 +369,7 @@ export default function Roadmap() {
   }
 
   return (
-    <main className="cv-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="cv-roadmap-home cv-premium-page cv-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <header className="cv-reveal">
         <p className="cv-kicker">CAREER ROADMAPS</p>
         <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">

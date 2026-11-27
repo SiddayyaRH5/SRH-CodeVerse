@@ -36,7 +36,7 @@ function FocusTimer() {
 
   return (
     <section className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-5">
-      <div className="flex items-center justify-between mb-2">
+      <div className="cv-premium-page flex items-center justify-between mb-2">
         <div>
           <h2 className="font-semibold">Focus Forge ⏱️</h2>
           <p className="text-xs text-[var(--color-text-secondary)]">25-minute deep-work sessions</p>

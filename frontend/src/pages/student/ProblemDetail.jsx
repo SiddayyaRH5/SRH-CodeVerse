@@ -173,9 +173,9 @@ function ProblemDetail() {
   const nextHintNumber = revealedHints.length + 1
 
   return (
-    <div>
+    <div className="cv-premium-page">
       {/* Mobile tab switcher - hidden on lg+ */}
-      <div className="flex lg:hidden gap-2 mb-3">
+      <div className="cv-mobile-tabs flex lg:hidden gap-2 mb-3">
         <button
           onClick={() => setMobileTab("description")}
           className={`flex-1 text-sm py-2 rounded ${
@@ -201,7 +201,7 @@ function ProblemDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:h-[calc(100vh-120px)]">
         {/* Left: description panel */}
         <div
-          className={`${mobileTab === "description" ? "block" : "hidden"} lg:block overflow-y-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-4 sm:p-5 h-[calc(100vh-220px)] lg:h-auto`}
+          className={`cv-workspace-description ${mobileTab === "description" ? "block" : "hidden"} lg:block overflow-y-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-4 sm:p-5 h-[calc(100vh-220px)] lg:h-auto`}
         >
           <ProtectedContent>
             <div className="flex items-center gap-3 mb-3 flex-wrap">
@@ -281,7 +281,7 @@ function ProblemDetail() {
 
         {/* Right: editor panel */}
         <div
-          className={`${mobileTab === "editor" ? "flex" : "hidden"} lg:flex flex-col bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg overflow-hidden h-[calc(100vh-220px)] lg:h-auto`}
+          className={`cv-editor-shell ${mobileTab === "editor" ? "flex" : "hidden"} lg:flex flex-col bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg overflow-hidden h-[calc(100vh-220px)] lg:h-auto`}
         >
           <div className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-[var(--color-border)] gap-2 flex-wrap">
             <div className="flex items-center gap-2 sm:gap-3">
@@ -409,7 +409,7 @@ function ProblemDetail() {
               {result.compileError ? (
                 <div>
                   <p className="text-[var(--color-danger)] font-semibold mb-2 text-sm">⚠ Compile Error</p>
-                  <pre className="text-xs text-[var(--color-danger)] whitespace-pre-wrap">{result.compileError}</pre>
+                  <pre className="cv-terminal text-xs text-[var(--color-danger)] whitespace-pre-wrap">{result.compileError}</pre>
                 </div>
               ) : (
                 <>

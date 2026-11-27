@@ -9,11 +9,14 @@ import com.srhcodeverse.backend.repository.UserRepository;
 import com.srhcodeverse.backend.repository.SubmissionRepository;
 import com.srhcodeverse.backend.repository.StudentAchievementRepository;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,6 +26,16 @@ public class DashboardService {
     private final SubmissionRepository submissionRepository;
     private final LeaderboardService leaderboardService;
     private final StudentAchievementRepository studentAchievementRepository;
+
+    /** Blank keeps the previous JVM-default-zone behaviour. */
+    @Value("${codeverse.analytics.timezone:}")
+    private String configuredTimezone;
+
+    private ZoneId zone() {
+        return configuredTimezone == null || configuredTimezone.isBlank()
+                ? ZoneId.systemDefault()
+                : ZoneId.of(configuredTimezone);
+    }
 
     public DashboardService(
             UserRepository userRepository,
@@ -61,14 +74,17 @@ public class DashboardService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         java.time.LocalDate startDate = java.time.LocalDate.now().minusDays(90);
-        Map<String, Long> countsByDate = submissionRepository
-                .countSubmissionsByDayForStudent(user, startDate.atStartOfDay()).stream()
-                .collect(Collectors.toMap(row -> row[0].toString(), row -> (Long) row[1]));
+        Map<LocalDate, Long> countsByDate = AnalyticsDates.countByDay(
+                submissionRepository.findSubmissionTimesForStudentAfter(user, startDate.atStartOfDay()),
+                zone());
 
         List<DayCount> days = new ArrayList<>();
         for (int i = 90; i >= 0; i--) {
-            String date = java.time.LocalDate.now().minusDays(i).toString();
-            days.add(DayCount.builder().date(date).count(countsByDate.getOrDefault(date, 0L)).build());
+            LocalDate date = java.time.LocalDate.now().minusDays(i);
+            days.add(DayCount.builder()
+                    .date(date.toString())
+                    .count(countsByDate.getOrDefault(date, 0L))
+                    .build());
         }
 
         return ActivityHeatmapResponse.builder().days(days).build();
