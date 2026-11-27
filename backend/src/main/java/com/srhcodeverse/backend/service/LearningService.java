@@ -57,9 +57,17 @@ public class LearningService {
                 || progress.getCompletedLessonIds().isBlank()) {
             return new HashSet<>();
         }
-        return Arrays.stream(progress.getCompletedLessonIds().split(","))
-                .map(String::trim).filter(s -> !s.isEmpty())
-                .map(Long::valueOf).collect(Collectors.toCollection(LinkedHashSet::new));
+        Set<Long> ids = new LinkedHashSet<>();
+        for (String raw : progress.getCompletedLessonIds().split(",")) {
+            String value = raw.trim();
+            if (value.isEmpty()) continue;
+            try {
+                ids.add(Long.valueOf(value));
+            } catch (NumberFormatException ignored) {
+                // Ignore malformed legacy entries instead of failing the whole page.
+            }
+        }
+        return ids;
     }
 
     private String joinIds(Set<Long> ids) {
@@ -342,7 +350,7 @@ public class LearningService {
                     item.put("priority", 1);
                     if (lesson != null) {
                         item.put("lessonId", lesson.getId());
-                        item.put("href", "/courses/" + lesson.getCourse().getSlug()
+                        item.put("href", "/learning-path/courses/" + lesson.getCourse().getSlug()
                                 + "/lessons/" + lesson.getId());
                     } else {
                         item.put("href", "/problems?topic=" + e.getKey());
@@ -362,7 +370,7 @@ public class LearningService {
                         "reason", "You completed " + done + " of " + lessons.size()
                                 + " lessons in this enrolled course.",
                         "priority", 2,
-                        "href", "/courses/" + c.getSlug()));
+                        "href", "/learning-path/courses/" + c.getSlug()));
             }
         }
 

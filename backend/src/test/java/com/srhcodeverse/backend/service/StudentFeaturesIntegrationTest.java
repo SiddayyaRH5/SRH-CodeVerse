@@ -234,6 +234,15 @@ class StudentFeaturesIntegrationTest {
         Map<String, Object> recommendations = learningService.recommendations(owner.getUsername());
         assertEquals("RULE_BASED", recommendations.get("engine"));
         assertTrue(((Number) recommendations.get("total")).intValue() >= 1);
+        List<Map<String, Object>> recommendationItems = list(recommendations.get("items"));
+        assertTrue(recommendationItems.stream()
+                .filter(item -> "course".equals(item.get("type")))
+                .allMatch(item -> String.valueOf(item.get("href"))
+                        .startsWith("/learning-path/courses/")));
+        assertTrue(recommendationItems.stream()
+                .filter(item -> item.get("lessonId") != null)
+                .allMatch(item -> String.valueOf(item.get("href"))
+                        .startsWith("/learning-path/courses/")));
     }
 
     @Test

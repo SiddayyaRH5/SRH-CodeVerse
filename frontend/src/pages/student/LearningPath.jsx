@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import {
   completeLearningLesson,
@@ -13,6 +13,20 @@ import {
   saveLessonNote,
   toggleLessonBookmark,
 } from "../../api/learningApi"
+
+const LEARNING_RESOURCES = ["courses", "progress", "my", "bookmarks", "recommendations"]
+
+const RESOURCE_LABELS = {
+  courses: "Course library",
+  progress: "Progress",
+  my: "Continue learning",
+  bookmarks: "Bookmarks",
+  recommendations: "Recommendations",
+}
+
+function resourceErrorMessage(key, err) {
+  return err?.response?.data?.message || `Unable to load ${RESOURCE_LABELS[key].toLowerCase()}.`
+}
 
 function ProgressBar({ value }) {
   return (
@@ -87,39 +101,90 @@ export default function LearningPath() {
   const [my, setMy] = useState([])
   const [bookmarks, setBookmarks] = useState([])
   const [recommendations, setRecommendations] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
+  const [status, setStatus] = useState(() =>
+    Object.fromEntries(LEARNING_RESOURCES.map((key) => [key, "loading"])),
+  )
+  const [errors, setErrors] = useState({})
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState("ALL")
+  const requestTokens = useRef({})
+  const mounted = useRef(false)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError("")
-    try {
-      const [courseResponse, progressResponse, myResponse, bookmarkResponse, recommendationResponse] =
-        await Promise.all([
-          getLearningCourses({ search: search || undefined, category: category === "ALL" ? undefined : category }),
-          getLearningProgress(),
-          getMyLearning(),
-          getLearningBookmarks(),
-          getLearningRecommendations(),
-        ])
-      setCourses(courseResponse.data.items || [])
-      setProgress(progressResponse.data)
-      setMy(myResponse.data.items || [])
-      setBookmarks(bookmarkResponse.data.items || [])
-      setRecommendations(recommendationResponse.data.items || [])
-    } catch (err) {
-      setError(err?.response?.data?.message || "Unable to load the learning path.")
-    } finally {
-      setLoading(false)
+  const applyResource = useCallback((key, data) => {
+    if (key === "courses") setCourses(Array.isArray(data?.items) ? data.items : [])
+    if (key === "progress") setProgress(data || null)
+    if (key === "my") setMy(Array.isArray(data?.items) ? data.items : [])
+    if (key === "bookmarks") setBookmarks(Array.isArray(data?.items) ? data.items : [])
+    if (key === "recommendations") setRecommendations(Array.isArray(data?.items) ? data.items : [])
+  }, [])
+
+  const load = useCallback(async (requested = LEARNING_RESOURCES) => {
+    const keys = requested.filter((key) => LEARNING_RESOURCES.includes(key))
+    if (keys.length === 0) return
+
+    const tokens = {}
+    keys.forEach((key) => {
+      tokens[key] = (requestTokens.current[key] || 0) + 1
+      requestTokens.current[key] = tokens[key]
+    })
+
+    setStatus((current) => {
+      const next = { ...current }
+      keys.forEach((key) => { next[key] = "loading" })
+      return next
+    })
+    setErrors((current) => {
+      const next = { ...current }
+      keys.forEach((key) => { delete next[key] })
+      return next
+    })
+
+    const requests = {
+      courses: () => getLearningCourses({
+        search: search || undefined,
+        category: category === "ALL" ? undefined : category,
+      }),
+      progress: () => getLearningProgress(),
+      my: () => getMyLearning(),
+      bookmarks: () => getLearningBookmarks(),
+      recommendations: () => getLearningRecommendations(),
     }
-  }, [search, category])
+
+    await Promise.all(keys.map(async (key) => {
+      try {
+        const response = await requests[key]()
+        if (requestTokens.current[key] !== tokens[key]) return
+        applyResource(key, response.data)
+        setStatus((current) => ({ ...current, [key]: "success" }))
+      } catch (err) {
+        if (requestTokens.current[key] !== tokens[key]) return
+        setStatus((current) => ({ ...current, [key]: "error" }))
+        setErrors((current) => ({ ...current, [key]: resourceErrorMessage(key, err) }))
+      }
+    }))
+  }, [applyResource, search, category])
 
   useEffect(() => {
-    const timer = setTimeout(load, 250)
+    const timer = setTimeout(() => {
+      if (!mounted.current) {
+        mounted.current = true
+        load()
+        return
+      }
+      load(["courses"])
+    }, 250)
     return () => clearTimeout(timer)
   }, [load])
+
+  const failedKeys = LEARNING_RESOURCES.filter((key) => status[key] === "error")
+  const progressReady = status.progress === "success" && progress !== null
+  const myReady = status.my === "success"
+  const bookmarksReady = status.bookmarks === "success"
+  const recommendationsReady = status.recommendations === "success"
+
+  const retryFailed = () => {
+    if (failedKeys.length > 0) load(failedKeys)
+  }
 
   const categories = useMemo(
     () => ["ALL", ...Array.from(new Set(courses.map((course) => course.category)))],
@@ -138,34 +203,74 @@ export default function LearningPath() {
               are stored against your account, and recommendations are generated from your actual practice data.
             </p>
           </div>
-          <span className="cv-pill w-fit">{progress?.overallPercent ?? 0}% overall</span>
+          <span className="cv-pill w-fit">
+            {progressReady
+              ? `${progress.overallPercent ?? 0}% overall`
+              : status.progress === "error"
+                ? "Progress unavailable"
+                : "Loading progress…"}
+          </span>
         </div>
       </header>
+
+      {failedKeys.length > 0 && (
+        <section className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-black">Some learning data could not be loaded.</p>
+            <button type="button" className="font-bold underline" onClick={retryFailed}>
+              Retry failed
+            </button>
+          </div>
+          <ul className="mt-2 space-y-1">
+            {failedKeys.map((key) => (
+              <li key={key}>
+                <span className="font-bold">{RESOURCE_LABELS[key]}:</span> {errors[key]}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="cv-stat-card rounded-2xl p-5">
           <p className="text-xs font-semibold tracking-wide text-[var(--cv-muted)]">ENROLLED COURSES</p>
-          <p className="mt-2 text-3xl font-black">{progress?.enrolledCourses ?? 0}</p>
-          <p className="mt-1 text-xs text-[var(--cv-muted)]">{my.length} in progress or completed</p>
+          <p className="mt-2 text-3xl font-black">{progressReady ? (progress.enrolledCourses ?? 0) : "—"}</p>
+          <p className="mt-1 text-xs text-[var(--cv-muted)]">
+            {progressReady
+              ? (myReady ? `${my.length} in progress or completed` : "Enrolled course list unavailable")
+              : status.progress === "error" ? "Progress could not be loaded" : "Loading progress…"}
+          </p>
         </div>
         <div className="cv-stat-card rounded-2xl p-5">
           <p className="text-xs font-semibold tracking-wide text-[var(--cv-muted)]">LESSONS COMPLETED</p>
-          <p className="mt-2 text-3xl font-black">{progress?.completedLessons ?? 0}</p>
-          <p className="mt-1 text-xs text-[var(--cv-muted)]">of {progress?.totalLessons ?? 0} in enrolled courses</p>
+          <p className="mt-2 text-3xl font-black">{progressReady ? (progress.completedLessons ?? 0) : "—"}</p>
+          <p className="mt-1 text-xs text-[var(--cv-muted)]">
+            {progressReady
+              ? `of ${progress.totalLessons ?? 0} in enrolled courses`
+              : status.progress === "error" ? "Progress could not be loaded" : "Loading progress…"}
+          </p>
         </div>
         <div className="cv-stat-card rounded-2xl p-5">
           <p className="text-xs font-semibold tracking-wide text-[var(--cv-muted)]">BOOKMARKS</p>
-          <p className="mt-2 text-3xl font-black">{progress?.bookmarks ?? 0}</p>
-          <p className="mt-1 text-xs text-[var(--cv-muted)]">Saved lessons for revision</p>
+          <p className="mt-2 text-3xl font-black">{progressReady ? (progress.bookmarks ?? 0) : "—"}</p>
+          <p className="mt-1 text-xs text-[var(--cv-muted)]">
+            {progressReady
+              ? "Saved lessons for revision"
+              : status.progress === "error" ? "Progress could not be loaded" : "Loading progress…"}
+          </p>
         </div>
         <div className="cv-stat-card rounded-2xl p-5">
           <p className="text-xs font-semibold tracking-wide text-[var(--cv-muted)]">RECOMMENDATIONS</p>
-          <p className="mt-2 text-3xl font-black">{recommendations.length}</p>
-          <p className="mt-1 text-xs text-[var(--cv-muted)]">Rule-based, from your activity</p>
+          <p className="mt-2 text-3xl font-black">{recommendationsReady ? recommendations.length : "—"}</p>
+          <p className="mt-1 text-xs text-[var(--cv-muted)]">
+            {recommendationsReady
+              ? "Rule-based, from your activity"
+              : status.recommendations === "error" ? "Recommendations could not be loaded" : "Loading recommendations…"}
+          </p>
         </div>
       </section>
 
-      {recommendations.length > 0 && (
+      {recommendationsReady && recommendations.length > 0 && (
         <section className="cv-panel mt-6">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -194,7 +299,7 @@ export default function LearningPath() {
         </section>
       )}
 
-      {my.length > 0 && (
+      {myReady && my.length > 0 && (
         <section className="cv-panel mt-6">
           <h2 className="text-lg font-black">Continue learning</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -233,14 +338,22 @@ export default function LearningPath() {
           </div>
         </div>
 
-        {error && (
-          <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-            {error}
-            <button type="button" className="ml-3 font-bold underline" onClick={load}>Retry</button>
+        {status.courses === "error" ? (
+          <div className="cv-panel mt-5 py-14 text-center">
+            <p className="text-4xl">⚠️</p>
+            <h3 className="mt-3 text-lg font-black">Course library unavailable</h3>
+            <p className="mt-1 text-sm text-[var(--cv-muted)]">
+              The course list could not be loaded. Retry the failed request above.
+            </p>
+            <button
+              type="button"
+              className="cv-secondary-btn mt-4 !px-4 !py-2 text-xs"
+              onClick={() => load(["courses"])}
+            >
+              Retry
+            </button>
           </div>
-        )}
-
-        {loading ? (
+        ) : status.courses === "loading" ? (
           <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="cv-panel h-64 animate-pulse rounded-2xl" />)}
           </div>
@@ -283,7 +396,7 @@ export default function LearningPath() {
         )}
       </section>
 
-      {bookmarks.length > 0 && (
+      {bookmarksReady && bookmarks.length > 0 && (
         <section className="cv-panel mt-6">
           <h2 className="text-lg font-black">Bookmarked lessons</h2>
           <div className="mt-3 grid gap-2 md:grid-cols-2">

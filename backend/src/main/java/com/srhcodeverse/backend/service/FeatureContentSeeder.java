@@ -7,12 +7,14 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Idempotent development content seeder for roadmaps and learning courses.
- * Existing rows are never modified or duplicated: every item is inserted only
- * when its unique slug is missing.
+ * Existing rows are never modified or duplicated. Roadmaps are inserted only
+ * when their unique slug is missing; lessons are inserted only when their
+ * module/lesson position is missing from an existing course.
  */
 @Component
 public class FeatureContentSeeder implements ApplicationRunner {
@@ -865,15 +867,26 @@ public class FeatureContentSeeder implements ApplicationRunner {
                         String category, String difficulty, String level, int durationMinutes,
                         String objectives, String skills, String prerequisites, String skillsGained,
                         String[][] lessons) {
-        if (courseRepository.findBySlug(slug).isPresent()) return;
-        Course course = courseRepository.save(Course.builder()
-                .slug(slug).title(title).shortDescription(shortDescription)
-                .detailedDescription(detailedDescription).category(category).difficulty(difficulty)
-                .level(level).estimatedDurationMinutes(durationMinutes)
-                .lessonCount(lessons.length).problemCount(0)
-                .learningObjectives(objectives).prerequisites(prerequisites)
-                .skillsGained(skillsGained).build());
+        Course course = courseRepository.findBySlug(slug).orElseGet(() -> courseRepository.save(
+                Course.builder()
+                        .slug(slug).title(title).shortDescription(shortDescription)
+                        .detailedDescription(detailedDescription).category(category).difficulty(difficulty)
+                        .level(level).estimatedDurationMinutes(durationMinutes)
+                        .lessonCount(lessons.length).problemCount(0)
+                        .learningObjectives(objectives).prerequisites(prerequisites)
+                        .skillsGained(skillsGained).build()));
+
+        // Repair partially seeded courses without touching existing lessons or
+        // course metadata. Lessons are matched by their module/lesson position.
+        Set<String> existingLessons = new HashSet<>();
+        for (CourseLesson lesson : lessonRepository
+                .findByCourseOrderByModuleOrderAscLessonOrderAsc(course)) {
+            existingLessons.add(lesson.getModuleOrder() + ":" + lesson.getLessonOrder());
+        }
+
         for (String[] row : lessons) {
+            String position = Integer.parseInt(row[1]) + ":" + Integer.parseInt(row[2]);
+            if (!existingLessons.add(position)) continue;
             lessonRepository.save(CourseLesson.builder()
                     .course(course)
                     .moduleName(row[0])

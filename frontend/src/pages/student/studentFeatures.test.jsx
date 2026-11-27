@@ -281,6 +281,158 @@ describe("LearningPath page", () => {
     expect(c.textContent).toContain("You solved 0 of 3 array problems.")
     expect(learningApi.getLearningRecommendations).toHaveBeenCalled()
   })
+
+  it("keeps successful learning data when one request fails and retries only the failure", async () => {
+    const course = {
+      slug: "java-foundations",
+      title: "Java Foundations",
+      shortDescription: "Learn Java from types to collections.",
+      category: "Programming",
+      difficulty: "Beginner",
+      lessonCount: 5,
+      skillsGained: ["Java", "OOP"],
+      enrolled: true,
+      progressPercent: 40,
+      completedLessons: 2,
+      currentLessonId: 1,
+    }
+
+    learningApi.getLearningCourses.mockRejectedValueOnce({
+      response: { data: { message: "Course service unavailable." } },
+    })
+    learningApi.getLearningProgress.mockResolvedValue({
+      data: {
+        enrolledCourses: 1,
+        completedLessons: 2,
+        totalLessons: 5,
+        overallPercent: 40,
+        bookmarks: 1,
+      },
+    })
+    learningApi.getMyLearning.mockResolvedValue({
+      data: {
+        items: [{
+          slug: "java-foundations",
+          title: "Java Foundations",
+          progressPercent: 40,
+          completedLessons: 2,
+          totalLessons: 5,
+          currentLessonTitle: "Variables and Data Types",
+        }],
+      },
+    })
+    learningApi.getLearningBookmarks.mockResolvedValue({
+      data: {
+        items: [{
+          lessonId: 1,
+          title: "Variables and Data Types",
+          courseTitle: "Java Foundations",
+        }],
+      },
+    })
+    learningApi.getLearningRecommendations.mockResolvedValue({
+      data: {
+        items: [{
+          type: "course",
+          title: "Continue Java Foundations",
+          reason: "You completed 2 of 5 lessons.",
+          href: "/learning-path/courses/java-foundations",
+        }],
+      },
+    })
+
+    const c = await render(<LearningPath />)
+    await settle(320)
+
+    expect(c.textContent).toContain("Course service unavailable.")
+    expect(c.textContent).not.toContain("No courses found")
+    expect(c.textContent).toContain("40% overall")
+    expect(c.textContent).toContain("Recommended next")
+    expect(c.textContent).toContain("Continue learning")
+    expect(c.textContent).toContain("Bookmarked lessons")
+
+    learningApi.getLearningCourses.mockResolvedValueOnce({
+      data: { items: [course], total: 1 },
+    })
+    await act(async () => {
+      buttonByText(c, "Retry failed").click()
+      await Promise.resolve()
+    })
+    await settle()
+
+    expect(learningApi.getLearningCourses).toHaveBeenCalledTimes(2)
+    expect(learningApi.getLearningProgress).toHaveBeenCalledTimes(1)
+    expect(learningApi.getMyLearning).toHaveBeenCalledTimes(1)
+    expect(learningApi.getLearningBookmarks).toHaveBeenCalledTimes(1)
+    expect(learningApi.getLearningRecommendations).toHaveBeenCalledTimes(1)
+    expect(c.textContent).toContain("Java Foundations")
+    expect(c.textContent).not.toContain("Course service unavailable.")
+  })
+
+  it("does not render failed progress as zero statistics", async () => {
+    learningApi.getLearningCourses.mockResolvedValue({
+      data: {
+        items: [{
+          slug: "java-foundations",
+          title: "Java Foundations",
+          shortDescription: "Learn Java from types to collections.",
+          category: "Programming",
+          difficulty: "Beginner",
+          lessonCount: 5,
+          skillsGained: ["Java"],
+          enrolled: false,
+          progressPercent: 0,
+          completedLessons: 0,
+        }],
+      },
+    })
+    learningApi.getLearningProgress.mockRejectedValue({
+      response: { data: { message: "Progress service unavailable." } },
+    })
+    learningApi.getMyLearning.mockResolvedValue({ data: { items: [] } })
+    learningApi.getLearningBookmarks.mockResolvedValue({ data: { items: [] } })
+    learningApi.getLearningRecommendations.mockResolvedValue({ data: { items: [] } })
+
+    const c = await render(<LearningPath />)
+    await settle(320)
+
+    expect(c.textContent).toContain("Progress service unavailable.")
+    expect(c.textContent).toContain("Progress unavailable")
+
+    const statCards = c.querySelectorAll(".cv-stat-card")
+    expect(statCards).toHaveLength(4)
+    expect(statCards[0].textContent).toContain("—")
+    expect(statCards[0].textContent).not.toContain("0")
+    expect(statCards[1].textContent).toContain("—")
+    expect(statCards[1].textContent).not.toContain("0")
+    expect(statCards[2].textContent).toContain("—")
+    expect(statCards[2].textContent).not.toContain("0")
+
+    expect(c.textContent).toContain("Java Foundations")
+    expect(c.textContent).not.toContain("No courses found")
+  })
+
+  it("shows the empty state only after a successful empty course response", async () => {
+    learningApi.getLearningCourses.mockResolvedValue({ data: { items: [], total: 0 } })
+    learningApi.getLearningProgress.mockResolvedValue({
+      data: {
+        enrolledCourses: 0,
+        completedLessons: 0,
+        totalLessons: 0,
+        overallPercent: 0,
+        bookmarks: 0,
+      },
+    })
+    learningApi.getMyLearning.mockResolvedValue({ data: { items: [] } })
+    learningApi.getLearningBookmarks.mockResolvedValue({ data: { items: [] } })
+    learningApi.getLearningRecommendations.mockResolvedValue({ data: { items: [] } })
+
+    const c = await render(<LearningPath />)
+    await settle(320)
+
+    expect(c.textContent).toContain("No courses found")
+    expect(c.textContent).not.toContain("Course library unavailable")
+  })
 })
 
 describe("InterviewArena page", () => {
