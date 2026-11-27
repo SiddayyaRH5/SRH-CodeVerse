@@ -2,6 +2,8 @@ package com.srhcodeverse.backend.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -94,38 +96,59 @@ class SecurityConfigTest {
     }
 
     @Test
-    void missingProviderCredentialsFailWithSafeConfigurationError() {
-        IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
-                () -> securityConfig.clientRegistrationRepository(
-                        "",
-                        "do-not-disclose-google-secret",
-                        "github-client-id",
-                        "github-client-secret",
-                        "{baseUrl}/login/oauth2/code/google",
-                        "{baseUrl}/login/oauth2/code/github"));
+    void incompleteGoogleCredentialsDisableOnlyGoogle() {
+        ClientRegistrationRepository registrations = securityConfig.clientRegistrationRepository(
+                "",
+                "do-not-disclose-google-secret",
+                "github-client-id",
+                "github-client-secret",
+                "{baseUrl}/login/oauth2/code/google",
+                "{baseUrl}/login/oauth2/code/github");
 
-        assertEquals(
-                "OAuth client ID and secret must be configured for provider google",
-                exception.getMessage());
-        assertFalse(exception.getMessage().contains("do-not-disclose-google-secret"));
+        assertNull(registrations.findByRegistrationId("google"));
+        assertNotNull(registrations.findByRegistrationId("github"));
     }
 
     @Test
-    void missingGitHubCredentialsFailWithSafeConfigurationError() {
-        IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
-                () -> securityConfig.clientRegistrationRepository(
-                        "google-client-id",
-                        "google-client-secret",
-                        "github-client-id",
-                        "",
-                        "{baseUrl}/login/oauth2/code/google",
-                        "{baseUrl}/login/oauth2/code/github"));
+    void incompleteGitHubCredentialsDisableOnlyGitHub() {
+        ClientRegistrationRepository registrations = securityConfig.clientRegistrationRepository(
+                "google-client-id",
+                "google-client-secret",
+                "github-client-id",
+                "",
+                "{baseUrl}/login/oauth2/code/google",
+                "{baseUrl}/login/oauth2/code/github");
 
-        assertEquals(
-                "OAuth client ID and secret must be configured for provider github",
-                exception.getMessage());
+        assertNotNull(registrations.findByRegistrationId("google"));
+        assertNull(registrations.findByRegistrationId("github"));
+    }
+
+    @Test
+    void noOAuthCredentialsDisableBothProviders() {
+        ClientRegistrationRepository registrations = securityConfig.clientRegistrationRepository(
+                "",
+                "",
+                "",
+                "",
+                "{baseUrl}/login/oauth2/code/google",
+                "{baseUrl}/login/oauth2/code/github");
+
+        assertNull(registrations.findByRegistrationId("google"));
+        assertNull(registrations.findByRegistrationId("github"));
+    }
+
+    @Test
+    void googleOnlyCredentialsEnableOnlyGoogle() {
+        ClientRegistrationRepository registrations = securityConfig.clientRegistrationRepository(
+                "google-client-id",
+                "google-client-secret",
+                "",
+                "",
+                "{baseUrl}/login/oauth2/code/google",
+                "{baseUrl}/login/oauth2/code/github");
+
+        assertNotNull(registrations.findByRegistrationId("google"));
+        assertNull(registrations.findByRegistrationId("github"));
     }
 
     private ClientRegistrationRepository registrations() {

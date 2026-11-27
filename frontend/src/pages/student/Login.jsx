@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { useNavigate, Link, useSearchParams } from "react-router-dom"
-import { loginUser, OAUTH_INITIATION_URLS } from "../../api/authApi"
+import { loginUser, OAUTH_INITIATION_URLS, getOAuthProviders } from "../../api/authApi"
 import { useAuth } from "../../context/AuthContext"
 
 const GoogleIcon = () => (
@@ -20,16 +20,29 @@ const GitHubIcon = () => (
 
 function SocialButtons() {
   const [visible, setVisible] = useState(false)
+  const [available, setAvailable] = useState(null)
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setVisible(true))
+    getOAuthProviders()
+      .then((data) => {
+        const keys = Object.keys(data || {}).filter((key) => data[key])
+        setAvailable(keys)
+      })
+      .catch(() => setAvailable([]))
     return () => cancelAnimationFrame(id)
   }, [])
 
-  const providers = [
+  const allProviders = [
     { key: "google", label: "Continue with Google", icon: <GoogleIcon />, url: OAUTH_INITIATION_URLS.google },
     { key: "github", label: "Continue with GitHub", icon: <GitHubIcon />, url: OAUTH_INITIATION_URLS.github },
   ]
+
+  const providers = available
+    ? allProviders.filter((provider) => available.includes(provider.key))
+    : []
+
+  if (!providers.length) return null
 
   return (
     <div className="flex flex-col gap-3">
