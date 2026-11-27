@@ -6,8 +6,10 @@ import com.srhcodeverse.backend.dto.*;
 import com.srhcodeverse.backend.entity.*;
 import com.srhcodeverse.backend.repository.*;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.InputStream;
 import java.util.*;
@@ -23,11 +25,12 @@ public class CourseContentService {
     private final CourseProgressRepository progressRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final CoursePricing pricing;
 
     public CourseContentService(CourseRepository courseRepository, CourseLessonRepository lessonRepository,
             CourseProblemRepository problemRepository, CourseResourceRepository resourceRepository,
             CourseProjectRepository projectRepository, CourseProgressRepository progressRepository,
-            UserRepository userRepository, ObjectMapper objectMapper) {
+            UserRepository userRepository, ObjectMapper objectMapper, CoursePricing pricing) {
         this.courseRepository = courseRepository;
         this.lessonRepository = lessonRepository;
         this.problemRepository = problemRepository;
@@ -36,6 +39,7 @@ public class CourseContentService {
         this.progressRepository = progressRepository;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
+        this.pricing = pricing;
     }
 
     public List<CourseSummaryResponse> listCourses(String username) {
@@ -49,6 +53,7 @@ public class CourseContentService {
         Course c = courseRepository.findBySlug(slug)
                 .orElseThrow(() -> new IllegalArgumentException("Course not found"));
         User user = username == null ? null : userRepository.findByUsername(username).orElse(null);
+        boolean eligible = pricing.entitled(c, user);
         CourseProgress p = user == null ? null : progressRepository.findByUserAndCourse(user, c).orElse(null);
         Set<Long> completed = completedIds(p);
         List<CourseLessonResponse> lessons = lessonRepository.findByCourseOrderByModuleOrderAscLessonOrderAsc(c)
@@ -56,17 +61,22 @@ public class CourseContentService {
                 .map(l -> CourseLessonResponse.builder().id(l.getId()).moduleName(l.getModuleName())
                         .moduleOrder(l.getModuleOrder()).lessonOrder(l.getLessonOrder()).title(l.getTitle())
                         .description(l.getDescription())
-                        .lessonContent(l.getLessonContent())
-                        .videoUrl(l.getVideoUrl())
-                        .codeExample(l.getCodeExample())
-                        .exercise(l.getExercise())
-                        .quiz(l.getQuiz())
+                        .lessonContent(eligible ? l.getLessonContent() : null)
+                        .videoUrl(eligible ? l.getVideoUrl() : null)
+                        .codeExample(eligible ? l.getCodeExample() : null)
+                        .exercise(eligible ? l.getExercise() : null)
+                        .quiz(eligible ? l.getQuiz() : null)
                         .estimatedMinutes(l.getEstimatedMinutes())
                         .completed(completed.contains(l.getId())).build())
                 .toList();
         return CourseDetailResponse.builder().id(c.getId()).slug(c.getSlug()).title(c.getTitle())
                 .shortDescription(c.getShortDescription()).detailedDescription(c.getDetailedDescription())
-                .category(c.getCategory()).difficulty(c.getDifficulty()).level(c.getLevel()).thumbnail(c.getThumbnail())
+                .category(c.getCategory()).difficulty(c.getDifficulty()).level(c.getLevel())
+                .thumbnail(pricing.thumbnail(c)).thumbnailUrl(pricing.thumbnail(c))
+                .instructor(pricing.instructor(c))
+                .courseType(pricing.type(c)).price(pricing.price(c)).currency(pricing.currency(c))
+                .paid(pricing.isPaid(c)).published(pricing.published(c))
+                .enrollmentEnabled(pricing.enrollmentEnabled(c)).eligible(eligible)
                 .estimatedDurationMinutes(c.getEstimatedDurationMinutes()).lessonCount(c.getLessonCount())
                 .problemCount(c.getProblemCount()).learningObjectives(split(c.getLearningObjectives()))
                 .prerequisites(split(c.getPrerequisites())).skillsGained(split(c.getSkillsGained()))
@@ -76,14 +86,22 @@ public class CourseContentService {
     }
 
     public List<CourseProblemResponse> problems(String slug) {
+        return problems(slug, null);
+    }
+
+    public List<CourseProblemResponse> problems(String slug, String username) {
         Course c = course(slug);
+        User user = username == null ? null : userRepository.findByUsername(username).orElse(null);
+        boolean eligible = pricing.entitled(c, user);
         return problemRepository.findByCourseOrderByIdAsc(c).stream()
                 .map(p -> CourseProblemResponse.builder().id(p.getId()).title(p.getTitle()).statement(p.getStatement())
                         .description(p.getDescription()).difficulty(p.getDifficulty()).topic(p.getTopic())
-                        .tags(p.getTags()).expectedInput(p.getExpectedInput()).expectedOutput(p.getExpectedOutput())
+                        .tags(p.getTags()).expectedInput(p.getExpectedInput())
+                        .expectedOutput(eligible ? p.getExpectedOutput() : null)
                         .exampleInput(p.getExampleInput()).exampleOutput(p.getExampleOutput())
-                        .explanation(p.getExplanation()).constraints(p.getConstraintsText())
-                        .starterCode(p.getStarterCode()).solution(p.getSolution()).xp(p.getXp())
+                        .explanation(eligible ? p.getExplanation() : null).constraints(p.getConstraintsText())
+                        .starterCode(p.getStarterCode()).solution(eligible ? p.getSolution() : null)
+                        .xp(p.getXp())
                         .estimatedTimeMinutes(p.getEstimatedTimeMinutes()).build())
                 .toList();
     }
@@ -101,6 +119,9 @@ public class CourseContentService {
         Course c = course(slug);
         User u = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (!pricing.entitled(c, u))
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                    "This course requires a verified payment.");
         CourseLesson lesson = lessonRepository.findById(request.getLessonId())
                 .orElseThrow(() -> new IllegalArgumentException("Lesson not found"));
         if (!lesson.getCourse().getId().equals(c.getId()))
@@ -119,9 +140,39 @@ public class CourseContentService {
         return getCourse(slug, username);
     }
 
+    /**
+     * Enrollment is free-only at this endpoint. A paid course is enrolled only
+     * after PaymentService records a verified, server-side payment.
+     */
+    @Transactional
+    public CourseDetailResponse enroll(String slug, String username) {
+        Course c = course(slug);
+        User u = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (!pricing.enrollmentEnabled(c))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Enrollment is disabled for this course");
+        if (!pricing.entitled(c, u))
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                    "This is a paid course. Complete a verified payment before enrolling.");
+        progressRepository.findByUserAndCourse(u, c).orElseGet(() -> {
+            List<CourseLesson> lessons = lessonRepository.findByCourseOrderByModuleOrderAscLessonOrderAsc(c);
+            return progressRepository.save(CourseProgress.builder().user(u).course(c).completedLessonIds("")
+                    .currentLessonId(lessons.isEmpty() ? null : lessons.get(0).getId()).xpEarned(0).build());
+        });
+        return getCourse(slug, username);
+    }
+
     @Transactional(readOnly = true)
     public CourseProblemResponse getCourseProblem(String slug, Long problemId) {
+        return getCourseProblem(slug, problemId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public CourseProblemResponse getCourseProblem(String slug, Long problemId, String username) {
         Course c = course(slug);
+        User user = username == null ? null : userRepository.findByUsername(username).orElse(null);
+        boolean eligible = pricing.entitled(c, user);
 
         CourseProblem p = problemRepository.findById(problemId)
                 .filter(problem -> problem.getCourse().getId().equals(c.getId()))
@@ -136,13 +187,13 @@ public class CourseContentService {
                 .topic(p.getTopic())
                 .tags(p.getTags())
                 .expectedInput(p.getExpectedInput())
-                .expectedOutput(p.getExpectedOutput())
+                .expectedOutput(eligible ? p.getExpectedOutput() : null)
                 .exampleInput(p.getExampleInput())
                 .exampleOutput(p.getExampleOutput())
-                .explanation(p.getExplanation())
+                .explanation(eligible ? p.getExplanation() : null)
                 .constraints(p.getConstraintsText())
                 .starterCode(p.getStarterCode())
-                .solution(p.getSolution())
+                .solution(eligible ? p.getSolution() : null)
                 .xp(p.getXp())
                 .estimatedTimeMinutes(p.getEstimatedTimeMinutes())
                 .build();
@@ -157,7 +208,11 @@ public class CourseContentService {
         int count = completedIds(p).size();
         return CourseSummaryResponse.builder().id(c.getId()).slug(c.getSlug()).title(c.getTitle())
                 .shortDescription(c.getShortDescription()).category(c.getCategory()).difficulty(c.getDifficulty())
-                .level(c.getLevel()).thumbnail(c.getThumbnail())
+                .level(c.getLevel()).thumbnail(pricing.thumbnail(c)).thumbnailUrl(pricing.thumbnail(c))
+                .instructor(pricing.instructor(c))
+                .courseType(pricing.type(c)).price(pricing.price(c)).currency(pricing.currency(c))
+                .paid(pricing.isPaid(c)).published(pricing.published(c))
+                .enrollmentEnabled(pricing.enrollmentEnabled(c))
                 .estimatedDurationMinutes(c.getEstimatedDurationMinutes()).lessonCount(c.getLessonCount())
                 .problemCount(c.getProblemCount())
                 .progressPercent(percent(count, c.getLessonCount() == null ? 0 : c.getLessonCount())).build();

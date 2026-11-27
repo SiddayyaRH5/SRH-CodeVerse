@@ -32,8 +32,8 @@ public class CourseController {
     }
 
     @GetMapping("/{slug}/problems")
-    public ResponseEntity<List<CourseProblemResponse>> problems(@PathVariable String slug) {
-        return ResponseEntity.ok(service.problems(slug));
+    public ResponseEntity<List<CourseProblemResponse>> problems(@PathVariable String slug, Authentication auth) {
+        return ResponseEntity.ok(service.problems(slug, auth == null ? null : auth.getName()));
     }
 
     @GetMapping("/{slug}/resources")
@@ -46,6 +46,11 @@ public class CourseController {
         return ResponseEntity.ok(service.projects(slug));
     }
 
+    @PostMapping("/{slug}/enroll")
+    public ResponseEntity<CourseDetailResponse> enroll(@PathVariable String slug, Authentication auth) {
+        return ResponseEntity.ok(service.enroll(slug, auth.getName()));
+    }
+
     @PostMapping("/{slug}/progress")
     public ResponseEntity<CourseDetailResponse> progress(@PathVariable String slug,
             @RequestBody CourseProgressRequest request, Authentication auth) {
@@ -55,9 +60,10 @@ public class CourseController {
     @GetMapping("/{slug}/problems/{problemId}")
     public ResponseEntity<CourseProblemResponse> getCourseProblem(
             @PathVariable String slug,
-            @PathVariable Long problemId) {
+            @PathVariable Long problemId,
+            Authentication auth) {
         return ResponseEntity.ok(
-                service.getCourseProblem(slug, problemId));
+                service.getCourseProblem(slug, problemId, auth == null ? null : auth.getName()));
     }
 
 }
