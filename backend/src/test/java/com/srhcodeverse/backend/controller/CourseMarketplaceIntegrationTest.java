@@ -141,19 +141,19 @@ class CourseMarketplaceIntegrationTest {
 
     @Test
     void freeCourseEnrollmentAndProgressRemainCompatible() throws Exception {
-        mockMvc.perform(post("/api/courses/java-foundations/enroll")
+        mockMvc.perform(post("/api/courses/sql-mastery/enroll")
                         .header("Authorization", auth(studentToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paid").value(false))
                 .andExpect(jsonPath("$.eligible").value(true));
 
-        JsonNode detail = objectMapper.readTree(mockMvc.perform(get("/api/courses/java-foundations")
+        JsonNode detail = objectMapper.readTree(mockMvc.perform(get("/api/courses/sql-mastery")
                         .header("Authorization", auth(studentToken)))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
         assertTrue(detail.get("lessons").size() > 0);
 
         long lessonId = detail.get("lessons").get(0).get("id").asLong();
-        mockMvc.perform(post("/api/courses/java-foundations/progress")
+        mockMvc.perform(post("/api/courses/sql-mastery/progress")
                         .header("Authorization", auth(studentToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"lessonId\":" + lessonId + ",\"completed\":true}"))
@@ -256,15 +256,15 @@ class CourseMarketplaceIntegrationTest {
     }
 
     @Test
-    void legacyCoursesGetThumbnailFallbackAndStayFree() throws Exception {
+    void legacyCoursesGetThumbnailFallbackAndApprovedPricing() throws Exception {
         JsonNode list = objectMapper.readTree(mockMvc.perform(get("/api/courses"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
         boolean found = false;
         for (JsonNode item : list) {
             if ("java-foundations".equals(item.get("slug").asText())) {
                 found = true;
-                assertEquals("FREE", item.get("courseType").asText());
-                assertEquals(0, item.get("price").asInt());
+                assertEquals("PAID", item.get("courseType").asText());
+                assertEquals(299, item.get("price").asInt());
                 assertEquals("/course-thumbnails/java-programming.svg", item.get("thumbnailUrl").asText());
             }
         }
@@ -379,7 +379,7 @@ class CourseMarketplaceIntegrationTest {
         mockMvc.perform(post("/api/payments/orders")
                         .header("Authorization", auth(studentToken))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"slug\":\"java-foundations\"}"))
+                        .content("{\"slug\":\"sql-mastery\"}"))
                 .andExpect(status().isBadRequest());
         mockMvc.perform(post("/api/payments/orders")
                         .header("Authorization", auth(studentToken))

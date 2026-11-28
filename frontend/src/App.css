@@ -1,5 +1,5 @@
 /* ==========================================
-   SRH CODEVERSE ├óΓé¼ΓÇ¥ COMPACT RESPONSIVE FOOTER
+   SRH CODEVERSE â€” COMPACT RESPONSIVE FOOTER
    Replaces old multi-column/footer implementations.
    No Lucide icons, no emojis, text-only social links.
    ========================================== */
@@ -81,7 +81,7 @@
 }
 
 /* ==========================================
-   MAIN GRID ├óΓé¼ΓÇ¥ 3-COL DESKTOP
+   MAIN GRID â€” 3-COL DESKTOP
    ========================================== */
 
 .cv-footer-inner {
@@ -301,7 +301,7 @@
 }
 
 /* ==========================================
-   TABLET ├óΓé¼ΓÇ¥ 768px and below
+   TABLET â€” 768px and below
    ========================================== */
 
 @media (max-width: 768px) {
@@ -350,7 +350,7 @@
 }
 
 /* ==========================================
-   MOBILE ├óΓé¼ΓÇ¥ 480px and below
+   MOBILE â€” 480px and below
    ========================================== */
 
 @media (max-width: 480px) {
@@ -418,7 +418,7 @@
 }
 
 /* ==========================================
-   EXTRA-SMALL PHONES ├óΓé¼ΓÇ¥ 320px and below
+   EXTRA-SMALL PHONES â€” 320px and below
    ========================================== */
 
 @media (max-width: 320px) {
@@ -529,110 +529,5 @@
   }
   .certificate-print > div {
     box-shadow: none !important;
-  }
-}
-
-/* ==========================================
-   COMPACT FOOTER (merged resolution)
-========================================== */
-.cv-footer-compact {
-  margin-top: 24px;
-  padding: 0 20px;
-  min-height: 190px;
-}
-
-/* The compact variant keeps a calm, flat surface: no animated glow lines. */
-.cv-footer-compact::before,
-.cv-footer-compact::after {
-  display: none;
-}
-
-.cv-footer-compact .cv-footer-inner {
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
-  align-items: start;
-  max-width: 1240px;
-  margin: 0 auto;
-  gap: 24px;
-  padding: 22px 0 16px;
-}
-
-.cv-footer-compact .cv-footer-logo {
-  width: 120px;
-  height: 52px;
-  margin-right: 0;
-}
-
-.cv-footer-compact .cv-footer-main {
-  gap: 6px;
-}
-
-.cv-footer-compact .cv-footer-description {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
-
-.cv-footer-compact .cv-footer-tagline {
-  margin: 2px 0 0;
-  font-size: 0.68rem;
-  letter-spacing: 0.16em;
-}
-
-.cv-footer-compact .cv-footer-socials {
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.cv-footer-compact .cv-footer-socials a {
-  font-size: 0.7rem;
-}
-
-.cv-footer-compact .cv-footer-column {
-  gap: 5px;
-}
-
-.cv-footer-compact .cv-footer-column h3 {
-  margin: 0 0 6px;
-  font-size: 0.72rem;
-}
-
-.cv-footer-compact .cv-footer-column a {
-  font-size: 0.74rem;
-  line-height: 1.4;
-}
-
-.cv-footer-compact .cv-footer-bottom {
-  padding: 10px 0 12px;
-  font-size: 0.68rem;
-  border-top: 1px solid var(--footer-border);
-}
-
-.cv-footer-compact .cv-footer-bottom::before {
-  display: none;
-}
-
-.cv-footer-compact .cv-footer-bottom p {
-  margin: 0;
-}
-
-@media (max-width: 900px) {
-  .cv-footer-compact .cv-footer-inner {
-    gap: 16px;
-    padding: 18px 0 12px;
-  }
-}
-
-@media (max-width: 600px) {
-  .cv-footer-compact .cv-footer-inner {
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-  .cv-footer-compact .cv-footer-main {
-    grid-column: 1 / -1;
-  }
-  .cv-footer-compact .cv-footer-bottom {
-    flex-direction: column;
-    gap: 6px;
-    text-align: center;
   }
 }
