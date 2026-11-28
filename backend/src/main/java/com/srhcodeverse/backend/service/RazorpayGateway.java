@@ -6,6 +6,9 @@ package com.srhcodeverse.backend.service;
  */
 public interface RazorpayGateway {
 
+    /** Creates a real Razorpay order and returns its Razorpay order ID. */
+    String createOrder(long amountPaise, String currency, String receipt);
+
     /** Returns null when Razorpay reports no such payment. */
     Payment fetchPayment(String paymentId);
 
