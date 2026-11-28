@@ -2,21 +2,23 @@ import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { useAuth } from "../../context/AuthContext"
 import { getProblems } from "../../api/problemApi"
+import { getCourses } from "../../api/courseApi"
+import FloatingTechScene from "../../components/common/FloatingTechScene"
 
 const courses = [
-  ["☕", "Java", "Complete Java from basics to advanced", "120+ Lessons", "#ef4444"],
-  ["🐍", "Python", "From basics to real-world applications", "100+ Lessons", "#f59e0b"],
-  ["JS", "JavaScript", "Modern JavaScript for web development", "80+ Lessons", "#eab308"],
-  ["⚛", "React", "Frontend development with real projects", "70+ Lessons", "#06b6d4"],
-  ["🌱", "Spring Boot", "Build powerful backend applications", "60+ Lessons", "#22c55e"],
-  ["◎", "Web Development", "HTML, CSS, Tailwind CSS and more", "90+ Lessons", "#8b5cf6"],
+  ["JV", "Java", "Complete Java from basics to advanced", "Java track", "#ef4444"],
+  ["PY", "Python", "From basics to real-world applications", "Python track", "#f59e0b"],
+  ["JS", "JavaScript", "Modern JavaScript for web development", "JavaScript track", "#eab308"],
+  ["RE", "React", "Frontend development with real projects", "React track", "#06b6d4"],
+  ["SB", "Spring Boot", "Build powerful backend applications", "Backend track", "#22c55e"],
+  ["WD", "Web Development", "HTML, CSS, Tailwind CSS and more", "Web track", "#8b5cf6"],
 ]
 
 const features = [
-  ["▣", "Interactive Learning", "Well-structured lessons with hands-on examples."],
-  ["</>", "Coding Challenges", "Practice problems with multiple difficulty levels."],
-  ["◈", "Real Projects", "Build and showcase practical developer projects."],
-  ["↗", "Track Progress", "Monitor learning, streaks and achievements."],
+  ["</>", "Interactive Learning", "Well-structured lessons with hands-on examples."],
+  ["{}", "Coding Challenges", "Practice problems with multiple difficulty levels."],
+  ["[]", "Real Projects", "Build and showcase practical developer projects."],
+  ["->", "Track Progress", "Monitor learning, streaks and achievements."],
 ]
 
 function CodeWindow() {
@@ -34,14 +36,14 @@ function CodeWindow() {
         <div className="pl-10"><span className="text-blue-500">CodeVerse</span>.levelUp(); <span className="text-violet-500 animate-pulse">▌</span></div>
         <div className="pl-5">{'}'}</div><div>{'}'}</div>
         <div className="mt-7 rounded-xl border border-[var(--cv-border)] bg-[var(--cv-surface)]/70 p-4 flex items-center justify-between font-sans">
-          <div><p className="text-xs text-[var(--cv-muted)]">Today's progress</p><p className="font-bold mt-1">7 / 10 problems</p></div>
-          <div className="w-12 h-12 rounded-full grid place-items-center bg-[conic-gradient(#7c3aed_70%,var(--cv-surface-2)_0)]"><span className="w-9 h-9 rounded-full grid place-items-center bg-[var(--cv-surface)] text-[10px] font-bold">70%</span></div>
+          <div><p className="text-xs text-[var(--cv-muted)]">Practice space</p><p className="font-bold mt-1">Ready to code</p></div>
+          <div className="w-12 h-12 rounded-full grid place-items-center bg-[conic-gradient(#7c3aed_60%,var(--cv-surface-2)_0)]"><span className="w-9 h-9 rounded-full grid place-items-center bg-[var(--cv-surface)] text-[10px] font-bold">70%</span></div>
         </div>
       </div>
     </div>
     <div className="cv-code-glow" />
-    <div className="cv-floating-badge cv-badge-a">☕ <b>Java</b><span>120+ lessons</span></div>
-    <div className="cv-floating-badge cv-badge-b">⚡ <b>+120 XP</b><span>level up</span></div>
+    <div className="cv-floating-badge cv-badge-a">☕ <b>Java</b><span>Practice track</span></div>
+    <div className="cv-floating-badge cv-badge-b">⚡ <b>Level up</b><span>keep building</span></div>
     <div className="hidden sm:block absolute -right-7 top-24 px-4 py-3 rounded-2xl bg-[var(--cv-glass)] border border-[var(--cv-border)] shadow-xl backdrop-blur-xl rotate-3"><b className="text-sm">Solve Problems</b><span className="block text-[10px] text-[var(--cv-muted)] mt-1">Easy → Hard</span></div>
   </div>
 }
@@ -50,22 +52,38 @@ function Landing() {
   const { user } = useAuth()
   const dashboard = user?.role === "TRAINER" ? "/trainer/dashboard" : "/dashboard"
   const [problems, setProblems] = useState(null)
+  const [catalog, setCatalog] = useState(null)
 
   useEffect(() => {
     let active = true
 
-    getProblems()
+    getCourses()
       .then((response) => {
-        if (active) setProblems(Array.isArray(response.data) ? response.data : [])
+        if (active) setCatalog(Array.isArray(response.data) ? response.data : [])
       })
       .catch(() => {
-        if (active) setProblems(null)
+        if (active) setCatalog(null)
       })
+
+    // Problem statistics require authentication on the backend. Calling this
+    // endpoint anonymously returns 401 and the global handler logs the visitor
+    // out, so only request it for a signed-in student.
+    if (user?.token) {
+      getProblems()
+        .then((response) => {
+          if (active) setProblems(Array.isArray(response.data) ? response.data : [])
+        })
+        .catch(() => {
+          if (active) setProblems(null)
+        })
+    } else {
+      setProblems(null)
+    }
 
     return () => {
       active = false
     }
-  }, [])
+  }, [user?.token])
 
   const problemCountByDifficulty = useMemo(
     () => {
@@ -88,9 +106,10 @@ function Landing() {
     return `${count} ${count === 1 ? "Problem" : "Problems"}`
   }
 
-  return <main>
+  return <main className="cv-premium-page">
     <section className="cv-hero min-h-[720px] lg:min-h-[760px] flex items-center">
-      <div className="cv-hero-orb cv-orb-purple"/><div className="cv-hero-orb cv-orb-cyan"/><div className="cv-hero-orb cv-orb-pink"/>
+      <FloatingTechScene />
+      <div className="cv-premium-fade-in cv-hero-orb cv-orb-purple"/><div className="cv-hero-orb cv-orb-cyan"/><div className="cv-hero-orb cv-orb-pink"/>
       <div className="max-w-[1320px] mx-auto w-full px-5 sm:px-8 py-20 relative z-10 grid lg:grid-cols-[.88fr_1.12fr] gap-12 items-center">
         <div className="cv-reveal">
           <div className="cv-pill"><span className="cv-live-dot"/> 🚀 Your Coding Journey Starts Here</div>
@@ -105,11 +124,21 @@ function Landing() {
 
     <section className="relative z-20 -mt-10 max-w-[1280px] mx-auto px-4 sm:px-6">
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {[["⌘","500+","Coding Problems"],["▶","50+","Video Courses"],["▣","20+","Real-world Projects"],["♧","10K+","Community Members"]].map(([icon,num,label]) => <div className="cv-stat-card rounded-2xl p-5 flex items-center gap-4" key={label}><span className="w-12 h-12 rounded-xl grid place-items-center bg-gradient-to-br from-violet-500/15 to-cyan-500/15 text-violet-600 text-xl">{icon}</span><div><b className="text-2xl tracking-tight">{num}</b><p className="text-xs text-[var(--cv-muted)] mt-0.5">{label}</p></div></div>)}
-      </div>
-    </section>
+          {[
+            ["{}", problems?.length ?? "—", "Coding Problems"],
+            ["[]", catalog?.length ?? "—", "Courses"],
+            [">_", catalog?.reduce((n, c) => n + (Number(c.lessonCount) || 0), 0) || "—", "Lessons"],
+            ["</>", "4", "Learning Tracks"],
+          ].map(([icon, num, label]) => (
+            <div className="cv-premium-surface rounded-2xl p-5 flex items-center gap-4" key={label}>
+              <span className="w-12 h-12 rounded-xl grid place-items-center bg-violet-500/10 text-violet-600 text-lg font-bold">{icon}</span>
+              <div><b className="text-2xl tracking-tight">{num}</b><p className="text-xs text-[var(--cv-muted)] mt-0.5">{label}</p></div>
+            </div>
+          ))}
+        </div>
+      </section>
 
-    <section className="max-w-[1280px] mx-auto px-5 sm:px-8 py-20">
+    <section className="cv-premium-section max-w-[1280px] mx-auto px-5 sm:px-8">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8"><div><p className="cv-kicker">LEARN WITH STRUCTURE</p><h2 className="text-3xl sm:text-4xl font-black mt-2">Popular Courses</h2><p className="text-[var(--cv-muted)] mt-2">Learn from structured courses designed for beginners to advanced learners.</p></div><Link to="/courses" className="text-sm font-bold text-violet-600 hover:translate-x-1 transition-transform">View All Courses →</Link></div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {courses.map(([icon,title,desc,lessons,accent]) => <Link to={`/courses/${({Java:"java-programming",Python:"python-programming",JavaScript:"javascript",React:"react-js","Spring Boot":"spring-boot","Web Development":"html-css"})[title] || ""}`} key={title} className="cv-course-card rounded-2xl p-5 group">

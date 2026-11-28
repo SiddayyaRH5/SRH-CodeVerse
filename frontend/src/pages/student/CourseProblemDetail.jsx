@@ -90,12 +90,12 @@ export default function CourseProblemDetail() {
   }
 
   if (loading) {
-    return <main className="max-w-6xl mx-auto p-8">Loading problem...</main>
+    return <main className="cv-premium-page max-w-6xl mx-auto p-8">Loading problem...</main>
   }
 
   if (error || !problem) {
     return (
-      <main className="max-w-6xl mx-auto p-8">
+      <main className="cv-premium-page max-w-6xl mx-auto p-8">
         <p className="text-red-500">{error || 'Problem not found.'}</p>
         <Link
           to={`/courses/${slug}`}
@@ -108,7 +108,7 @@ export default function CourseProblemDetail() {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-5 py-8">
+    <main className="cv-premium-page max-w-7xl mx-auto px-5 py-8">
       <Link
         to={`/courses/${slug}`}
         className="text-sm font-bold text-violet-500"

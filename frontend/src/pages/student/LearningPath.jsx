@@ -13,6 +13,7 @@ import {
   saveLessonNote,
   toggleLessonBookmark,
 } from "../../api/learningApi"
+import FloatingTechScene from "../../components/common/FloatingTechScene"
 
 const LEARNING_RESOURCES = ["courses", "progress", "my", "bookmarks", "recommendations"]
 
@@ -192,8 +193,9 @@ export default function LearningPath() {
   )
 
   return (
-    <main className="cv-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <header className="cv-reveal">
+    <main className="cv-page cv-premium-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <header className="cv-path-hero cv-reveal">
+        <FloatingTechScene compact />
         <p className="cv-kicker">STRUCTURED LEARNING</p>
         <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
@@ -231,7 +233,7 @@ export default function LearningPath() {
         </section>
       )}
 
-      <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="cv-path-stats mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="cv-stat-card rounded-2xl p-5">
           <p className="text-xs font-semibold tracking-wide text-[var(--cv-muted)]">ENROLLED COURSES</p>
           <p className="mt-2 text-3xl font-black">{progressReady ? (progress.enrolledCourses ?? 0) : "—"}</p>
@@ -271,7 +273,7 @@ export default function LearningPath() {
       </section>
 
       {recommendationsReady && recommendations.length > 0 && (
-        <section className="cv-panel mt-6">
+        <section className="cv-path-panel cv-panel mt-6">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-black">Recommended next</h2>
@@ -300,7 +302,7 @@ export default function LearningPath() {
       )}
 
       {myReady && my.length > 0 && (
-        <section className="cv-panel mt-6">
+        <section className="cv-path-panel cv-panel mt-6">
           <h2 className="text-lg font-black">Continue learning</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {my.map((item) => (
@@ -319,7 +321,7 @@ export default function LearningPath() {
         </section>
       )}
 
-      <section className="mt-6">
+      <section className="cv-path-library mt-6">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
             <h2 className="text-xl font-black">Course library</h2>
@@ -366,7 +368,7 @@ export default function LearningPath() {
         ) : (
           <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {courses.map((course) => (
-              <Link key={course.slug} to={`/learning-path/courses/${course.slug}`} className="cv-panel flex h-full flex-col transition hover:-translate-y-0.5 hover:border-violet-500/40">
+              <Link key={course.slug} to={`/learning-path/courses/${course.slug}`} className="cv-path-card cv-panel flex h-full flex-col transition hover:-translate-y-0.5 hover:border-violet-500/40">
                 <div className="flex items-start justify-between gap-3">
                   <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-violet-400">
                     {course.category}
@@ -397,7 +399,7 @@ export default function LearningPath() {
       </section>
 
       {bookmarksReady && bookmarks.length > 0 && (
-        <section className="cv-panel mt-6">
+        <section className="cv-path-panel cv-panel mt-6">
           <h2 className="text-lg font-black">Bookmarked lessons</h2>
           <div className="mt-3 grid gap-2 md:grid-cols-2">
             {bookmarks.map((bookmark) => (
@@ -453,10 +455,10 @@ export function CourseOverview() {
     }
   }
 
-  if (loading) return <main className="cv-page"><div className="cv-panel h-64 animate-pulse rounded-2xl" /></main>
+  if (loading) return <main className="cv-premium-page cv-page"><div className="cv-panel h-64 animate-pulse rounded-2xl" /></main>
   if (!course) {
     return (
-      <main className="cv-page">
+      <main className="cv-premium-page cv-page">
         <div className="cv-panel">
           <p className="text-sm text-red-400">{error || "Course not found."}</p>
           <button type="button" className="cv-secondary-btn mt-4 !px-4 !py-2 text-xs" onClick={load}>Retry</button>
@@ -466,7 +468,7 @@ export function CourseOverview() {
   }
 
   return (
-    <main className="cv-page mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="cv-path-detail cv-premium-page cv-page mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <Link to="/learning-path" className="text-xs font-bold text-violet-400 hover:text-violet-300">← Learning path</Link>
       <div className="cv-panel mt-4">
         <p className="cv-kicker">{course.category} COURSE</p>
@@ -618,10 +620,10 @@ export function LessonView() {
     }
   }
 
-  if (loading) return <main className="cv-page"><div className="cv-panel h-64 animate-pulse rounded-2xl" /></main>
+  if (loading) return <main className="cv-premium-page cv-page"><div className="cv-panel h-64 animate-pulse rounded-2xl" /></main>
   if (!lesson) {
     return (
-      <main className="cv-page">
+      <main className="cv-premium-page cv-page">
         <div className="cv-panel">
           <p className="text-sm text-red-400">{error || "Lesson not found."}</p>
           <button type="button" className="cv-secondary-btn mt-4 !px-4 !py-2 text-xs" onClick={load}>Retry</button>
@@ -631,7 +633,7 @@ export function LessonView() {
   }
 
   return (
-    <main className="cv-page mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="cv-lesson-experience cv-premium-page cv-page mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link to={`/learning-path/courses/${lesson.courseSlug}`} className="text-xs font-bold text-violet-400 hover:text-violet-300">
           ← {lesson.courseTitle}

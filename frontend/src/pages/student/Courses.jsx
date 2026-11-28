@@ -157,7 +157,7 @@ function Courses() {
 
   if (loading) {
     return (
-      <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="cv-premium-page mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="animate-pulse">
           <div className="h-3 w-44 rounded bg-slate-700/50" />
           <div className="mt-4 h-10 w-80 max-w-full rounded bg-slate-700/50" />
@@ -187,7 +187,7 @@ function Courses() {
 
   if (error) {
     return (
-      <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="cv-premium-page mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <section
           role="alert"
           className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-400"
@@ -207,7 +207,7 @@ function Courses() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="cv-premium-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <header className="mb-8">
         <p className="cv-kicker">SRH CODEVERSE ACADEMY</p>
 
@@ -396,14 +396,14 @@ function Courses() {
                   <span
                     className={`absolute left-4 top-4 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-wide shadow-sm ${
                       paid
-                        ? "bg-amber-400 text-slate-900"
-                        : "bg-emerald-500 text-white"
+                        ? "bg-amber-400 text-slate-950"
+                        : "bg-emerald-700 text-white"
                     }`}
                   >
                     {paid ? "Paid" : "Free"}
                   </span>
 
-                  <span className="absolute right-4 top-4 rounded-full border border-violet-400/20 bg-[var(--cv-surface)]/95 px-3 py-1.5 text-[10px] font-bold text-violet-400 shadow-sm">
+                  <span className="absolute right-4 top-4 rounded-full border border-[var(--cv-border)] bg-[var(--cv-surface)] px-3 py-1.5 text-[10px] font-bold text-[var(--cv-text)] shadow-sm">
                     {course.level || course.difficulty || "All levels"}
                   </span>
                 </div>

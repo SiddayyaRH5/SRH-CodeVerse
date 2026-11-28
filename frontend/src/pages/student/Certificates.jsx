@@ -38,7 +38,7 @@ function CertificatePreview({ certificate, onClose }) {
   return (
     <div className="fixed inset-0 z-[100] overflow-auto bg-black/70 p-4 backdrop-blur-sm sm:p-8" role="dialog" aria-modal="true">
       <div className="grid min-h-full place-items-center">
-        <div className="w-full max-w-5xl overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--cv-surface)]">
+        <div className="cv-cert-preview w-full max-w-5xl overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--cv-surface)]">
           <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-5 py-4">
             <div>
               <p className="cv-kicker">EARNED CERTIFICATE</p>
@@ -52,7 +52,7 @@ function CertificatePreview({ certificate, onClose }) {
             </div>
           </div>
           <div className="certificate-print p-6 sm:p-12">
-            <div className="relative overflow-hidden rounded-[24px] border-[3px] border-violet-500/60 p-6 text-center sm:p-12">
+            <div className="cv-cert-sheet relative overflow-hidden rounded-[24px] border-[3px] border-violet-500/60 p-6 text-center sm:p-12">
               <div className="absolute -right-24 -top-24 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
               <div className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" />
               <p className="text-sm font-black tracking-[.3em] text-violet-500">SRH CODEVERSE</p>
@@ -100,7 +100,7 @@ function AttemptView({ attempt, onAnswer, onSubmit, onExit, busy, remaining, err
   const answered = attempt.questions.filter((item) => item.selectedOption !== null && item.selectedOption !== undefined).length
 
   return (
-    <main className="cv-page mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="cv-page cv-premium-page mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="cv-kicker">CERTIFICATE ASSESSMENT</p>
@@ -183,7 +183,7 @@ function AttemptView({ attempt, onAnswer, onSubmit, onExit, busy, remaining, err
 
 function AttemptResult({ result, onBack, onClaim, onDownload, claiming, issued }) {
   return (
-    <main className="cv-page mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="cv-premium-page cv-page mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <button type="button" className="cv-secondary-btn mb-4 !px-4 !py-2 text-xs" onClick={onBack}>← Back to certificates</button>
       <div className="cv-panel">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -421,7 +421,7 @@ export default function Certificates() {
   }
 
   return (
-    <main className="cv-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="cv-cert-home cv-premium-page cv-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <header className="cv-reveal">
         <p className="cv-kicker">VERIFIED CREDENTIALS</p>
         <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
@@ -509,7 +509,7 @@ export default function Certificates() {
                 ? "text-violet-400 bg-violet-500/10"
                 : "text-[var(--cv-muted)] bg-[var(--cv-surface-2)]"
             return (
-              <article key={item.slug} className="cv-panel flex h-full flex-col">
+              <article key={item.slug} className="cv-cert-track cv-panel flex h-full flex-col">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <span className="grid h-12 w-12 place-items-center rounded-2xl border border-violet-500/20 bg-violet-500/10 text-sm font-black text-violet-400">

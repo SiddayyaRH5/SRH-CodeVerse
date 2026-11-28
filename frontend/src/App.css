@@ -538,9 +538,20 @@
 .cv-footer-compact {
   margin-top: 24px;
   padding: 0 20px;
+  min-height: 190px;
+}
+
+/* The compact variant keeps a calm, flat surface: no animated glow lines. */
+.cv-footer-compact::before,
+.cv-footer-compact::after {
+  display: none;
 }
 
 .cv-footer-compact .cv-footer-inner {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  max-width: 1240px;
+  margin: 0 auto;
   gap: 24px;
   padding: 22px 0 16px;
 }
@@ -593,6 +604,11 @@
 .cv-footer-compact .cv-footer-bottom {
   padding: 10px 0 12px;
   font-size: 0.68rem;
+  border-top: 1px solid var(--footer-border);
+}
+
+.cv-footer-compact .cv-footer-bottom::before {
+  display: none;
 }
 
 .cv-footer-compact .cv-footer-bottom p {

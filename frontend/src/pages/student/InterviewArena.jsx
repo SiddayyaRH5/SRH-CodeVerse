@@ -10,6 +10,7 @@ import {
   startInterviewSession,
   submitInterviewSession,
 } from "../../api/interviewApi"
+import FloatingTechScene from "../../components/common/FloatingTechScene"
 
 const DIFFICULTIES = ["MIXED", "EASY", "MEDIUM", "HARD"]
 const MODES = ["TIMED", "PRACTICE"]
@@ -232,7 +233,7 @@ export default function InterviewArena() {
 
   if (view === "session" && session) {
     return (
-      <main className="cv-page mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="cv-interview-session cv-page cv-premium-page mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="cv-kicker">{session.category} · {session.difficulty}</p>
@@ -328,7 +329,7 @@ export default function InterviewArena() {
             )}
           </div>
 
-          <aside className="cv-panel h-fit">
+          <aside className="cv-interview-setup cv-panel h-fit">
             <p className="text-xs font-black uppercase tracking-wide text-[var(--cv-muted)]">Progress</p>
             <p className="mt-1 text-sm font-bold">{answeredCount} / {session.questions.length} answered</p>
             <div className="mt-3 grid grid-cols-5 gap-2">
@@ -364,7 +365,7 @@ export default function InterviewArena() {
 
   if (view === "result" && result) {
     return (
-      <main className="cv-page mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="cv-interview-result cv-premium-page cv-page mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
         <button type="button" className="cv-secondary-btn mb-4 !px-4 !py-2 text-xs" onClick={() => { setView("setup"); setResult(null); loadOverview() }}>
           ← Back to interview arena
         </button>
@@ -482,8 +483,9 @@ export default function InterviewArena() {
   }
 
   return (
-    <main className="cv-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <header className="cv-reveal">
+    <main className="cv-premium-page cv-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <header className="cv-interview-hero cv-reveal">
+        <FloatingTechScene compact />
         <p className="cv-kicker">INTERVIEW PREPARATION</p>
         <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
@@ -530,7 +532,7 @@ export default function InterviewArena() {
                     key={category.code}
                     type="button"
                     onClick={() => selectCategory(category.code)}
-                    className={`cv-panel text-left transition ${
+                    className={`cv-interview-category cv-panel text-left transition ${
                       form.category === category.code ? "border-violet-500/60 ring-1 ring-violet-500/30" : "hover:border-violet-500/30"
                     }`}
                   >
@@ -548,7 +550,7 @@ export default function InterviewArena() {
               </div>
             </div>
 
-            <aside className="cv-panel h-fit">
+            <aside className="cv-interview-setup cv-panel h-fit">
               <h2 className="text-lg font-black">Session setup</h2>
               <p className="mt-1 text-xs text-[var(--cv-muted)]">Selected: {form.category}</p>
               <div className="mt-4 space-y-3">

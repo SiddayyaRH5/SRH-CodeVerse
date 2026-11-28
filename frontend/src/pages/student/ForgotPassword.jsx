@@ -46,7 +46,7 @@ function ForgotPassword() {
   }
 
   return (
-    <main className="cv-auth-page relative overflow-hidden">
+    <main className="cv-auth-forgot cv-premium-page cv-auth-page relative overflow-hidden">
       <div className="cv-hero-orb cv-orb-purple" aria-hidden="true" />
       <div className="cv-hero-orb cv-orb-cyan" aria-hidden="true" />
 

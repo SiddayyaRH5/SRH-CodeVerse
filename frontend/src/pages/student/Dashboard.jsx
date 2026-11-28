@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { getDashboard } from "../../api/dashboardApi"
 import { getTodaysChallenge } from "../../api/dailyChallengeApi"
 import { getAchievements } from "../../api/achievementApi"
+import FloatingTechScene from "../../components/common/FloatingTechScene"
 
 function DailyChallengeCard() {
   const [challenge, setChallenge] = useState(null)
@@ -110,14 +111,15 @@ function Dashboard() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <main className="cv-dashboard-page"><div className="cv-dashboard-loading"><span className="cv-dashboard-spinner" /> Preparing your developer space…</div></main>
-  if (error) return <main className="cv-dashboard-page"><div className="cv-dashboard-error"><span className="cv-dashboard-error-icon">!</span><div><h2>We couldn’t load your dashboard</h2><p>{error}</p><button className="cv-dashboard-button" onClick={() => window.location.reload()}>Try again <span>↻</span></button></div></div></main>
+  if (loading) return <main className="cv-premium-page cv-dashboard-page"><div className="cv-dashboard-loading"><span className="cv-dashboard-spinner" /> Preparing your developer space…</div></main>
+  if (error) return <main className="cv-premium-page cv-dashboard-page"><div className="cv-dashboard-error"><span className="cv-dashboard-error-icon">!</span><div><h2>We couldn’t load your dashboard</h2><p>{error}</p><button className="cv-dashboard-button" onClick={() => window.location.reload()}>Try again <span>↻</span></button></div></div></main>
 
   const username = data?.username || "developer"
 
   return (
-    <main className="cv-dashboard-page">
+    <main className="cv-premium-page cv-dashboard-page">
       <section className="cv-dashboard-welcome cv-reveal">
+        <FloatingTechScene compact />
         <div className="cv-dashboard-welcome-glow" aria-hidden="true" />
         <div className="cv-dashboard-welcome-copy">
           <span className="cv-dashboard-welcome-pill"><span className="cv-dashboard-live-dot" /> YOUR DEVELOPER SPACE</span>

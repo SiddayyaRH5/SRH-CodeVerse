@@ -22,7 +22,7 @@ function Profile() {
   const isTrainer = profile.role === "TRAINER"
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
+    <main className="cv-profile-page cv-premium-page mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-[var(--color-forge-500)]">YOUR SPACE</p>
@@ -35,7 +35,7 @@ function Profile() {
         <section className="min-w-0 lg:col-span-2">
         <div className="mb-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-sm sm:p-8">
           <div className="flex items-center gap-4 mb-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-cyan-500 text-2xl font-bold text-white shadow-lg shadow-violet-900/20">
+            <div className="cv-avatar flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-cyan-500 text-2xl font-bold text-white shadow-lg shadow-violet-900/20">
               {profile.username.charAt(0).toUpperCase()}
             </div>
             <div>
@@ -57,17 +57,17 @@ function Profile() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {isTrainer ? (
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-sm">
+            <div className="cv-profile-card rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-sm">
               <p className="text-sm text-[var(--color-text-secondary)] mb-1">Problems Created</p>
               <p className="text-2xl font-bold text-[var(--color-forge-500)]">{profile.problemsCreated}</p>
             </div>
           ) : (
             <>
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-sm">
+              <div className="cv-profile-card rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-sm">
                 <p className="text-sm text-[var(--color-text-secondary)] mb-1">Problems Solved</p>
                 <p className="text-2xl font-bold">{profile.problemsSolved}</p>
               </div>
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-sm">
+              <div className="cv-profile-card rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-sm">
                 <p className="text-sm text-[var(--color-text-secondary)] mb-1">Current Streak</p>
                 <p className="text-2xl font-bold text-[var(--color-forge-500)]">{profile.forgeStreakCurrent} 🔥</p>
               </div>

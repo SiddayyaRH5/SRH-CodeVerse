@@ -6,7 +6,7 @@ import { setTodaysChallenge } from "../../api/dailyChallengeApi"
 
 function Panel({ title, children, className = "" }) {
   return (
-    <div className={`cv-panel rounded-2xl p-4 ${className}`}>
+    <div className="cv-premium-page" className={`cv-panel rounded-2xl p-4 ${className}`}>
       <p className="text-violet-500 text-sm mb-3">{title}</p>
       {children}
     </div>

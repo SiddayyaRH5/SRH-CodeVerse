@@ -74,7 +74,7 @@ export default function Playground() {
   }
 
   return (
-    <div className="cv-page mx-auto w-full max-w-[1500px] space-y-7">
+    <div className="cv-page cv-premium-page mx-auto w-full max-w-[1500px] space-y-7">
       {/* Page heading */}
       <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>

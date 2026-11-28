@@ -51,7 +51,7 @@ export default function CertificateVerify() {
     : ""
 
   return (
-    <main className="cv-page mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
+    <main className="cv-cert-verify cv-page cv-premium-page mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
       <header className="text-center">
         <p className="cv-kicker">SRH CODEVERSE</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Certificate verification</h1>
@@ -77,7 +77,7 @@ export default function CertificateVerify() {
           </div>
         </div>
       ) : certificate ? (
-        <div className="cv-panel mt-8 overflow-hidden">
+        <div className="cv-cert-sheet cv-panel mt-8 overflow-hidden">
           <div className={`flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-4 ${
             certificate.valid ? "bg-emerald-500/5" : "bg-red-500/5"
           }`}>

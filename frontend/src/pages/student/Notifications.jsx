@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import {
   NOTIFICATION_CATEGORIES,
-  NOTIFICATION_PREVIEW,
   getNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -27,7 +26,6 @@ function formatDate(value) {
 
 function Notifications() {
   const [items, setItems] = useState([])
-  const [source, setSource] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [category, setCategory] = useState("ALL")
@@ -39,7 +37,6 @@ function Notifications() {
     try {
       const result = await getNotifications()
       setItems(Array.isArray(result.items) ? result.items : [])
-      setSource(result.source)
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -62,29 +59,25 @@ function Notifications() {
   }, [items, category])
 
   const handleMarkRead = async (notificationId) => {
-    setItems((current) =>
-      current.map((item) => (item.id === notificationId ? { ...item, read: true } : item)),
-    )
-
     try {
       await markNotificationRead(notificationId)
-    } catch {
-      // Read state is local only until a backend endpoint exists.
+      await loadNotifications()
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not mark this notification as read.")
     }
   }
 
   const handleMarkAllRead = async () => {
-    setItems((current) => current.map((item) => ({ ...item, read: true })))
-
     try {
       await markAllNotificationsRead()
-    } catch {
-      // Read state is local only until a backend endpoint exists.
+      await loadNotifications()
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not mark all notifications as read.")
     }
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="cv-premium-page mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
       <section className="mb-8 flex flex-col gap-5 rounded-3xl border border-[var(--cv-border)] bg-[var(--cv-surface)] p-6 shadow-sm sm:flex-row sm:items-end sm:justify-between sm:p-8">
         <div>
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-violet-500">
@@ -110,20 +103,6 @@ function Notifications() {
           </button>
         </div>
       </section>
-
-      {source === NOTIFICATION_PREVIEW && (
-        <div
-          role="status"
-          className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-300"
-        >
-          <p className="font-semibold">Preview data</p>
-          <p className="mt-1 leading-6">
-            The SRH CodeVerse backend does not expose a notifications endpoint yet, so these are
-            sample records. Marking them as read only updates this browser session — nothing is
-            saved to your account.
-          </p>
-        </div>
-      )}
 
       <div className="mb-6 flex flex-wrap gap-2" role="group" aria-label="Filter notifications by category">
         {NOTIFICATION_CATEGORIES.map((entry) => (

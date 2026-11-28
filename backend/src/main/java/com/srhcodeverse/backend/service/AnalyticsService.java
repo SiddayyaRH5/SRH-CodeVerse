@@ -5,6 +5,7 @@ import com.srhcodeverse.backend.entity.Problem;
 import com.srhcodeverse.backend.entity.Role;
 import com.srhcodeverse.backend.entity.User;
 import com.srhcodeverse.backend.repository.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,10 @@ public class AnalyticsService {
     private final ProblemRepository problemRepository;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+
+    /** Blank keeps the previous JVM-default-zone behaviour. */
+    @Value("${codeverse.analytics.timezone:}")
+    private String configuredTimezone;
 
     public AnalyticsService(SubmissionRepository submissionRepository, ProblemRepository problemRepository,
                              UserRepository userRepository, RoleRepository roleRepository) {
@@ -97,44 +102,29 @@ public class AnalyticsService {
         return longest;
     }
 
-    private LocalDate toLocalDate(Object value) {
-        if (value instanceof LocalDate date) {
-            return date;
-        }
-        if (value instanceof java.sql.Date date) {
-            return date.toLocalDate();
-        }
-        if (value instanceof java.sql.Timestamp timestamp) {
-            return timestamp.toLocalDateTime().toLocalDate();
-        }
-        if (value instanceof LocalDateTime dateTime) {
-            return dateTime.toLocalDate();
-        }
-        if (value instanceof java.util.Date date) {
-            return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        }
+    private ZoneId zone() {
+        return configuredTimezone == null || configuredTimezone.isBlank()
+                ? ZoneId.systemDefault()
+                : ZoneId.of(configuredTimezone);
+    }
 
-        String text = String.valueOf(value);
-        try {
-            return LocalDate.parse(text.length() >= 10 ? text.substring(0, 10) : text);
-        } catch (RuntimeException e) {
-            throw new IllegalStateException("Unsupported accepted-submission date value: " + text, e);
-        }
+    private LocalDate toLocalDate(Object value) {
+        return AnalyticsDates.toLocalDate(value, zone());
     }
 
     private List<DayCount> getActivityForUser(User user, LocalDate today) {
         LocalDate startDate = today.minusDays(13);
-        Map<String, Long> countsByDate = submissionRepository
-                .countSubmissionsByDayForStudent(user, startDate.atStartOfDay())
-                .stream()
-                .collect(Collectors.toMap(
-                        row -> toLocalDate(row[1]).toString(),
-                        row -> toLong(row[0])));
+        Map<LocalDate, Long> countsByDate = AnalyticsDates.countByDay(
+                submissionRepository.findSubmissionTimesForStudentAfter(user, startDate.atStartOfDay()),
+                zone());
 
         List<DayCount> activity = new ArrayList<>();
         for (int i = 13; i >= 0; i--) {
-            String date = today.minusDays(i).toString();
-            activity.add(DayCount.builder().date(date).count(countsByDate.getOrDefault(date, 0L)).build());
+            LocalDate date = today.minusDays(i);
+            activity.add(DayCount.builder()
+                    .date(date.toString())
+                    .count(countsByDate.getOrDefault(date, 0L))
+                    .build());
         }
         return activity;
     }
@@ -166,13 +156,14 @@ public class AnalyticsService {
 
     private List<DayCount> getSubmissionTrend() {
         LocalDateTime sevenDaysAgo = java.time.LocalDate.now().minusDays(6).atStartOfDay();
-        Map<String, Long> countsByDate = submissionRepository.countSubmissionsByDay(sevenDaysAgo).stream()
-                .collect(Collectors.toMap(row -> row[0].toString(), row -> (Long) row[1]));
+        Map<LocalDate, Long> countsByDate = AnalyticsDates.countByDay(
+                submissionRepository.findSubmissionTimesAfter(sevenDaysAgo), zone());
 
         List<DayCount> trend = new ArrayList<>();
         for (int i = 6; i >= 0; i--) {
-            String date = java.time.LocalDate.now().minusDays(i).toString();
-            trend.add(DayCount.builder().date(date).count(countsByDate.getOrDefault(date, 0L)).build());
+            LocalDate date = java.time.LocalDate.now().minusDays(i);
+            trend.add(DayCount.builder().date(date.toString())
+                    .count(countsByDate.getOrDefault(date, 0L)).build());
         }
         return trend;
     }

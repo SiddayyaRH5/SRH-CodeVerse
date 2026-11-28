@@ -9,6 +9,7 @@ import {
   enrollCourse,
   createPaymentOrder,
 } from '../../api/courseApi'
+import PremiumProgress from '../../components/common/PremiumProgress'
 
 function CourseDetail() {
   const { slug } = useParams()
@@ -174,7 +175,7 @@ function CourseDetail() {
 
   if (loading) {
     return (
-      <main className="max-w-[1280px] mx-auto px-5 sm:px-8 py-10">
+      <main className="cv-premium-page max-w-[1280px] mx-auto px-5 sm:px-8 py-10">
         Loading course...
       </main>
     )
@@ -182,7 +183,7 @@ function CourseDetail() {
 
   if (!course) {
     return (
-      <main className="max-w-[1280px] mx-auto px-5 sm:px-8 py-10">
+      <main className="cv-premium-page max-w-[1280px] mx-auto px-5 sm:px-8 py-10">
         <p className="text-red-500">
           {error || 'Course not found.'}
         </p>
@@ -213,7 +214,7 @@ function CourseDetail() {
     : []
 
   return (
-    <main className="max-w-[1280px] mx-auto px-5 sm:px-8 py-10">
+    <main className="cv-premium-page max-w-[1280px] mx-auto px-5 sm:px-8 py-10">
       {/* Course introduction */}
       <section className="cv-section-panel rounded-3xl p-7 sm:p-10 bg-gradient-to-br from-violet-600/10 via-blue-500/5 to-cyan-400/10">
         <Link
@@ -269,23 +270,8 @@ function CourseDetail() {
           </div>
 
           <div className="min-w-[250px] rounded-2xl bg-[var(--cv-surface)] border border-[var(--cv-border)] p-5">
-            <div className="flex justify-between text-sm">
-              <b>Your progress</b>
-              <b className="text-violet-600">
-                {course.progressPercent ?? 0}%
-              </b>
-            </div>
-
-            <div className="h-2 bg-[var(--cv-surface-2)] rounded-full mt-2 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-violet-600 to-cyan-400"
-                style={{
-                  width: `${Math.min(
-                    100,
-                    Math.max(0, Number(course.progressPercent) || 0)
-                  )}%`,
-                }}
-              />
+            <div className="mt-3">
+              <PremiumProgress value={course.progressPercent ?? 0} label="Course completion" />
             </div>
 
             <p className="text-xs text-[var(--cv-muted)] mt-3">

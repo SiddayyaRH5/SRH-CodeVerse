@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { getCourse, updateCourseProgress } from "../../api/courseApi"
+import LessonPoster from "../../components/common/LessonPoster"
 
 function ContentSection({ title, content, code = false }) {
   if (
@@ -41,6 +42,11 @@ export default function CourseLessonDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
+  const [videoPlaying, setVideoPlaying] = useState(false)
+
+  useEffect(() => {
+    setVideoPlaying(false)
+  }, [slug, lessonId])
 
   useEffect(() => {
     let cancelled = false
@@ -165,7 +171,7 @@ export default function CourseLessonDetail() {
 
   if (loading) {
     return (
-      <main className="max-w-4xl mx-auto p-8">
+      <main className="cv-premium-page max-w-4xl mx-auto p-8">
         Loading lesson...
       </main>
     )
@@ -173,7 +179,7 @@ export default function CourseLessonDetail() {
 
   if (error && !course) {
     return (
-      <main className="max-w-4xl mx-auto p-8">
+      <main className="cv-premium-page max-w-4xl mx-auto p-8">
         <p className="text-red-500">{error}</p>
         <Link
           to={`/courses/${slug}`}
@@ -187,7 +193,7 @@ export default function CourseLessonDetail() {
 
   if (!course) {
     return (
-      <main className="max-w-4xl mx-auto p-8">
+      <main className="cv-premium-page max-w-4xl mx-auto p-8">
         Course not found.
       </main>
     )
@@ -195,7 +201,7 @@ export default function CourseLessonDetail() {
 
   if (!lesson) {
     return (
-      <main className="max-w-4xl mx-auto p-8">
+      <main className="cv-premium-page max-w-4xl mx-auto p-8">
         <h1 className="text-xl font-bold">
           Lesson not found
         </h1>
@@ -207,7 +213,7 @@ export default function CourseLessonDetail() {
   }
 
   return (
-    <main className="max-w-4xl mx-auto px-5 py-10 space-y-6">
+    <main className="cv-premium-page max-w-4xl mx-auto px-5 py-10 space-y-6">
 
       {/* Navigation */}
       <Link
@@ -258,14 +264,23 @@ export default function CourseLessonDetail() {
           </h2>
 
           <div className="aspect-video overflow-hidden rounded-xl">
-            <iframe
-              src={embedUrl}
-              title={`${lesson.title} lesson video`}
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              loading="lazy"
-            />
+            {videoPlaying ? (
+              <iframe
+                src={embedUrl}
+                title={`${lesson.title} lesson video`}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                autoPlay
+              />
+            ) : (
+              <LessonPoster
+                poster={course?.thumbnailUrl || course?.thumbnail}
+                title={lesson.title}
+                durationMinutes={lesson.estimatedMinutes}
+                onPlay={() => setVideoPlaying(true)}
+              />
+            )}
           </div>
         </section>
       )}

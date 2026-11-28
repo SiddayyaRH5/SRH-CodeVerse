@@ -81,7 +81,7 @@ function OAuthCallback() {
   }, [login, navigate])
 
   return (
-    <main className="flex min-h-[60vh] items-center justify-center px-4 py-12">
+    <main className="cv-auth-callback cv-premium-page flex min-h-[60vh] items-center justify-center px-4 py-12">
       <section className="w-full max-w-md rounded-2xl border border-[var(--cv-border)] bg-[var(--cv-surface)] p-8 text-center shadow-xl">
         {error ? (
           <>

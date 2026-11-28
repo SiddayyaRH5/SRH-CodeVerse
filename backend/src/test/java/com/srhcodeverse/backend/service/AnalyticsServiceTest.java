@@ -41,9 +41,11 @@ class AnalyticsServiceTest {
         SubmissionRepository submissionRepository = repository(SubmissionRepository.class, (method, args) -> switch (method.getName()) {
             case "countDistinctSolvedProblems" -> 2L;
             case "findDistinctAcceptedSubmissionDatesByStudent" -> acceptedDates;
-            case "countSubmissionsByDayForStudent" -> List.of(
-                    new Object[] { 3L, java.sql.Date.valueOf(today) },
-                    new Object[] { 1L, java.sql.Date.valueOf(today.minusDays(1)) });
+            case "findSubmissionTimesForStudentAfter" -> List.of(
+                    today.atStartOfDay().plusHours(9),
+                    today.atStartOfDay().plusHours(10),
+                    today.atStartOfDay().plusHours(11),
+                    today.minusDays(1).atStartOfDay().plusHours(12));
             case "findDistinctSolvedProblemIds" -> List.of(1L, 3L);
             default -> null;
         });
@@ -77,7 +79,7 @@ class AnalyticsServiceTest {
         SubmissionRepository submissionRepository = repository(SubmissionRepository.class, (method, args) -> switch (method.getName()) {
             case "countDistinctSolvedProblems" -> 0L;
             case "findDistinctAcceptedSubmissionDatesByStudent" -> List.of();
-            case "countSubmissionsByDayForStudent" -> List.of();
+            case "findSubmissionTimesForStudentAfter" -> List.of();
             case "findDistinctSolvedProblemIds" -> List.of();
             default -> null;
         });
@@ -106,7 +108,7 @@ class AnalyticsServiceTest {
         SubmissionRepository submissionRepository = repository(SubmissionRepository.class, (method, args) -> switch (method.getName()) {
             case "countDistinctSolvedProblems" -> 1L;
             case "findDistinctAcceptedSubmissionDatesByStudent" -> acceptedDates;
-            case "countSubmissionsByDayForStudent" -> List.of();
+            case "findSubmissionTimesForStudentAfter" -> List.of();
             case "findDistinctSolvedProblemIds" -> List.of(1L);
             default -> null;
         });
@@ -141,7 +143,7 @@ class AnalyticsServiceTest {
         SubmissionRepository submissionRepository = repository(SubmissionRepository.class, (method, args) -> switch (method.getName()) {
             case "countDistinctSolvedProblems" -> 3L;
             case "findDistinctAcceptedSubmissionDatesByStudent" -> acceptedDates;
-            case "countSubmissionsByDayForStudent" -> List.of();
+            case "findSubmissionTimesForStudentAfter" -> List.of();
             case "findDistinctSolvedProblemIds" -> List.of(1L, 2L, 3L);
             default -> null;
         });
@@ -181,7 +183,7 @@ class AnalyticsServiceTest {
         SubmissionRepository submissionRepository = repository(SubmissionRepository.class, (method, args) -> switch (method.getName()) {
             case "countDistinctSolvedProblems" -> 4L;
             case "findDistinctAcceptedSubmissionDatesByStudent" -> acceptedDates;
-            case "countSubmissionsByDayForStudent" -> List.of();
+            case "findSubmissionTimesForStudentAfter" -> List.of();
             case "findDistinctSolvedProblemIds" -> List.of(1L, 2L, 3L, 4L);
             default -> null;
         });
@@ -221,7 +223,7 @@ class AnalyticsServiceTest {
         SubmissionRepository submissionRepository = repository(SubmissionRepository.class, (method, args) -> switch (method.getName()) {
             case "countDistinctSolvedProblems" -> 2L;
             case "findDistinctAcceptedSubmissionDatesByStudent" -> acceptedDates;
-            case "countSubmissionsByDayForStudent" -> List.of();
+            case "findSubmissionTimesForStudentAfter" -> List.of();
             case "findDistinctSolvedProblemIds" -> List.of(1L, 2L);
             default -> null;
         });
@@ -263,7 +265,7 @@ class AnalyticsServiceTest {
         SubmissionRepository submissionRepository = repository(SubmissionRepository.class, (method, args) -> switch (method.getName()) {
             case "countDistinctSolvedProblems" -> 4L;
             case "findDistinctAcceptedSubmissionDatesByStudent" -> acceptedDates;
-            case "countSubmissionsByDayForStudent" -> List.of();
+            case "findSubmissionTimesForStudentAfter" -> List.of();
             case "findDistinctSolvedProblemIds" -> List.of(1L, 2L, 3L, 4L);
             default -> null;
         });

@@ -45,7 +45,7 @@ function Leaderboard() {
 
   if (loading) {
     return (
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="cv-leaderboard-home cv-premium-page mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="animate-pulse">
           <div className="h-3 w-36 rounded bg-slate-700/50" />
           <div className="mt-4 h-10 w-72 max-w-full rounded bg-slate-700/50" />
@@ -74,9 +74,9 @@ function Leaderboard() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="cv-leaderboard-home cv-premium-page mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Page header */}
-      <header className="mb-8">
+      <header className="cv-leaderboard-hero mb-8">
         <p className="text-xs font-bold uppercase tracking-[0.22em] text-violet-400">
           CODEVERSE COMMUNITY
         </p>
@@ -139,7 +139,7 @@ function Leaderboard() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-3">
+              <div className="cv-leaderboard-podium grid grid-cols-1 items-stretch gap-4 md:grid-cols-3">
                 {topThree.map((entry) => {
                   const rank = Number(entry.rank)
                   const medal = getMedal(rank)
@@ -227,7 +227,7 @@ function Leaderboard() {
                   return (
                     <article
                       key={entry.username}
-                      className="flex flex-col gap-4 px-5 py-4 transition hover:bg-[var(--color-bg-tertiary)] sm:flex-row sm:items-center sm:justify-between"
+                      className="cv-leaderboard-row flex flex-col gap-4 px-5 py-4 transition hover:bg-[var(--color-bg-tertiary)] sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="flex min-w-0 items-center gap-4">
                         <div

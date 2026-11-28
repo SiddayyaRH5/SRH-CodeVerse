@@ -86,7 +86,7 @@ function Settings() {
     }`
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="cv-settings-page cv-premium-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <header className="mb-8">
         <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-[var(--color-forge-500)]">
           PREFERENCES
@@ -104,7 +104,7 @@ function Settings() {
           {/* Email settings */}
           <form
             onSubmit={handleEmailUpdate}
-            className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-5 shadow-sm sm:p-6"
+            className="cv-profile-card rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-5 shadow-sm sm:p-6"
           >
             <div className="mb-5">
               <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
@@ -149,7 +149,7 @@ function Settings() {
           {/* Password settings */}
           <form
             onSubmit={handlePasswordChange}
-            className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-5 shadow-sm sm:p-6"
+            className="cv-profile-card rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-5 shadow-sm sm:p-6"
           >
             <div className="mb-5">
               <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
@@ -229,7 +229,7 @@ function Settings() {
 
         <div className="min-w-0 space-y-6">
           {/* Appearance settings */}
-          <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-5 shadow-sm sm:p-6">
+          <section className="cv-profile-card rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-5 shadow-sm sm:p-6">
             <div className="mb-5">
               <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
                 Appearance
@@ -266,7 +266,7 @@ function Settings() {
           </section>
 
           {/* Editor preferences */}
-          <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-5 shadow-sm sm:p-6">
+          <section className="cv-profile-card rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-5 shadow-sm sm:p-6">
             <div className="mb-5">
               <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
                 Editor preferences

@@ -21,7 +21,7 @@ function StudentDetail() {
   if (error) return <p className="text-[var(--color-danger)]">{error}</p>
 
   return (
-    <div>
+    <div className="cv-premium-page">
       <Link to="/trainer/students" className="text-sm text-[var(--color-forge-500)] hover:underline mb-4 inline-block">
         ← Back to Students
       </Link>

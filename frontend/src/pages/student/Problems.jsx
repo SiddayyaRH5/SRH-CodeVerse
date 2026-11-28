@@ -172,7 +172,7 @@ function Problems() {
 
   if (loading) {
     return (
-      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="cv-premium-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="animate-pulse">
           <div className="h-3 w-40 rounded bg-slate-700/50" />
           <div className="mt-4 h-10 w-72 rounded bg-slate-700/50" />
@@ -193,7 +193,7 @@ function Problems() {
 
   if (error) {
     return (
-      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="cv-premium-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div
           role="alert"
           className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-400"
@@ -213,9 +213,9 @@ function Problems() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="cv-premium-page mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Page heading */}
-      <header className="mb-8">
+      <header className="cv-workspace-hero mb-8">
         <p className="text-xs font-bold uppercase tracking-[0.22em] text-violet-400">
           PRACTICE • IMPROVE • MASTER
         </p>
@@ -252,7 +252,7 @@ function Problems() {
 
       <section
         aria-label="Filter problems by difficulty"
-        className="mb-6 grid gap-3 sm:grid-cols-3"
+        className="cv-workspace-filter mb-6 grid gap-3 sm:grid-cols-3"
       >
         {difficulties.map((difficulty) => {
           const active = difficultyFilter === difficulty
@@ -295,7 +295,7 @@ function Problems() {
       </section>
 
       {/* Search and filters */}
-      <section className="mb-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4 sm:p-5">
+      <section className="cv-workspace-filter mb-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4 sm:p-5">
         <label
           htmlFor="problem-search"
           className="mb-2 block text-xs font-semibold text-[var(--color-text-secondary)]"
@@ -429,14 +429,14 @@ function Problems() {
             <span className="text-center">Save</span>
           </div>
 
-          <div className="divide-y divide-[var(--color-border)]">
+          <div className="cv-problem-list divide-y divide-[var(--color-border)]">
             {filtered.map((problem) => {
               const bookmarked = isBookmarked(problem.id)
 
               return (
                 <div
                   key={problem.id}
-                  className="flex min-w-0 items-start gap-3 px-4 py-4 transition hover:bg-[var(--color-bg-tertiary)] sm:px-5 md:items-center md:gap-4"
+                  className="cv-problem-row flex min-w-0 items-start gap-3 px-4 py-4 transition hover:bg-[var(--color-bg-tertiary)] sm:px-5 md:items-center md:gap-4"
                 >
                   <Link
                     to={`/problems/${problem.id}`}
