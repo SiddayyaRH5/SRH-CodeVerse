@@ -10,6 +10,9 @@ import Courses from "./Courses"
 import CourseDetail from "./CourseDetail"
 
 import * as courseApi from "../../api/courseApi"
+import * as razorpayUtil from "../../utils/razorpay"
+
+vi.mock("../../utils/razorpay", () => ({ loadRazorpayScript: vi.fn(async () => true) }))
 
 vi.mock("../../api/courseApi", () => ({
   getCourses: vi.fn(),
@@ -174,12 +177,12 @@ describe("course marketplace detail access", () => {
     await render(<CourseDetail />, "/courses/paid-course", "/courses/:slug")
     await settle()
 
-    expect(container.textContent).toContain("Buy this course")
+    expect(container.textContent).toContain("Buy Course")
     expect(container.textContent).toContain("Locked lesson")
     expect(container.querySelector('a[href="/courses/paid-course/lessons/1"]')).toBeNull()
 
     await act(async () => {
-      buttonByText("Buy this course").click()
+      buttonByText("Buy Course").click()
     })
 
     expect(courseApi.createPaymentOrder).toHaveBeenCalledWith("paid-course")
@@ -203,5 +206,109 @@ describe("course marketplace detail access", () => {
     })
 
     expect(courseApi.enrollCourse).toHaveBeenCalledWith("java-foundations")
+  })
+
+  it("opens Razorpay Checkout with the server-provided amount and order", async () => {
+    vi.mocked(courseApi.getCourse).mockResolvedValue({ data: PAID_COURSE })
+    vi.mocked(courseApi.createPaymentOrder).mockResolvedValue({
+      data: {
+        orderId: "order_server_1",
+        amountPaise: 49900,
+        currency: "INR",
+        keyId: "rzp_test_local",
+      },
+    })
+    let options = null
+    const Modal = function (config) {
+      options = config
+      this.on = vi.fn()
+      this.open = vi.fn(() => config.modal.ondismiss())
+    }
+    window.Razorpay = Modal
+
+    await render(<CourseDetail />, "/courses/paid-course", "/courses/:slug")
+    await settle()
+
+    await act(async () => {
+      buttonByText("Buy Course").click()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(courseApi.createPaymentOrder).toHaveBeenCalledWith("paid-course")
+    expect(razorpayUtil.loadRazorpayScript).toHaveBeenCalled()
+    expect(options).toMatchObject({
+      key: "rzp_test_local",
+      amount: 49900,
+      currency: "INR",
+      order_id: "order_server_1",
+    })
+    delete window.Razorpay
+  })
+
+  it("verifies only when the checkout order ID matches the server order", async () => {
+    vi.mocked(courseApi.getCourse).mockResolvedValue({ data: PAID_COURSE })
+    vi.mocked(courseApi.createPaymentOrder).mockResolvedValue({
+      data: { orderId: "order_server_2", amountPaise: 49900, currency: "INR", keyId: "rzp_test_local" },
+    })
+    vi.mocked(courseApi.verifyPayment).mockClear()
+    vi.mocked(courseApi.verifyPayment).mockResolvedValue({ enrolled: true })
+    let options = null
+    window.Razorpay = function (config) {
+      options = config
+      this.on = vi.fn()
+      this.open = vi.fn()
+    }
+
+    await render(<CourseDetail />, "/courses/paid-course", "/courses/:slug")
+    await settle()
+    await act(async () => {
+      buttonByText("Buy Course").click()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      await options.handler({
+        razorpay_order_id: "order_server_2",
+        razorpay_payment_id: "pay_match",
+        razorpay_signature: "sig",
+      })
+    })
+    expect(courseApi.verifyPayment).toHaveBeenCalledWith("order_server_2", "pay_match", "sig")
+    delete window.Razorpay
+  })
+
+  it("rejects a checkout response with a mismatched order ID", async () => {
+    vi.mocked(courseApi.getCourse).mockResolvedValue({ data: PAID_COURSE })
+    vi.mocked(courseApi.createPaymentOrder).mockResolvedValue({
+      data: { orderId: "order_server_3", amountPaise: 49900, currency: "INR", keyId: "rzp_test_local" },
+    })
+    vi.mocked(courseApi.verifyPayment).mockClear()
+    let options = null
+    window.Razorpay = function (config) {
+      options = config
+      this.on = vi.fn()
+      this.open = vi.fn()
+    }
+
+    await render(<CourseDetail />, "/courses/paid-course", "/courses/:slug")
+    await settle()
+    await act(async () => {
+      buttonByText("Buy Course").click()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      await options.handler({
+        razorpay_order_id: "someone_elses_order",
+        razorpay_payment_id: "pay_bad",
+        razorpay_signature: "sig",
+      })
+    })
+    expect(courseApi.verifyPayment).not.toHaveBeenCalled()
+    expect(container.textContent).toContain("the order did not match")
+    delete window.Razorpay
   })
 })

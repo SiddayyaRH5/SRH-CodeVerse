@@ -14,6 +14,7 @@ import com.srhcodeverse.backend.repository.CourseRepository;
 import com.srhcodeverse.backend.repository.PaymentOrderRepository;
 import com.srhcodeverse.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,16 +84,15 @@ public class PaymentService {
         this.gateway = gateway;
     }
 
-    private boolean configured() {
-        return keyId != null && !keyId.isBlank() && keySecret != null && !keySecret.isBlank();
-    }
-
     @Transactional
     public Map<String, Object> createOrder(String slug, String username) {
         Course course = courseRepository.findBySlug(slug)
                 .orElseThrow(() -> new IllegalArgumentException("Course not found"));
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        // Lock the authenticated user's stable row so concurrent order
+        // requests for the same student serialize before reading active orders.
+        User user = userRepository.findByUsernameForUpdate(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "Authenticated user not found"));
         if (!pricing.isPaid(course))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "This course is free; no payment is required");
@@ -102,9 +102,7 @@ public class PaymentService {
         if (pricing.entitled(course, user))
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "You already have access to this course");
-        if (!configured())
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                    "Online payments are not configured yet");
+        RazorpayConfig.validate(keyId, keySecret);
 
         BigDecimal amount = pricing.price(course);
         String currency = pricing.currency(course);
@@ -115,30 +113,45 @@ public class PaymentService {
                 .orElse(null);
         if (existing != null
                 && (existing.getAmountPaise() != amountPaise
-                || !existing.getCurrency().equalsIgnoreCase(currency))) {
-            // Price/currency changed after the order was created: retire the old order.
+                || !existing.getCurrency().equalsIgnoreCase(currency)
+                || existing.getOrderId() == null
+                || existing.getOrderId().startsWith("cv_"))) {
+            // Price/currency changed, or this is a legacy local-only ID: retire it.
             existing.setStatus(EXPIRED);
             paymentOrderRepository.save(existing);
             existing = null;
         }
 
-        PaymentOrder order = existing != null ? existing : paymentOrderRepository.save(PaymentOrder.builder()
-                .orderId("cv_" + UUID.randomUUID().toString().replace("-", ""))
-                .user(user)
-                .course(course)
-                .amount(amount)
-                .amountPaise(amountPaise)
-                .currency(currency)
-                .status(CREATED)
-                .build());
+        String razorpayOrderId = existing == null
+                ? gateway.createOrder(amountPaise, currency, "course_" + slug + "_" + user.getId())
+                : existing.getOrderId();
+
+        PaymentOrder order = existing;
+        if (order == null) {
+            try {
+                order = paymentOrderRepository.save(PaymentOrder.builder()
+                        .orderId(razorpayOrderId)
+                        .user(user)
+                        .course(course)
+                        .amount(amount)
+                        .amountPaise(amountPaise)
+                        .currency(currency)
+                        .status(CREATED)
+                        .build());
+            } catch (DataIntegrityViolationException conflict) {
+                // Another transaction won the race: return its active order.
+                order = paymentOrderRepository
+                        .findFirstByUserAndCourseAndStatusOrderByCreatedAtDesc(user, course, CREATED)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                                "Payment order could not be created"));
+            }
+        }
         return orderResponse(order);
     }
 
     @Transactional
     public Map<String, Object> verify(VerifyRequest request, String username) {
-        if (!configured())
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                    "Online payments are not configured yet");
+        RazorpayConfig.validate(keyId, keySecret);
 
         // Pessimistic lock serializes concurrent verification and webhook delivery.
         PaymentOrder order = paymentOrderRepository.findByOrderIdForUpdate(request.orderId())

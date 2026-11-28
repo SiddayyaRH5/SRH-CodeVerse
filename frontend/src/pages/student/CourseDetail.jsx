@@ -8,8 +8,10 @@ import {
   getCourseProblems,
   enrollCourse,
   createPaymentOrder,
+  verifyPayment,
 } from '../../api/courseApi'
 import PremiumProgress from '../../components/common/PremiumProgress'
+import { loadRazorpayScript } from '../../utils/razorpay'
 
 function CourseDetail() {
   const { slug } = useParams()
@@ -151,25 +153,102 @@ function CourseDetail() {
       navigate('/login')
       return
     }
+
     checkoutInFlight.current = true
     setBusy(true)
-    setNotice('')
+    setNotice('Creating a secure payment order…')
     setError('')
+
     try {
-      await createPaymentOrder(slug)
-      setNotice('Checkout is not enabled yet. Access will unlock only after the backend verifies a captured payment.')
+      // Amount and public key always come from the backend; the browser never
+      // computes or supplies a payable amount.
+      const { data: order } = await createPaymentOrder(slug)
+      const amountPaise = Number(order?.amountPaise)
+      if (!order?.orderId || !Number.isInteger(amountPaise) || amountPaise <= 0)
+        throw new Error('The payment order is incomplete. Please try again.')
+      if (!String(order.keyId || '').startsWith('rzp_test_'))
+        throw new Error('Razorpay Test Mode is not configured on the server.')
+
+      setNotice('Opening secure checkout…')
+      const ready = await loadRazorpayScript()
+      if (!ready || !window.Razorpay)
+        throw new Error('Razorpay Checkout could not be loaded. Check your connection and retry.')
+
+      await new Promise((resolve) => {
+        let settled = false
+        const finish = () => {
+          if (settled) return
+          settled = true
+          checkoutInFlight.current = false
+          setBusy(false)
+          resolve()
+        }
+
+        const rzp = new window.Razorpay({
+          key: order.keyId,
+          amount: amountPaise,
+          currency: order.currency || 'INR',
+          name: 'SRH CodeVerse',
+          description: course.title,
+          order_id: order.orderId,
+          prefill: { name: user.username },
+          notes: { courseSlug: slug },
+          theme: { color: '#6d28d9' },
+          modal: {
+            ondismiss: () => {
+              setNotice('Checkout was closed before payment. No access has been granted; you can retry safely.')
+              finish()
+            },
+          },
+          handler: async (response) => {
+            if (!response?.razorpay_order_id || response.razorpay_order_id !== order.orderId) {
+              setError('Payment verification could not be completed: the order did not match. If you were charged, please contact support.')
+              finish()
+              return
+            }
+            setNotice('Verifying your payment with the server…')
+            try {
+              await verifyPayment(
+                order.orderId,
+                response.razorpay_payment_id,
+                response.razorpay_signature,
+              )
+              const fresh = await getCourse(slug)
+              setCourse(fresh.data)
+              setNotice('Payment verified. You can continue learning.')
+            } catch (err) {
+              setError(
+                err.response?.data?.message
+                  || 'Payment verification failed. If you were charged, please contact support.',
+              )
+              try {
+                const fresh = await getCourse(slug)
+                setCourse(fresh.data)
+              } catch {
+                // Keep the existing course state if the status refresh fails.
+              }
+            } finally {
+              finish()
+            }
+          },
+        })
+
+        rzp.on('payment.failed', (event) => {
+          setError(event?.error?.description || 'The payment failed. No access has been granted.')
+          finish()
+        })
+        rzp.open()
+      })
     } catch (err) {
-      setError(err.response?.data?.message || 'Purchases are not available right now.')
-    } finally {
-      // Re-read entitlement from the server after checkout closes or fails.
+      setError(err.response?.data?.message || err.message || 'Purchases are not available right now.')
+      checkoutInFlight.current = false
+      setBusy(false)
       try {
         const response = await getCourse(slug)
         setCourse(response.data)
       } catch {
-        // Keep the existing course/notice when the status refresh fails.
+        // Keep the existing course state if the status refresh fails.
       }
-      checkoutInFlight.current = false
-      setBusy(false)
     }
   }
 
@@ -293,7 +372,7 @@ function CourseDetail() {
                   disabled={busy || course.enrollmentEnabled === false}
                   className="cv-primary-btn !py-3 text-sm disabled:opacity-60"
                 >
-                  {busy ? 'Working...' : 'Buy this course'}
+                  {busy ? 'Working...' : `Buy Course — ${priceLabel}`}
                 </button>
               ) : !paid && course.enrollmentEnabled !== false && !(course.progressPercent > 0) ? (
                 <button
@@ -304,10 +383,15 @@ function CourseDetail() {
                 >
                   {busy ? 'Enrolling...' : 'Enroll for free'}
                 </button>
+              ) : paid ? (
+                <Link
+                  to={`/learning-path/courses/${slug}`}
+                  className="cv-primary-btn !py-3 text-sm"
+                >
+                  Continue Learning
+                </Link>
               ) : (
-                <span className="text-xs font-bold text-emerald-500">
-                  {paid ? 'You have access' : 'You are enrolled'}
-                </span>
+                <span className="text-xs font-bold text-emerald-500">You are enrolled</span>
               )}
             </div>
           </div>

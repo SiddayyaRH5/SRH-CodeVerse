@@ -9,12 +9,14 @@ import com.srhcodeverse.backend.repository.CourseRepository;
 import com.srhcodeverse.backend.repository.RoleRepository;
 import com.srhcodeverse.backend.repository.UserRepository;
 import com.srhcodeverse.backend.security.JwtUtil;
+import com.srhcodeverse.backend.service.RazorpayGateway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -22,6 +24,9 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -61,6 +66,9 @@ class ApprovedCoursePricingIntegrationTest {
     @Autowired private RoleRepository roleRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private JwtUtil jwtUtil;
+
+    @MockitoBean
+    private RazorpayGateway razorpayGateway;
 
     private String studentToken() {
         Role role = roleRepository.findByName("STUDENT")
@@ -125,6 +133,8 @@ class ApprovedCoursePricingIntegrationTest {
 
     @Test
     void paymentOrderAmountMatchesApprovedPaiseAmount() throws Exception {
+        when(razorpayGateway.createOrder(anyLong(), anyString(), anyString()))
+                .thenReturn("order_java_foundations");
         String token = studentToken();
         String body = mockMvc.perform(post("/api/payments/orders")
                         .header("Authorization", token)

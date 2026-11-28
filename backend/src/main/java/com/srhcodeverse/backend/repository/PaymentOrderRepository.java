@@ -23,6 +23,8 @@ public interface PaymentOrderRepository extends JpaRepository<PaymentOrder, Long
 
     boolean existsByUserAndCourseAndStatus(User user, Course course, String status);
 
+    long countByUserAndCourseAndStatus(User user, Course course, String status);
+
     Optional<PaymentOrder> findFirstByUserAndCourseAndStatusOrderByCreatedAtDesc(
             User user, Course course, String status);
 }

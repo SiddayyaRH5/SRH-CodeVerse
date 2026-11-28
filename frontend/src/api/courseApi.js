@@ -13,9 +13,8 @@ export const getCourseLessons = (slug) => axiosInstance.get(`/courses/${slug}/le
 export const enrollCourse = (slug) => axiosInstance.post(`/courses/${slug}/enroll`)
 
 /**
- * Payment-ready calls. No Razorpay checkout is activated here: the server
- * returns 503 while payment credentials are absent, and only a server-side
- * verified payment can unlock a paid course.
+ * Authenticated payment calls. The server computes and verifies the payable
+ * amount; the browser only sends identifiers and the gateway signature.
  */
 export const createPaymentOrder = (slug) =>
   axiosInstance.post('/payments/orders', { slug })

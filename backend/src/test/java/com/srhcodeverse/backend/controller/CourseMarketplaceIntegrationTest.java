@@ -7,6 +7,7 @@ import com.srhcodeverse.backend.entity.CourseLesson;
 import com.srhcodeverse.backend.entity.Role;
 import com.srhcodeverse.backend.entity.User;
 import com.srhcodeverse.backend.repository.CourseLessonRepository;
+import com.srhcodeverse.backend.repository.CourseProgressRepository;
 import com.srhcodeverse.backend.repository.CourseRepository;
 import com.srhcodeverse.backend.repository.PaymentOrderRepository;
 import com.srhcodeverse.backend.repository.RoleRepository;
@@ -33,10 +34,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -72,6 +76,7 @@ class CourseMarketplaceIntegrationTest {
     @Autowired private UserRepository userRepository;
     @Autowired private CourseRepository courseRepository;
     @Autowired private CourseLessonRepository courseLessonRepository;
+    @Autowired private CourseProgressRepository courseProgressRepository;
     @Autowired private PaymentOrderRepository paymentOrderRepository;
     @Autowired private JwtUtil jwtUtil;
 
@@ -83,6 +88,8 @@ class CourseMarketplaceIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        when(razorpayGateway.createOrder(anyLong(), anyString(), anyString()))
+                .thenAnswer(invocation -> "order_" + invocation.<String>getArgument(2));
         studentToken = tokenFor("STUDENT");
         trainerToken = tokenFor("TRAINER");
     }
@@ -495,6 +502,57 @@ class CourseMarketplaceIntegrationTest {
             assertEquals(200, first.get(30, TimeUnit.SECONDS));
             assertEquals(200, second.get(30, TimeUnit.SECONDS));
             assertEquals("CAPTURED", paymentOrderRepository.findByOrderId(orderId).orElseThrow().getStatus());
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void concurrentOrderCreationIsIdempotentForSameUserAndCourse() throws Exception {
+        createCourse(paidCoursePayload("concurrent-orders", "PAID", "75"), trainerToken);
+        AtomicInteger gatewayOrders = new AtomicInteger();
+        when(razorpayGateway.createOrder(anyLong(), anyString(), anyString()))
+                .thenAnswer(invocation -> {
+                    gatewayOrders.incrementAndGet();
+                    return "order_concurrent_single";
+                });
+        String username = jwtUtil.extractUsername(studentToken);
+
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            java.util.concurrent.Future<MvcResult> first = pool.submit(() -> {
+                start.await();
+                return mockMvc.perform(post("/api/payments/orders")
+                                .header("Authorization", auth(studentToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"slug\":\"concurrent-orders\"}"))
+                        .andReturn();
+            });
+            java.util.concurrent.Future<MvcResult> second = pool.submit(() -> {
+                start.await();
+                return mockMvc.perform(post("/api/payments/orders")
+                                .header("Authorization", auth(studentToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"slug\":\"concurrent-orders\"}"))
+                        .andReturn();
+            });
+            start.countDown();
+
+            MvcResult a = first.get(30, TimeUnit.SECONDS);
+            MvcResult b = second.get(30, TimeUnit.SECONDS);
+            assertEquals(200, a.getResponse().getStatus());
+            assertEquals(200, b.getResponse().getStatus());
+            JsonNode firstBody = objectMapper.readTree(a.getResponse().getContentAsString());
+            JsonNode secondBody = objectMapper.readTree(b.getResponse().getContentAsString());
+            assertEquals("order_concurrent_single", firstBody.get("orderId").asText());
+            assertEquals(firstBody.get("orderId").asText(), secondBody.get("orderId").asText());
+            assertEquals(1, gatewayOrders.get());
+
+            User buyer = userRepository.findByUsername(username).orElseThrow();
+            Course course = courseRepository.findBySlug("concurrent-orders").orElseThrow();
+            assertEquals(1, paymentOrderRepository.countByUserAndCourseAndStatus(buyer, course, "CREATED"));
+            assertTrue(courseProgressRepository.findByUserAndCourse(buyer, course).isEmpty());
         } finally {
             pool.shutdownNow();
         }
