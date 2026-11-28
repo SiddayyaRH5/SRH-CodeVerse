@@ -1,8 +1,10 @@
 
 import { useEffect, useMemo, useState } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { getCourse, updateCourseProgress } from "../../api/courseApi"
 import LessonPoster from "../../components/common/LessonPoster"
+import BackButton from "../../components/common/BackButton"
+import { ArrowLeft } from "lucide-react"
 
 function ContentSection({ title, content, code = false }) {
   if (
@@ -181,12 +183,9 @@ export default function CourseLessonDetail() {
     return (
       <main className="cv-premium-page max-w-4xl mx-auto p-8">
         <p className="text-red-500">{error}</p>
-        <Link
-          to={`/courses/${slug}`}
-          className="text-violet-600 font-bold mt-4 inline-block"
-        >
-          Back to course
-        </Link>
+        <div className="mt-4">
+          <BackButton to={`/courses/${slug}`}>Back to course</BackButton>
+        </div>
       </main>
     )
   }
@@ -205,9 +204,7 @@ export default function CourseLessonDetail() {
         <h1 className="text-xl font-bold">
           Lesson not found
         </h1>
-        <Link to={`/courses/${slug}`}>
-          Back to course
-        </Link>
+        <BackButton to={`/courses/${slug}`}>Back to course</BackButton>
       </main>
     )
   }
@@ -216,12 +213,9 @@ export default function CourseLessonDetail() {
     <main className="cv-premium-page max-w-4xl mx-auto px-5 py-10 space-y-6">
 
       {/* Navigation */}
-      <Link
-        to={`/courses/${slug}`}
-        className="text-sm font-semibold text-violet-600 hover:underline"
-      >
-        ← Back to {course.title}
-      </Link>
+      <BackButton to={`/courses/${slug}`}>
+        Back to {course.title}
+      </BackButton>
 
       {/* Lesson heading */}
       <section className="cv-section-panel rounded-3xl p-6 sm:p-9">
@@ -450,8 +444,9 @@ export default function CourseLessonDetail() {
             }
             className="cv-section-panel rounded-xl p-4 text-left hover:border-violet-500 transition-colors"
           >
-            <span className="text-xs text-[var(--cv-muted)]">
-              ← Previous lesson
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--cv-muted)]">
+              <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />
+              Previous lesson
             </span>
             <p className="font-bold text-sm mt-2">
               {previousLesson.title}

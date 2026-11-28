@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { getMySubmissions } from "../../api/submissionApi"
 import EmptyState from "../../components/common/EmptyState"

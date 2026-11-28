@@ -180,6 +180,16 @@
     animation: none !important;
     transition: none !important;
   }
+
+  .cv-back-button,
+  .cv-back-button svg {
+    transition: none !important;
+  }
+
+  .cv-back-button:hover,
+  .cv-back-button:hover svg {
+    transform: none !important;
+  }
 }
 
 /* Global upgrades applied through the existing shared class names, so every
@@ -217,11 +227,55 @@
   box-shadow: 0 16px 34px -16px rgba(124, 58, 237, 0.65);
 }
 
+/* Consistent, accessible back-navigation control */
+.cv-back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 7px 13px;
+  border: 1px solid var(--cv-border);
+  border-radius: 999px;
+  background: var(--cv-surface, transparent);
+  color: var(--cv-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 180ms var(--cv-ease), border-color 180ms var(--cv-ease),
+    background-color 180ms var(--cv-ease), transform 180ms var(--cv-ease);
+}
+
+.cv-back-button svg {
+  flex: 0 0 auto;
+  transition: transform 180ms var(--cv-ease);
+}
+
+.cv-back-button:hover {
+  color: var(--cv-primary);
+  border-color: rgba(124, 58, 237, 0.5);
+  background: var(--cv-primary-gradient-soft);
+  transform: translateY(-1px);
+}
+
+.cv-back-button:hover svg {
+  transform: translateX(-3px);
+}
+
+.cv-back-button:focus-visible {
+  outline: 2px solid var(--cv-primary);
+  outline-offset: 2px;
+}
+
 @media (max-width: 640px) {
   .cv-course-card:hover,
   .cv-stat-card:hover,
   .cv-primary-btn:hover,
-  .cv-secondary-btn:hover {
+  .cv-secondary-btn:hover,
+  .cv-back-button:hover {
     transform: none;
   }
 }

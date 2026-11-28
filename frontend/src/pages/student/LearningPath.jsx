@@ -14,6 +14,8 @@ import {
   toggleLessonBookmark,
 } from "../../api/learningApi"
 import FloatingTechScene from "../../components/common/FloatingTechScene"
+import BackButton from "../../components/common/BackButton"
+import { ArrowLeft } from "lucide-react"
 
 const LEARNING_RESOURCES = ["courses", "progress", "my", "bookmarks", "recommendations"]
 
@@ -469,7 +471,7 @@ export function CourseOverview() {
 
   return (
     <main className="cv-path-detail cv-premium-page cv-page mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      <Link to="/learning-path" className="text-xs font-bold text-violet-400 hover:text-violet-300">← Learning path</Link>
+      <BackButton to="/learning-path">Learning path</BackButton>
       <div className="cv-panel mt-4">
         <p className="cv-kicker">{course.category} COURSE</p>
         <h1 className="mt-2 text-3xl font-black sm:text-4xl">{course.title}</h1>
@@ -635,9 +637,9 @@ export function LessonView() {
   return (
     <main className="cv-lesson-experience cv-premium-page cv-page mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link to={`/learning-path/courses/${lesson.courseSlug}`} className="text-xs font-bold text-violet-400 hover:text-violet-300">
-          ← {lesson.courseTitle}
-        </Link>
+        <BackButton to={`/learning-path/courses/${lesson.courseSlug}`}>
+          {lesson.courseTitle}
+        </BackButton>
         <span className="text-xs text-[var(--cv-muted)]">Lesson {lesson.position} of {lesson.totalLessons}</span>
       </div>
 
@@ -747,9 +749,10 @@ export function LessonView() {
           type="button"
           disabled={!lesson.previousLessonId}
           onClick={() => navigate(`/learning-path/lessons/${lesson.previousLessonId}`)}
-          className="cv-secondary-btn !px-4 !py-2.5 text-xs disabled:opacity-40"
+          className="cv-secondary-btn inline-flex items-center gap-1.5 !px-4 !py-2.5 text-xs disabled:opacity-40"
         >
-          ← Previous lesson
+          <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />
+          Previous lesson
         </button>
         <button
           type="button"

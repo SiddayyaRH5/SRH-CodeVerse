@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import BackButton from "../../components/common/BackButton"
 import {
   enrollRoadmap,
   getRoadmap,
@@ -98,9 +99,9 @@ function RoadmapDetail({ roadmap, busy, onBack, onEnroll, onUnenroll, onToggleTo
 
   return (
     <div className="cv-roadmap-detail">
-      <button type="button" onClick={onBack} className="cv-secondary-btn mb-5 !px-4 !py-2 text-xs">
-        ← Back to roadmap library
-      </button>
+      <div className="mb-5">
+        <BackButton onClick={onBack}>Back to roadmap library</BackButton>
+      </div>
 
       <div className="cv-panel overflow-hidden">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">

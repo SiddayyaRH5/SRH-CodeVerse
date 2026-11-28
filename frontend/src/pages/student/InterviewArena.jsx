@@ -11,6 +11,8 @@ import {
   submitInterviewSession,
 } from "../../api/interviewApi"
 import FloatingTechScene from "../../components/common/FloatingTechScene"
+import BackButton from "../../components/common/BackButton"
+import { ArrowLeft } from "lucide-react"
 
 const DIFFICULTIES = ["MIXED", "EASY", "MEDIUM", "HARD"]
 const MODES = ["TIMED", "PRACTICE"]
@@ -311,8 +313,9 @@ export default function InterviewArena() {
                 )}
 
                 <div className="mt-6 flex flex-wrap justify-between gap-2">
-                  <button type="button" disabled={activeIndex === 0} onClick={() => setActiveIndex((i) => i - 1)} className="cv-secondary-btn !px-4 !py-2 text-xs disabled:opacity-40">
-                    ← Previous
+                  <button type="button" disabled={activeIndex === 0} onClick={() => setActiveIndex((i) => i - 1)} className="cv-secondary-btn inline-flex items-center gap-1.5 !px-4 !py-2 text-xs disabled:opacity-40">
+                    <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />
+                    Previous
                   </button>
                   <button
                     type="button"
@@ -366,9 +369,17 @@ export default function InterviewArena() {
   if (view === "result" && result) {
     return (
       <main className="cv-interview-result cv-premium-page cv-page mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        <button type="button" className="cv-secondary-btn mb-4 !px-4 !py-2 text-xs" onClick={() => { setView("setup"); setResult(null); loadOverview() }}>
-          ← Back to interview arena
-        </button>
+        <div className="mb-4">
+          <BackButton
+            onClick={() => {
+              setView("setup")
+              setResult(null)
+              loadOverview()
+            }}
+          >
+            Back to interview arena
+          </BackButton>
+        </div>
         <div className="cv-panel">
           <div className="flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-center">
             <div>

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { PASSWORD_RESET_UNAVAILABLE, requestPasswordReset } from "../../api/passwordApi"
+import { ArrowLeft } from "lucide-react"
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -167,8 +168,9 @@ function ForgotPassword() {
             )}
 
             <p className="mt-7 text-center text-xs text-[var(--cv-muted)]">
-              <Link to="/login" className="font-bold text-violet-500 transition hover:text-cyan-400">
-                ← Return to login
+              <Link to="/login" className="inline-flex items-center gap-1.5 font-bold text-violet-500 transition hover:text-cyan-400">
+                <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />
+                Return to login
               </Link>
             </p>
           </div>

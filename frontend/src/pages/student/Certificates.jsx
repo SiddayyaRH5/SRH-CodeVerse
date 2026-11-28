@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link } from "react-router-dom"
+import BackButton from "../../components/common/BackButton"
+import { ArrowLeft } from "lucide-react"
 import {
   claimCertificate,
   downloadCertificatePdf,
@@ -144,7 +146,7 @@ function AttemptView({ attempt, onAnswer, onSubmit, onExit, busy, remaining, err
                 ))}
               </div>
               <div className="mt-6 flex justify-between gap-2">
-                <button type="button" disabled={activeIndex === 0} onClick={() => setActiveIndex((i) => i - 1)} className="cv-secondary-btn !px-4 !py-2 text-xs disabled:opacity-40">← Previous</button>
+                <button type="button" disabled={activeIndex === 0} onClick={() => setActiveIndex((i) => i - 1)} className="cv-secondary-btn inline-flex items-center gap-1.5 !px-4 !py-2 text-xs disabled:opacity-40"><ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />Previous</button>
                 <button type="button" disabled={activeIndex >= attempt.questions.length - 1} onClick={() => setActiveIndex((i) => i + 1)} className="cv-primary-btn !px-4 !py-2 text-xs disabled:opacity-40">Next →</button>
               </div>
             </>
@@ -184,7 +186,9 @@ function AttemptView({ attempt, onAnswer, onSubmit, onExit, busy, remaining, err
 function AttemptResult({ result, onBack, onClaim, onDownload, claiming, issued }) {
   return (
     <main className="cv-premium-page cv-page mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-      <button type="button" className="cv-secondary-btn mb-4 !px-4 !py-2 text-xs" onClick={onBack}>← Back to certificates</button>
+      <div className="mb-4">
+        <BackButton onClick={onBack}>Back to certificates</BackButton>
+      </div>
       <div className="cv-panel">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -208,7 +212,7 @@ function AttemptResult({ result, onBack, onClaim, onDownload, claiming, issued }
               Download PDF
             </button>
           )}
-          <button type="button" className="cv-secondary-btn !px-4 !py-2.5 text-xs" onClick={onBack}>Back to certificates</button>
+          <BackButton onClick={onBack}>Back to certificates</BackButton>
         </div>
       </div>
 
