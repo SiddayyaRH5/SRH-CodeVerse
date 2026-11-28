@@ -102,21 +102,21 @@ function Navbar() {
 
         {/* Desktop actions */}
         <div className="hidden lg:flex items-center gap-2 ml-auto shrink-0">
-          <div className="relative hidden 2xl:block">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--cv-subtle)]">
+          <div className="cv-nav-search hidden xl:block">
+            <span className="cv-nav-search-icon">
               <Search size={16} strokeWidth={2} aria-hidden="true" />
             </span>
 
             <input
-              aria-label="Search"
+              aria-label="Search courses, problems, skills"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) =>
                 e.key === "Enter" &&
                 navigate(`/problems?search=${encodeURIComponent(query)}`)
               }
-              placeholder="Search courses, problems..."
-              className="cv-input rounded-full py-2.5 px-4 text-sm max-w-[220px]"
+              placeholder="Search courses, problems, skills..."
+              className="cv-input cv-nav-search-input"
             />
           </div>
 
@@ -266,6 +266,24 @@ function Navbar() {
       {/* Mobile menu */}
       {mobileNavOpen && (
         <div className="cv-mobile-nav xl:hidden border-t border-[var(--cv-border)] bg-[var(--cv-surface)] px-4 py-4 shadow-xl">
+          <div className="cv-nav-search cv-nav-search--mobile mb-3">
+            <span className="cv-nav-search-icon">
+              <Search size={16} strokeWidth={2} aria-hidden="true" />
+            </span>
+            <input
+              aria-label="Search courses, problems, skills"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  navigate(`/problems?search=${encodeURIComponent(query)}`)
+                  setMobileNavOpen(false)
+                }
+              }}
+              placeholder="Search courses, problems, skills..."
+              className="cv-input cv-nav-search-input"
+            />
+          </div>
           <div className="grid sm:grid-cols-2 gap-1">
             {links.map(([label, path]) => (
               <Link

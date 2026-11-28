@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./styles/premium.css";
+@import "./styles/phase32.css";
 
 @theme {
   --color-bg-primary: var(--cv-bg);

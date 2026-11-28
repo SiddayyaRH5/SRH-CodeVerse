@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
+import {
+  CalendarDays,
+  CircleCheck,
+  Flame,
+  Lightbulb,
+  ShieldAlert,
+  Sparkles,
+  Target,
+  Trophy,
+} from "lucide-react"
 import { getAnalytics } from "../../api/analyticsApi"
 
 export default function Analytics() {
@@ -51,31 +61,126 @@ export default function Analytics() {
     return <div className="cv-page"><p className="text-[var(--color-danger)]">{error}</p><button onClick={loadAnalytics} className="cv-primary-btn mt-4">Retry</button></div>
   }
 
-  return <div className="cv-page cv-analytics-page">
-    <div><p className="cv-kicker">YOUR DEVELOPER TELEMETRY</p><h1 className="text-4xl font-black mt-2">Advanced Analytics</h1><p className="text-[var(--cv-muted)] mt-2 max-w-2xl">See how consistently you code, which difficulty levels you have mastered, and where your next improvement can come from.</p></div>
-    {error && <div role="alert" className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-500">{error}</div>}
-    <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-8">
-      {[
-        ["Problems Solved", analytics?.problemsSolved ?? 0, "✓"],
-        ["Current Streak", `${analytics?.currentStreak ?? 0} days`, "🔥"],
-        ["Longest Streak", `${longestStreak} days`, "💎"],
-        ["Solve Coverage", `${solveCoverage}%`, "◈"],
-        ["Active Days", activeDays, "↗"],
-      ].map(([label, value, icon]) => (
-        <div key={label} className="cv-analytics-stat cv-stat-card rounded-2xl p-5">
-          <div className="flex justify-between">
-            <span className="w-10 h-10 rounded-xl grid place-items-center bg-violet-500/10 text-violet-500">{icon}</span>
-            <span className="text-xs text-emerald-500 font-bold">LIVE</span>
+  const stats = [
+    { label: "Problems Solved", value: analytics?.problemsSolved ?? 0, icon: CircleCheck, accent: "violet" },
+    { label: "Current Streak", value: `${analytics?.currentStreak ?? 0} days`, icon: Flame, accent: "amber" },
+    { label: "Longest Streak", value: `${longestStreak} days`, icon: Trophy, accent: "cyan" },
+    { label: "Solve Coverage", value: `${solveCoverage}%`, icon: Target, accent: "blue" },
+    { label: "Active Days", value: activeDays, icon: CalendarDays, accent: "emerald" },
+  ]
+
+  return (
+    <div className="cv-page cv-analytics-page cv-premium-page">
+      <section className="cv-analytics-hero">
+        <span className="cv-analytics-geo" aria-hidden="true" />
+        <span className="cv-analytics-geo cv-analytics-geo--small" aria-hidden="true" />
+        <p className="cv-kicker">YOUR DEVELOPER TELEMETRY</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Advanced Analytics</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--cv-muted)]">
+          See how consistently you code, which difficulty levels you have mastered, and where your next improvement can come from.
+        </p>
+        <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-500">
+          <Sparkles size={12} aria-hidden="true" /> Live progress
+        </span>
+      </section>
+
+      {error && <div role="alert" className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-500">{error}</div>}
+
+      <div className="grid gap-4 mt-6 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map(({ label, value, icon: Icon, accent }) => (
+          <article key={label} className={`cv-analytics-stat cv-stat-card rounded-2xl border p-5 cv-analytics-accent--${accent}`}>
+            <div className="flex items-start justify-between gap-3">
+              <span className="cv-analytics-icon grid h-10 w-10 place-items-center rounded-xl">
+                <Icon size={19} strokeWidth={2} aria-hidden="true" />
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-500">LIVE</span>
+            </div>
+            <p className="mt-5 text-xs text-[var(--cv-muted)]">{label}</p>
+            <p className="cv-analytics-stat-number mt-1 font-black">{value}</p>
+          </article>
+        ))}
+      </div>
+
+      <div className="grid gap-5 mt-5 xl:grid-cols-[1.35fr_.65fr]">
+        <section className="cv-analytics-chart cv-panel">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-violet-500">Last 14 days</p>
+              <h2 className="mt-1 text-xl font-black">Coding Activity</h2>
+            </div>
+            <div className="cv-analytics-legend">
+              <span><i style={{ background: "#7c3aed" }} aria-hidden="true" /> Submissions</span>
+            </div>
           </div>
-          <p className="text-xs text-[var(--cv-muted)] mt-6">{label}</p>
-          <p className="text-3xl font-black mt-1">{value}</p>
-        </div>
-      ))}
+          {last14.length === 0 ? (
+            <div className="cv-analytics-empty">No submissions in the last 14 days yet.</div>
+          ) : (
+            <div className="h-72 mt-5">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={last14} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="activityFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--cv-border)" />
+                  <XAxis dataKey="date" tick={{ fill: "var(--cv-muted)", fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fill: "var(--cv-muted)", fontSize: 11 }} />
+                  <Tooltip contentStyle={{ background: "var(--cv-surface)", border: "1px solid var(--cv-border)", borderRadius: 12, color: "var(--cv-text)" }} />
+                  <Area type="monotone" dataKey="submissions" stroke="#7c3aed" fill="url(#activityFill)" strokeWidth={3} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </section>
+
+        <section className="cv-analytics-chart cv-panel">
+          <p className="text-xs font-bold uppercase tracking-wide text-cyan-500">Difficulty mastery</p>
+          <h2 className="mt-1 text-xl font-black">Solved vs available</h2>
+          <div className="cv-analytics-legend mt-3">
+            <span><i style={{ background: "#06b6d4" }} aria-hidden="true" /> Solved</span>
+            <span><i style={{ background: "rgba(124,58,237,0.35)" }} aria-hidden="true" /> Available</span>
+          </div>
+          {difficulty.length === 0 ? (
+            <div className="cv-analytics-empty">Difficulty data is not available yet.</div>
+          ) : (
+            <div className="h-72 mt-3">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={difficulty} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--cv-border)" />
+                  <XAxis dataKey="name" tick={{ fill: "var(--cv-muted)", fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fill: "var(--cv-muted)", fontSize: 11 }} />
+                  <Tooltip contentStyle={{ background: "var(--cv-surface)", border: "1px solid var(--cv-border)", borderRadius: 12, color: "var(--cv-text)" }} />
+                  <Bar dataKey="solved" fill="#06b6d4" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="total" fill="#7c3aed" fillOpacity={0.22} radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </section>
+      </div>
+
+      <div className="grid gap-5 mt-5 lg:grid-cols-3">
+        <article className="cv-panel cv-analytics-insight">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-500/10 text-violet-500"><Lightbulb size={17} aria-hidden="true" /></span>
+          <p className="text-xs font-bold uppercase tracking-wide text-violet-500">Next focus</p>
+          <h3 className="text-lg font-black">Build consistency</h3>
+          <p className="text-sm text-[var(--cv-muted)]">Your analytics show {activeDays} active days. Aim for a short daily session instead of occasional long sessions.</p>
+        </article>
+        <article className="cv-panel cv-analytics-insight">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-500/10 text-cyan-500"><ShieldAlert size={17} aria-hidden="true" /></span>
+          <p className="text-xs font-bold uppercase tracking-wide text-cyan-500">Difficulty signal</p>
+          <h3 className="text-lg font-black">Push one level higher</h3>
+          <p className="text-sm text-[var(--cv-muted)]">Use your solved distribution to choose the next difficulty. Once Easy feels routine, increase Medium practice gradually.</p>
+        </article>
+        <article className="cv-panel cv-analytics-insight">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-500/10 text-amber-500"><Flame size={17} aria-hidden="true" /></span>
+          <p className="text-xs font-bold uppercase tracking-wide text-amber-500">Streak</p>
+          <h3 className="text-lg font-black">Protect your momentum</h3>
+          <p className="text-sm text-[var(--cv-muted)]">Your current streak is {analytics?.currentStreak ?? 0} days. One focused problem a day is enough to keep the habit going.</p>
+        </article>
+      </div>
     </div>
-    <div className="grid xl:grid-cols-[1.35fr_.65fr] gap-5 mt-5">
-      <section className="cv-analytics-chart cv-panel"><div className="flex justify-between items-end"><div><p className="text-xs font-bold text-violet-500">LAST 14 DAYS</p><h2 className="text-xl font-black mt-1">Coding Activity</h2></div><span className="text-xs text-[var(--cv-muted)]">Your actual submissions</span></div><div className="h-72 mt-6"><ResponsiveContainer width="100%" height="100%"><AreaChart data={last14}><defs><linearGradient id="activityFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#7c3aed" stopOpacity={0.35}/><stop offset="95%" stopColor="#7c3aed" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="var(--cv-border)"/><XAxis dataKey="date" tick={{fill:'var(--cv-muted)',fontSize:11}}/><YAxis allowDecimals={false} tick={{fill:'var(--cv-muted)',fontSize:11}}/><Tooltip contentStyle={{background:'var(--cv-surface)',border:'1px solid var(--cv-border)',borderRadius:12,color:'var(--cv-text)'}}/><Area type="monotone" dataKey="submissions" stroke="#7c3aed" fill="url(#activityFill)" strokeWidth={3}/></AreaChart></ResponsiveContainer></div></section>
-      <section className="cv-analytics-chart cv-panel"><p className="text-xs font-bold text-cyan-500">DIFFICULTY MASTERY</p><h2 className="text-xl font-black mt-1">Solved vs available</h2><div className="h-72 mt-6"><ResponsiveContainer width="100%" height="100%"><BarChart data={difficulty}><CartesianGrid strokeDasharray="3 3" stroke="var(--cv-border)"/><XAxis dataKey="name" tick={{fill:'var(--cv-muted)',fontSize:11}}/><YAxis allowDecimals={false} tick={{fill:'var(--cv-muted)',fontSize:11}}/><Tooltip contentStyle={{background:'var(--cv-surface)',border:'1px solid var(--cv-border)',borderRadius:12,color:'var(--cv-text)'}}/><Bar dataKey="solved" fill="#06b6d4" radius={[6,6,0,0]}/><Bar dataKey="total" fill="#7c3aed" fillOpacity={0.22} radius={[6,6,0,0]}/></BarChart></ResponsiveContainer></div></section>
-    </div>
-    <div className="grid lg:grid-cols-3 gap-5 mt-5"><div className="cv-panel"><p className="text-xs font-bold text-violet-500">NEXT FOCUS</p><h3 className="text-xl font-black mt-2">Build consistency</h3><p className="text-sm text-[var(--cv-muted)] mt-2">Your analytics show {activeDays} active days. Aim for a short daily session instead of occasional long sessions.</p></div><div className="cv-panel"><p className="text-xs font-bold text-cyan-500">DIFFICULTY SIGNAL</p><h3 className="text-xl font-black mt-2">Push one level higher</h3><p className="text-sm text-[var(--cv-muted)] mt-2">Use your solved distribution to choose the next difficulty. Once Easy feels routine, increase Medium practice gradually.</p></div><div className="cv-panel"><p className="text-xs font-bold text-pink-500">STREAK</p><h3 className="text-xl font-black mt-2">Protect your momentum</h3><p className="text-sm text-[var(--cv-muted)] mt-2">Your current streak is {analytics?.currentStreak ?? 0} days. One focused problem a day is enough to keep the habit going.</p></div></div>
-  </div>
+  )
 }
