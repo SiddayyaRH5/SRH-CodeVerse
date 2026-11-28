@@ -7,7 +7,9 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -18,6 +20,13 @@ import java.util.Set;
  */
 @Component
 public class FeatureContentSeeder implements ApplicationRunner {
+
+    /** Approved pricing for new/local-test course rows. Existing rows are never modified here. */
+    private static final Map<String, BigDecimal> APPROVED_PAID_PRICES = Map.of(
+            "java-foundations", new BigDecimal("299"),
+            "dsa-essentials", new BigDecimal("349"),
+            "spring-boot-backend", new BigDecimal("399"),
+            "fullstack-projects", new BigDecimal("449"));
 
     private final RoadmapRepository roadmapRepository;
     private final RoadmapStageRepository stageRepository;
@@ -873,6 +882,9 @@ public class FeatureContentSeeder implements ApplicationRunner {
                         .detailedDescription(detailedDescription).category(category).difficulty(difficulty)
                         .level(level).estimatedDurationMinutes(durationMinutes)
                         .lessonCount(lessons.length).problemCount(0)
+                        .courseType(APPROVED_PAID_PRICES.containsKey(slug) ? "PAID" : "FREE")
+                        .price(APPROVED_PAID_PRICES.getOrDefault(slug, BigDecimal.ZERO))
+                        .currency("INR")
                         .learningObjectives(objectives).prerequisites(prerequisites)
                         .skillsGained(skillsGained).build()));
 

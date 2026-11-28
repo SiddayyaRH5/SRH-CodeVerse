@@ -203,10 +203,10 @@ class StudentFeaturesIntegrationTest {
         User owner = student("learn");
         User other = student("learn");
 
-        Map<String, Object> enrolled = learningService.enroll("java-foundations", owner.getUsername());
+        Map<String, Object> enrolled = learningService.enroll("sql-mastery", owner.getUsername());
         assertEquals(Boolean.TRUE, enrolled.get("enrolled"));
 
-        Course course = courseRepository.findBySlug("java-foundations").orElseThrow();
+        Course course = courseRepository.findBySlug("sql-mastery").orElseThrow();
         List<CourseLesson> lessons = courseLessonRepository
                 .findByCourseOrderByModuleOrderAscLessonOrderAsc(course);
         Long lessonId = lessons.get(0).getId();
@@ -248,15 +248,15 @@ class StudentFeaturesIntegrationTest {
     @Test
     void learningCatalogSupportsSearchAndReportsProgress() {
         User user = student("catalog");
-        learningService.enroll("java-foundations", user.getUsername());
+        learningService.enroll("sql-mastery", user.getUsername());
 
         Map<String, Object> catalog = learningService.catalog(
-                user.getUsername(), "java", null, null, 0, 50);
+                user.getUsername(), "sql", null, null, 0, 50);
         assertTrue(((Number) catalog.get("total")).intValue() >= 1);
         List<Map<String, Object>> items = list(catalog.get("items"));
-        assertTrue(items.stream().anyMatch(item -> "java-foundations".equals(item.get("slug"))));
+        assertTrue(items.stream().anyMatch(item -> "sql-mastery".equals(item.get("slug"))));
         assertTrue(items.stream()
-                .filter(item -> "java-foundations".equals(item.get("slug")))
+                .filter(item -> "sql-mastery".equals(item.get("slug")))
                 .allMatch(item -> Boolean.TRUE.equals(item.get("enrolled"))));
     }
 

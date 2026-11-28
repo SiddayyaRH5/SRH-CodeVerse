@@ -84,7 +84,7 @@ class LearningControllerIntegrationTest {
         assertTrue(catalog.get("items").isArray());
         assertTrue(catalog.get("items").size() > 0);
 
-        JsonNode detail = getJson("/api/learning/courses/java-foundations");
+        JsonNode detail = getJson("/api/learning/courses/sql-mastery");
         assertTrue(detail.get("modules").size() > 0);
         long lessonId = detail.get("modules").get(0).get("lessons").get(0).get("id").asLong();
 
@@ -102,10 +102,10 @@ class LearningControllerIntegrationTest {
 
     @Test
     void learningMutationsPersistAndRecommendationLinksUseLearningPathRoutes() throws Exception {
-        JsonNode detail = getJson("/api/learning/courses/java-foundations");
+        JsonNode detail = getJson("/api/learning/courses/sql-mastery");
         long lessonId = detail.get("modules").get(0).get("lessons").get(0).get("id").asLong();
 
-        mockMvc.perform(post("/api/learning/courses/java-foundations/enroll")
+        mockMvc.perform(post("/api/learning/courses/sql-mastery/enroll")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
 
