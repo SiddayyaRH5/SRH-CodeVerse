@@ -15,7 +15,7 @@ import {
 } from "../../api/learningApi"
 import FloatingTechScene from "../../components/common/FloatingTechScene"
 import BackButton from "../../components/common/BackButton"
-import { ArrowLeft } from "lucide-react"
+import LessonNav from "../../components/common/LessonNav"
 
 const LEARNING_RESOURCES = ["courses", "progress", "my", "bookmarks", "recommendations"]
 
@@ -744,24 +744,19 @@ export function LessonView() {
         </div>
       </article>
 
-      <div className="mt-5 flex flex-wrap justify-between gap-2">
-        <button
-          type="button"
-          disabled={!lesson.previousLessonId}
-          onClick={() => navigate(`/learning-path/lessons/${lesson.previousLessonId}`)}
-          className="cv-secondary-btn inline-flex items-center gap-1.5 !px-4 !py-2.5 text-xs disabled:opacity-40"
-        >
-          <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />
-          Previous lesson
-        </button>
-        <button
-          type="button"
-          disabled={!lesson.nextLessonId}
-          onClick={() => navigate(`/learning-path/lessons/${lesson.nextLessonId}`)}
-          className="cv-primary-btn !px-4 !py-2.5 text-xs disabled:opacity-40"
-        >
-          Next lesson →
-        </button>
+      <div className="mt-5">
+        <LessonNav
+          previous={lesson.previousLessonId ? `Lesson ${Number(lesson.position) - 1}` : null}
+          next={lesson.nextLessonId ? `Lesson ${Number(lesson.position) + 1}` : null}
+          onPrevious={() =>
+            lesson.previousLessonId &&
+            navigate(`/learning-path/lessons/${lesson.previousLessonId}`)
+          }
+          onNext={() =>
+            lesson.nextLessonId &&
+            navigate(`/learning-path/lessons/${lesson.nextLessonId}`)
+          }
+        />
       </div>
     </main>
   )

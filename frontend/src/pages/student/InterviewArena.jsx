@@ -12,6 +12,7 @@ import {
 } from "../../api/interviewApi"
 import FloatingTechScene from "../../components/common/FloatingTechScene"
 import BackButton from "../../components/common/BackButton"
+import CustomSelect from "../../components/common/CustomSelect"
 import { ArrowLeft } from "lucide-react"
 
 const DIFFICULTIES = ["MIXED", "EASY", "MEDIUM", "HARD"]
@@ -567,9 +568,13 @@ export default function InterviewArena() {
               <div className="mt-4 space-y-3">
                 <label className="block">
                   <span className="mb-1 block text-xs font-bold text-[var(--cv-muted)]">Difficulty</span>
-                  <select className="cv-input w-full" value={form.difficulty} onChange={(event) => setForm((current) => ({ ...current, difficulty: event.target.value }))}>
-                    {DIFFICULTIES.map((item) => <option key={item} value={item}>{item}</option>)}
-                  </select>
+                  <CustomSelect
+                    label="Interview difficulty"
+                    value={form.difficulty}
+                    onChange={(value) => setForm((current) => ({ ...current, difficulty: value }))}
+                    options={DIFFICULTIES.map((item) => ({ value: item, label: item }))}
+                    className="w-full"
+                  />
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-bold text-[var(--cv-muted)]">Questions</span>
@@ -588,9 +593,13 @@ export default function InterviewArena() {
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-bold text-[var(--cv-muted)]">Mode</span>
-                  <select className="cv-input w-full" value={form.mode} onChange={(event) => setForm((current) => ({ ...current, mode: event.target.value }))}>
-                    {MODES.map((item) => <option key={item} value={item}>{item}</option>)}
-                  </select>
+                  <CustomSelect
+                    label="Interview mode"
+                    value={form.mode}
+                    onChange={(value) => setForm((current) => ({ ...current, mode: value }))}
+                    options={MODES.map((item) => ({ value: item, label: item }))}
+                    className="w-full"
+                  />
                 </label>
                 <button type="button" className="cv-primary-btn w-full !py-3 text-sm" disabled={busy || availableQuestions < 5} onClick={start}>
                   {busy ? "Starting…" : "Start interview"}

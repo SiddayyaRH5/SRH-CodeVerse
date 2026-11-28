@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import BackButton from "../../components/common/BackButton"
+import CustomSelect from "../../components/common/CustomSelect"
 import {
   enrollRoadmap,
   getRoadmap,
@@ -398,18 +399,29 @@ export default function Roadmap() {
           </label>
           <label className="block">
             <span className="mb-1.5 block text-xs font-bold text-[var(--cv-muted)]">Category</span>
-            <select className="cv-input w-full" value={category} onChange={(event) => setCategory(event.target.value)}>
-              <option value="ALL">All categories</option>
-              {catalog.categories.map((item) => (
-                <option key={item.name} value={item.name}>{item.name} ({item.count})</option>
-              ))}
-            </select>
+            <CustomSelect
+              label="Roadmap category"
+              value={category}
+              onChange={setCategory}
+              options={[
+                { value: "ALL", label: "All categories" },
+                ...catalog.categories.map((item) => ({
+                  value: item.name,
+                  label: `${item.name} (${item.count})`,
+                })),
+              ]}
+              className="w-full"
+            />
           </label>
           <label className="block">
             <span className="mb-1.5 block text-xs font-bold text-[var(--cv-muted)]">Difficulty</span>
-            <select className="cv-input w-full" value={difficulty} onChange={(event) => setDifficulty(event.target.value)}>
-              {DIFFICULTIES.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
+            <CustomSelect
+              label="Roadmap difficulty"
+              value={difficulty}
+              onChange={setDifficulty}
+              options={DIFFICULTIES.map((item) => ({ value: item, label: item }))}
+              className="w-full"
+            />
           </label>
         </div>
       </div>

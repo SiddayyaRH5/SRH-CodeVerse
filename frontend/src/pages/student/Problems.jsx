@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { getProblems } from "../../api/problemApi"
 import DifficultyBadge from "../../components/common/DifficultyBadge"
+import CustomSelect from "../../components/common/CustomSelect"
+import { Search } from "lucide-react"
 import { useAuth } from "../../context/AuthContext"
 import { isBookmarked, toggleBookmark } from "../../utils/srhStudy"
 
@@ -304,8 +306,8 @@ function Problems() {
         </label>
 
         <div className="relative">
-          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
-            🔍
+          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
+            <Search size={15} strokeWidth={2} aria-hidden="true" />
           </span>
           <input
             id="problem-search"
@@ -367,18 +369,16 @@ function Problems() {
             >
               TOPIC
             </label>
-            <select
-              id="problem-topic"
+            <CustomSelect
+              label="Problem topic"
               value={topicFilter}
-              onChange={(event) => setTopicFilter(event.target.value)}
-              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] px-3 py-2.5 text-sm text-[var(--color-text-primary)] outline-none focus:border-violet-500"
-            >
-              {topics.map((topic) => (
-                <option key={topic} value={topic}>
-                  {topic === "ALL" ? "All topics" : topic}
-                </option>
-              ))}
-            </select>
+              onChange={setTopicFilter}
+              options={topics.map((topic) => ({
+                value: topic,
+                label: topic === "ALL" ? "All topics" : topic,
+              }))}
+              className="w-full"
+            />
           </div>
         </div>
 
