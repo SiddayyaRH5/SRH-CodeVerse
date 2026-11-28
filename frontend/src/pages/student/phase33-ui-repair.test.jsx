@@ -23,6 +23,9 @@ vi.mock("recharts", () => ({
   BarChart: ({ children }) => <div>{children}</div>,
   Area: () => <path data-testid="area" />,
   Bar: () => <rect data-testid="bar" />,
+  PieChart: ({ children }) => <div data-testid="pie-chart">{children}</div>,
+  Pie: ({ children }) => <div data-testid="pie">{children}</div>,
+  Cell: () => <span data-testid="pie-cell" />,
   XAxis: () => null,
   YAxis: () => null,
   Tooltip: () => null,
@@ -87,6 +90,26 @@ describe("Analytics states", () => {
     expect(c.textContent.toLowerCase()).toContain("easy")
     expect(c.textContent).toContain("56%")
     expect(c.querySelectorAll('[role="progressbar"]')).toHaveLength(3)
+  })
+
+  it("maps metrics and renders the donut from real API fields", async () => {
+    analyticsApi.getAnalytics.mockResolvedValue({ data: analyticsData })
+    const c = render(<Analytics />)
+    await settle()
+    expect(c.textContent).toContain("24")
+    expect(c.textContent).toContain("40%")
+    expect(c.textContent).toContain("9")
+    expect(c.querySelector('[aria-label^="Solved versus available"]')).not.toBeNull()
+    expect(c.querySelectorAll('[data-testid="pie-cell"]')).toHaveLength(2)
+    expect(c.textContent).toContain("solved of 60")
+  })
+
+  it("handles zero available problems without rendering a misleading donut", async () => {
+    analyticsApi.getAnalytics.mockResolvedValue({ data: { ...analyticsData, totalAvailableProblems: 0, problemsSolved: 0 } })
+    const c = render(<Analytics />)
+    await settle()
+    expect(c.textContent).toContain("No problems are available yet.")
+    expect(c.querySelector('[data-testid="pie-chart"]')).toBeNull()
   })
 
   it("shows honest empty states when the API has no chart data", async () => {
@@ -219,7 +242,13 @@ describe("Global search and compact filters", () => {
       </MemoryRouter>
     )
     const input = c.querySelector('input[aria-label="Search courses, problems, skills"]')
-    if (input) expect(input.className).toContain("cv-nav-search-input")
-    else expect(c.querySelector(".cv-nav-search")).not.toBeNull()
+    if (input) {
+      expect(input.className).toContain("cv-nav-search-input")
+      // Icon and input are siblings: overlap is structurally impossible.
+      expect(input.parentElement.classList.contains("cv-nav-search")).toBe(true)
+      expect(input.parentElement.querySelector(".cv-nav-search-icon")).not.toBeNull()
+    } else {
+      expect(c.querySelector(".cv-nav-search")).not.toBeNull()
+    }
   })
 })

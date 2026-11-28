@@ -102,7 +102,7 @@ function Navbar() {
 
         {/* Desktop actions */}
         <div className="hidden lg:flex items-center gap-2 ml-auto shrink-0">
-          <div className="cv-nav-search hidden xl:block">
+          <div className="cv-nav-search hidden xl:flex">
             <span className="cv-nav-search-icon">
               <Search size={16} strokeWidth={2} aria-hidden="true" />
             </span>
