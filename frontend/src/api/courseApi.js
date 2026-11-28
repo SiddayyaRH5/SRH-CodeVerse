@@ -1,4 +1,4 @@
-﻿import axiosInstance from './axiosInstance'
+import axiosInstance from './axiosInstance'
 
 export const getCourses = () => axiosInstance.get('/courses')
 export const getCourse = (slug) => axiosInstance.get(`/courses/${slug}`)

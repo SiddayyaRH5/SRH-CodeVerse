@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { useParams } from "react-router-dom"
 import { verifyCertificate } from "../../api/certificateApi"
+import BackButton from "../../components/common/BackButton"
 
 function Detail({ label, value, mono = false }) {
   return (
@@ -73,7 +74,7 @@ export default function CertificateVerify() {
             <button type="button" className="cv-secondary-btn !px-4 !py-2 text-xs" onClick={load}>
               Try again
             </button>
-            <Link to="/" className="cv-secondary-btn !px-4 !py-2 text-xs">Back to home</Link>
+            <BackButton to="/">Back to home</BackButton>
           </div>
         </div>
       ) : certificate ? (
@@ -127,7 +128,7 @@ export default function CertificateVerify() {
       ) : null}
 
       <div className="mt-6 text-center">
-        <Link to="/" className="text-xs font-bold text-violet-400 hover:text-violet-300">← Back to SRH CodeVerse</Link>
+        <BackButton to="/">Back to SRH CodeVerse</BackButton>
       </div>
     </main>
   )

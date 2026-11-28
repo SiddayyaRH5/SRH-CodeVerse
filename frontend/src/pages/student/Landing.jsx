@@ -4,6 +4,17 @@ import { useAuth } from "../../context/AuthContext"
 import { getProblems } from "../../api/problemApi"
 import { getCourses } from "../../api/courseApi"
 import FloatingTechScene from "../../components/common/FloatingTechScene"
+import {
+  ArrowRight,
+  Boxes,
+  Braces,
+  Code2,
+  Coffee,
+  Rocket,
+  Terminal,
+  TrendingUp,
+  Zap,
+} from "lucide-react"
 
 const courses = [
   ["JV", "Java", "Complete Java from basics to advanced", "Java track", "#ef4444"],
@@ -15,10 +26,10 @@ const courses = [
 ]
 
 const features = [
-  ["</>", "Interactive Learning", "Well-structured lessons with hands-on examples."],
-  ["{}", "Coding Challenges", "Practice problems with multiple difficulty levels."],
-  ["[]", "Real Projects", "Build and showcase practical developer projects."],
-  ["->", "Track Progress", "Monitor learning, streaks and achievements."],
+  [Code2, "Interactive Learning", "Well-structured lessons with hands-on examples."],
+  [Braces, "Coding Challenges", "Practice problems with multiple difficulty levels."],
+  [Boxes, "Real Projects", "Build and showcase practical developer projects."],
+  [TrendingUp, "Track Progress", "Monitor learning, streaks and achievements."],
 ]
 
 function CodeWindow() {
@@ -42,8 +53,8 @@ function CodeWindow() {
       </div>
     </div>
     <div className="cv-code-glow" />
-    <div className="cv-floating-badge cv-badge-a">☕ <b>Java</b><span>Practice track</span></div>
-    <div className="cv-floating-badge cv-badge-b">⚡ <b>Level up</b><span>keep building</span></div>
+    <div className="cv-floating-badge cv-badge-a"><Coffee size={14} aria-hidden="true" /> <b>Java</b><span>Practice track</span></div>
+    <div className="cv-floating-badge cv-badge-b"><Zap size={14} aria-hidden="true" /> <b>Level up</b><span>keep building</span></div>
     <div className="hidden sm:block absolute -right-7 top-24 px-4 py-3 rounded-2xl bg-[var(--cv-glass)] border border-[var(--cv-border)] shadow-xl backdrop-blur-xl rotate-3"><b className="text-sm">Solve Problems</b><span className="block text-[10px] text-[var(--cv-muted)] mt-1">Easy → Hard</span></div>
   </div>
 }
@@ -112,10 +123,10 @@ function Landing() {
       <div className="cv-premium-fade-in cv-hero-orb cv-orb-purple"/><div className="cv-hero-orb cv-orb-cyan"/><div className="cv-hero-orb cv-orb-pink"/>
       <div className="max-w-[1320px] mx-auto w-full px-5 sm:px-8 py-20 relative z-10 grid lg:grid-cols-[.88fr_1.12fr] gap-12 items-center">
         <div className="cv-reveal">
-          <div className="cv-pill"><span className="cv-live-dot"/> 🚀 Your Coding Journey Starts Here</div>
+          <div className="cv-pill"><span className="cv-live-dot"/> <Rocket size={13} aria-hidden="true" /> Your Coding Journey Starts Here</div>
           <h1 className="mt-7 text-5xl sm:text-6xl lg:text-[72px] font-black tracking-[-.055em] leading-[.94]">Learn to Code.<br/>Build Your <span className="cv-gradient-text">Future.</span></h1>
           <p className="mt-7 max-w-xl text-base sm:text-lg leading-8 text-[var(--cv-muted)]">Interactive courses, coding challenges, real-world projects and a supportive community to help you become a better developer.</p>
-          <div className="flex flex-wrap gap-3 mt-8"><Link to={user ? dashboard : "/register"} className="cv-primary-btn">{user ? "Open Dashboard" : "Start Learning"} <span>→</span></Link><Link to="/courses" className="cv-secondary-btn">Explore Courses</Link></div>
+          <div className="flex flex-wrap gap-3 mt-8"><Link to={user ? dashboard : "/register"} className="cv-primary-btn">{user ? "Open Dashboard" : "Start Learning"} <ArrowRight size={16} strokeWidth={2} aria-hidden="true" /></Link><Link to="/courses" className="cv-secondary-btn">Explore Courses</Link></div>
           <div className="flex items-center gap-4 mt-9"><div className="flex -space-x-2"><span className="w-9 h-9 rounded-full grid place-items-center bg-gradient-to-br from-violet-500 to-blue-500 border-2 border-[var(--cv-bg)] text-white text-xs font-bold">S</span><span className="w-9 h-9 rounded-full grid place-items-center bg-gradient-to-br from-blue-500 to-cyan-400 border-2 border-[var(--cv-bg)] text-white text-xs font-bold">A</span><span className="w-9 h-9 rounded-full grid place-items-center bg-gradient-to-br from-pink-500 to-violet-500 border-2 border-[var(--cv-bg)] text-white text-xs font-bold">R</span><span className="w-9 h-9 rounded-full grid place-items-center bg-gradient-to-br from-amber-400 to-orange-500 border-2 border-[var(--cv-bg)] text-white text-xs font-bold">+</span></div><div><b className="text-sm">10K+ Developers</b><p className="text-xs text-[var(--cv-muted)]">are learning with CodeVerse</p></div></div>
         </div>
         <div className="relative px-2 sm:px-8 lg:px-0"><CodeWindow /></div>
@@ -125,13 +136,13 @@ function Landing() {
     <section className="relative z-20 -mt-10 max-w-[1280px] mx-auto px-4 sm:px-6">
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            ["{}", problems?.length ?? "—", "Coding Problems"],
-            ["[]", catalog?.length ?? "—", "Courses"],
-            [">_", catalog?.reduce((n, c) => n + (Number(c.lessonCount) || 0), 0) || "—", "Lessons"],
-            ["</>", "4", "Learning Tracks"],
-          ].map(([icon, num, label]) => (
+            [Braces, problems?.length ?? "—", "Coding Problems"],
+            [Boxes, catalog?.length ?? "—", "Courses"],
+            [Terminal, catalog?.reduce((n, c) => n + (Number(c.lessonCount) || 0), 0) || "—", "Lessons"],
+            [Code2, "4", "Learning Tracks"],
+          ].map(([Icon, num, label]) => (
             <div className="cv-premium-surface rounded-2xl p-5 flex items-center gap-4" key={label}>
-              <span className="w-12 h-12 rounded-xl grid place-items-center bg-violet-500/10 text-violet-600 text-lg font-bold">{icon}</span>
+              <span className="w-12 h-12 rounded-xl grid place-items-center bg-violet-500/10 text-violet-600"><Icon size={20} strokeWidth={2} aria-hidden="true" /></span>
               <div><b className="text-2xl tracking-tight">{num}</b><p className="text-xs text-[var(--cv-muted)] mt-0.5">{label}</p></div>
             </div>
           ))}
@@ -139,16 +150,16 @@ function Landing() {
       </section>
 
     <section className="cv-premium-section max-w-[1280px] mx-auto px-5 sm:px-8">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8"><div><p className="cv-kicker">LEARN WITH STRUCTURE</p><h2 className="text-3xl sm:text-4xl font-black mt-2">Popular Courses</h2><p className="text-[var(--cv-muted)] mt-2">Learn from structured courses designed for beginners to advanced learners.</p></div><Link to="/courses" className="text-sm font-bold text-violet-600 hover:translate-x-1 transition-transform">View All Courses →</Link></div>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8"><div><p className="cv-kicker">LEARN WITH STRUCTURE</p><h2 className="text-3xl sm:text-4xl font-black mt-2">Popular Courses</h2><p className="text-[var(--cv-muted)] mt-2">Learn from structured courses designed for beginners to advanced learners.</p></div><Link to="/courses" className="text-sm font-bold text-violet-600 hover:translate-x-1 transition-transform inline-flex items-center gap-1.5">View All Courses <ArrowRight size={15} strokeWidth={2} aria-hidden="true" /></Link></div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {courses.map(([icon,title,desc,lessons,accent]) => <Link to={`/courses/${({Java:"java-programming",Python:"python-programming",JavaScript:"javascript",React:"react-js","Spring Boot":"spring-boot","Web Development":"html-css"})[title] || ""}`} key={title} className="cv-course-card rounded-2xl p-5 group">
-          <span className="w-12 h-12 rounded-xl grid place-items-center text-2xl" style={{background:`color-mix(in srgb, ${accent} 10%, var(--cv-surface))`}}>{icon}</span><h3 className="font-extrabold mt-5">{title}</h3><p className="text-xs leading-5 text-[var(--cv-muted)] mt-2 min-h-10">{desc}</p><div className="mt-5 flex items-center justify-between"><span className="text-[11px] font-semibold text-[var(--cv-muted)]">{lessons}</span><span className="w-8 h-8 rounded-full grid place-items-center bg-violet-500/10 text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition">→</span></div>
+          <span className="w-12 h-12 rounded-xl grid place-items-center text-2xl" style={{background:`color-mix(in srgb, ${accent} 10%, var(--cv-surface))`}}>{icon}</span><h3 className="font-extrabold mt-5">{title}</h3><p className="text-xs leading-5 text-[var(--cv-muted)] mt-2 min-h-10">{desc}</p><div className="mt-5 flex items-center justify-between"><span className="text-[11px] font-semibold text-[var(--cv-muted)]">{lessons}</span><span className="w-8 h-8 rounded-full grid place-items-center bg-violet-500/10 text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition"><ArrowRight size={15} strokeWidth={2} aria-hidden="true" /></span></div>
         </Link>)}
       </div>
     </section>
 
     <section className="max-w-[1280px] mx-auto px-5 sm:px-8 pb-20 grid lg:grid-cols-[1.45fr_.75fr] gap-5">
-      <div className="cv-section-panel rounded-3xl p-6 sm:p-8"><p className="cv-kicker">WHY CHOOSE US</p><h2 className="text-3xl font-black mt-2">Why Choose SRH <span className="cv-gradient-text">CodeVerse?</span></h2><p className="text-[var(--cv-muted)] mt-2">More than just courses — a complete platform to help you grow as a developer.</p><div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-7">{features.map(([icon,title,desc]) => <div key={title} className="rounded-2xl p-4 bg-[var(--cv-surface-2)] border border-[var(--cv-border)] hover:-translate-y-1 transition"><span className="w-10 h-10 rounded-xl grid place-items-center bg-violet-500/10 text-violet-600 font-bold">{icon}</span><h3 className="text-sm font-bold mt-4">{title}</h3><p className="text-[11px] leading-5 text-[var(--cv-muted)] mt-1">{desc}</p></div>)}</div></div>
+      <div className="cv-section-panel rounded-3xl p-6 sm:p-8"><p className="cv-kicker">WHY CHOOSE US</p><h2 className="text-3xl font-black mt-2">Why Choose SRH <span className="cv-gradient-text">CodeVerse?</span></h2><p className="text-[var(--cv-muted)] mt-2">More than just courses — a complete platform to help you grow as a developer.</p><div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-7">{features.map(([Icon,title,desc]) => <div key={title} className="rounded-2xl p-4 bg-[var(--cv-surface-2)] border border-[var(--cv-border)] hover:-translate-y-1 transition"><span className="w-10 h-10 rounded-xl grid place-items-center bg-violet-500/10 text-violet-600"><Icon size={18} strokeWidth={2} aria-hidden="true" /></span><h3 className="text-sm font-bold mt-4">{title}</h3><p className="text-[11px] leading-5 text-[var(--cv-muted)] mt-1">{desc}</p></div>)}</div></div>
       <div className="cv-section-panel rounded-3xl p-6 sm:p-8"><div className="flex items-start justify-between"><div><p className="cv-kicker">PRACTICE</p><h2 className="text-2xl font-black mt-2">Practice Problems</h2><p className="text-xs text-[var(--cv-muted)] mt-1">Sharpen your skills with coding challenges.</p></div><Link to="/problems" className="text-xs font-bold text-violet-600">View All →</Link></div><div className="space-y-3 mt-7">{[["Easy","EASY","#22c55e"],["Medium","MEDIUM","#f59e0b"],["Hard","HARD","#ef4444"]].map(([name,difficulty,color]) => <Link to={`/problems?difficulty=${difficulty}`} key={name} className="flex items-center justify-between rounded-2xl p-4 bg-[var(--cv-surface-2)] border border-[var(--cv-border)] hover:-translate-y-1 transition"><div className="flex items-center gap-3"><span className="w-10 h-10 rounded-xl grid place-items-center font-bold" style={{color,background:`color-mix(in srgb, ${color} 10%, var(--cv-surface))`}}>◆</span><div><b className="text-sm">{name}</b><p className="text-[10px] text-[var(--cv-muted)]">{problemCountLabel(difficulty)}</p></div></div><span className="text-[var(--cv-muted)]">→</span></Link>)}</div></div>
     </section>
 

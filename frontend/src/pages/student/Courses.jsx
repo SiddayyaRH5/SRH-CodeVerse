@@ -2,6 +2,18 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { getCourses } from "../../api/courseApi"
+import {
+  Atom,
+  BookOpen,
+  Braces,
+  Code2,
+  Coffee,
+  Database,
+  FileCode2,
+  Leaf,
+  Palette,
+  Star,
+} from "lucide-react"
 
 const LEVELS = ["ALL", "Beginner", "Intermediate", "Advanced"]
 const ACCESS = ["ALL", "FREE", "PAID"]
@@ -14,16 +26,16 @@ const SORTS = [
 ]
 
 const COURSE_ICONS = {
-  java: "☕",
-  python: "🐍",
-  javascript: "JS",
-  html: "🌐",
-  css: "🎨",
-  react: "⚛️",
-  sql: "🗄️",
-  database: "🗄️",
-  spring: "🌱",
-  default: "💻",
+  java: Coffee,
+  python: Code2,
+  javascript: Braces,
+  html: FileCode2,
+  css: Palette,
+  react: Atom,
+  sql: Database,
+  database: Database,
+  spring: Leaf,
+  default: BookOpen,
 }
 
 function getCourseIcon(course) {
@@ -363,7 +375,7 @@ function Courses() {
             const durationHours = Math.round(
               (Number(course.estimatedDurationMinutes) || 0) / 60
             )
-            const icon = getCourseIcon(course)
+            const Icon = getCourseIcon(course)
             const imageFailed = brokenImages[course.slug]
             const image = course.thumbnailUrl || course.thumbnail
 
@@ -388,8 +400,8 @@ function Courses() {
                       className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600/20 to-cyan-500/10 text-5xl font-black text-violet-300">
-                      {icon}
+                    <div className="flex h-full w-full items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600/20 to-cyan-500/10 text-violet-300">
+                      <Icon size={52} strokeWidth={1.6} aria-hidden="true" />
                     </div>
                   )}
 
@@ -416,8 +428,9 @@ function Courses() {
                       </span>
                     )}
                     {course.rating > 0 && (
-                      <span className="rounded-full bg-amber-400/10 px-3 py-1 text-[10px] font-semibold text-amber-400">
-                        ★ {course.rating}
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-3 py-1 text-[10px] font-semibold text-amber-400">
+                        <Star size={12} strokeWidth={2} fill="currentColor" aria-hidden="true" />
+                        {course.rating}
                       </span>
                     )}
                   </div>

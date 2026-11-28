@@ -11,6 +11,8 @@ import {
   verifyPayment,
 } from '../../api/courseApi'
 import PremiumProgress from '../../components/common/PremiumProgress'
+import BackButton from '../../components/common/BackButton'
+import { ArrowUpRight } from 'lucide-react'
 import { loadRazorpayScript } from '../../utils/razorpay'
 
 function CourseDetail() {
@@ -267,12 +269,9 @@ function CourseDetail() {
           {error || 'Course not found.'}
         </p>
 
-        <Link
-          to="/courses"
-          className="inline-block mt-4 text-violet-600 font-bold"
-        >
-          Back to courses
-        </Link>
+        <div className="mt-4">
+          <BackButton to="/courses">Back to courses</BackButton>
+        </div>
       </main>
     )
   }
@@ -296,12 +295,7 @@ function CourseDetail() {
     <main className="cv-premium-page max-w-[1280px] mx-auto px-5 sm:px-8 py-10">
       {/* Course introduction */}
       <section className="cv-section-panel rounded-3xl p-7 sm:p-10 bg-gradient-to-br from-violet-600/10 via-blue-500/5 to-cyan-400/10">
-        <Link
-          to="/courses"
-          className="text-xs font-bold text-violet-600"
-        >
-          ← All Courses
-        </Link>
+        <BackButton to="/courses">All Courses</BackButton>
 
         {(course.thumbnailUrl || course.thumbnail) && (
           <div className="mt-5 aspect-video max-h-80 overflow-hidden rounded-2xl border border-[var(--cv-border)] bg-[var(--cv-surface-2)]">
@@ -580,8 +574,9 @@ function CourseDetail() {
                   {project.outcome}
                 </p>
 
-                <span className="block mt-4 text-xs font-bold text-violet-600">
-                  View project details ←’
+                <span className="inline-flex items-center gap-1.5 mt-4 text-xs font-bold text-violet-600">
+                  View project details
+                  <ArrowUpRight size={14} strokeWidth={2} aria-hidden="true" />
                 </span>
               </button>
             ))
@@ -796,8 +791,9 @@ function CourseDetail() {
                   {resource.description}
                 </p>
 
-                <span className="inline-block mt-4 text-xs font-bold text-violet-600">
-                  Open resource ←—
+                <span className="inline-flex items-center gap-1.5 mt-4 text-xs font-bold text-violet-600">
+                  Open resource
+                  <ArrowUpRight size={14} strokeWidth={2} aria-hidden="true" />
                 </span>
               </a>
             ))
@@ -953,8 +949,9 @@ function CourseProblems({ slug }) {
                 </span>
               </div>
 
-              <span className="block mt-4 text-xs font-bold text-violet-600">
-                Solve problem ←’
+              <span className="inline-flex items-center gap-1.5 mt-4 text-xs font-bold text-violet-600">
+                Solve problem
+                <ArrowUpRight size={14} strokeWidth={2} aria-hidden="true" />
               </span>
             </button>
           ))}

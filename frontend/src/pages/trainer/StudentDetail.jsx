@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react"
-import { useParams, Link } from "react-router-dom"
+import { useParams } from "react-router-dom"
 import { getStudentDetail, getStudentActivity } from "../../api/trainerStudentApi"
 import StatCard from "../../components/common/StatCard"
 import ActivityHeatmap from "../../components/common/ActivityHeatmap"
+import BackButton from "../../components/common/BackButton"
 
 function StudentDetail() {
   const { username } = useParams()
@@ -22,9 +23,9 @@ function StudentDetail() {
 
   return (
     <div className="cv-premium-page">
-      <Link to="/trainer/students" className="text-sm text-[var(--color-forge-500)] hover:underline mb-4 inline-block">
-        ← Back to Students
-      </Link>
+      <div className="mb-4">
+        <BackButton to="/trainer/students">Back to Students</BackButton>
+      </div>
 
       <div className="flex items-center gap-4 mb-6">
         <div className="w-16 h-16 rounded-full bg-[var(--color-forge-500)] flex items-center justify-center text-2xl font-bold text-white">

@@ -69,7 +69,7 @@ function ConfirmModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="cv-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={() => {
         if (!loading) onCancel?.()
       }}
@@ -80,7 +80,7 @@ function ConfirmModal({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={message ? messageId : undefined}
-        className="w-full max-w-sm rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-2xl"
+        className="cv-modal-panel w-full max-w-sm rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id={titleId} className="mb-2 text-lg font-semibold">

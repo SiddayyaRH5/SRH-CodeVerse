@@ -3,12 +3,15 @@ import { useState, useRef, useEffect } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../../context/AuthContext"
 import { useTheme } from "../../context/ThemeContext"
-
-const Icon = ({ children }) => (
-  <span aria-hidden="true" className="text-base leading-none">
-    {children}
-  </span>
-)
+import {
+  Bell,
+  ChevronDown,
+  Menu,
+  Moon,
+  Search,
+  Sun,
+  X,
+} from "lucide-react"
 
 function Navbar() {
   const { user, logout } = useAuth()
@@ -101,7 +104,7 @@ function Navbar() {
         <div className="hidden lg:flex items-center gap-2 ml-auto shrink-0">
           <div className="relative hidden 2xl:block">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--cv-subtle)]">
-              ⌕
+              <Search size={16} strokeWidth={2} aria-hidden="true" />
             </span>
 
             <input
@@ -120,13 +123,18 @@ function Navbar() {
           <button
             className="cv-icon-btn"
             title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
             onClick={toggleTheme}
           >
-            <Icon>{theme === "dark" ? "☀" : "☾"}</Icon>
+            {theme === "dark" ? (
+              <Sun size={18} strokeWidth={2} aria-hidden="true" />
+            ) : (
+              <Moon size={18} strokeWidth={2} aria-hidden="true" />
+            )}
           </button>
 
-          <button className="cv-icon-btn" title="Notifications">
-            <Icon>♢</Icon>
+          <button className="cv-icon-btn" title="Notifications" aria-label="Notifications">
+            <Bell size={18} strokeWidth={2} aria-hidden="true" />
           </button>
 
           {user ? (
@@ -143,7 +151,7 @@ function Navbar() {
                   {user.username}
                 </span>
 
-                <span className="text-[10px]">⌄</span>
+                <ChevronDown size={14} strokeWidth={2} aria-hidden="true" />
               </button>
 
               {menuOpen && (
@@ -231,16 +239,26 @@ function Navbar() {
             className="cv-icon-btn"
             onClick={toggleTheme}
             title="Toggle theme"
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
           >
-            {theme === "dark" ? "☀" : "☾"}
+            {theme === "dark" ? (
+              <Sun size={18} strokeWidth={2} aria-hidden="true" />
+            ) : (
+              <Moon size={18} strokeWidth={2} aria-hidden="true" />
+            )}
           </button>
 
           <button
             className="cv-icon-btn"
             onClick={() => setMobileNavOpen((v) => !v)}
-            aria-label="Toggle menu"
+            aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileNavOpen}
           >
-            {mobileNavOpen ? "✕" : "☰"}
+            {mobileNavOpen ? (
+              <X size={20} strokeWidth={2} aria-hidden="true" />
+            ) : (
+              <Menu size={20} strokeWidth={2} aria-hidden="true" />
+            )}
           </button>
         </div>
       </div>

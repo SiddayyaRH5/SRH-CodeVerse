@@ -215,7 +215,7 @@ function ProblemDetail() {
               <button
                 onClick={() => setNoteOpen((v) => !v)}
                 className="text-xs px-2 py-1 rounded bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]"
-              >📝 Notes</button>
+              >📝 Notes</button>
             </div>
             <p className="text-sm text-[var(--color-text-secondary)] mb-4">
               {problem.topic} . {problem.estimatedTimeMinutes} min

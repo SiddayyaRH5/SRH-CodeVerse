@@ -1,9 +1,10 @@
-﻿
+
 import { useEffect, useState } from 'react'
 import CodeEditor from '../../components/editor/CodeEditor'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import axiosInstance from '../../api/axiosInstance'
 import { getCourseProblem } from '../../api/courseApi'
+import BackButton from '../../components/common/BackButton'
 
 export default function CourseProblemDetail() {
   const { slug, problemId } = useParams()
@@ -97,24 +98,16 @@ export default function CourseProblemDetail() {
     return (
       <main className="cv-premium-page max-w-6xl mx-auto p-8">
         <p className="text-red-500">{error || 'Problem not found.'}</p>
-        <Link
-          to={`/courses/${slug}`}
-          className="inline-block mt-4 text-violet-500 font-bold"
-        >
-          ← Back to course
-        </Link>
+        <div className="mt-4">
+          <BackButton to={`/courses/${slug}`}>Back to course</BackButton>
+        </div>
       </main>
     )
   }
 
   return (
     <main className="cv-premium-page max-w-7xl mx-auto px-5 py-8">
-      <Link
-        to={`/courses/${slug}`}
-        className="text-sm font-bold text-violet-500"
-      >
-        ← Back to course
-      </Link>
+      <BackButton to={`/courses/${slug}`}>Back to course</BackButton>
 
       <div className="grid lg:grid-cols-2 gap-5 mt-5 items-start">
         {/* Problem description */}
