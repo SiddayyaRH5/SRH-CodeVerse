@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom"
 import { getCourse, updateCourseProgress } from "../../api/courseApi"
 import LessonPoster from "../../components/common/LessonPoster"
 import BackButton from "../../components/common/BackButton"
-import { ArrowLeft } from "lucide-react"
+import LessonNav from "../../components/common/LessonNav"
 
 function ContentSection({ title, content, code = false }) {
   if (
@@ -433,48 +433,18 @@ export default function CourseLessonDetail() {
       </section>
 
       {/* Previous and next lesson */}
-      <div className="grid grid-cols-2 gap-4">
-        {previousLesson ? (
-          <button
-            type="button"
-            onClick={() =>
-              navigate(
-                `/courses/${slug}/lessons/${previousLesson.id}`
-              )
-            }
-            className="cv-section-panel rounded-xl p-4 text-left hover:border-violet-500 transition-colors"
-          >
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--cv-muted)]">
-              <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />
-              Previous lesson
-            </span>
-            <p className="font-bold text-sm mt-2">
-              {previousLesson.title}
-            </p>
-          </button>
-        ) : (
-          <div />
-        )}
-
-        {nextLesson && (
-          <button
-            type="button"
-            onClick={() =>
-              navigate(
-                `/courses/${slug}/lessons/${nextLesson.id}`
-              )
-            }
-            className="cv-section-panel rounded-xl p-4 text-right hover:border-violet-500 transition-colors"
-          >
-            <span className="text-xs text-[var(--cv-muted)]">
-              Next lesson →
-            </span>
-            <p className="font-bold text-sm mt-2">
-              {nextLesson.title}
-            </p>
-          </button>
-        )}
-      </div>
+      <LessonNav
+        previous={previousLesson?.title}
+        next={nextLesson?.title}
+        onPrevious={() =>
+          previousLesson &&
+          navigate(`/courses/${slug}/lessons/${previousLesson.id}`)
+        }
+        onNext={() =>
+          nextLesson &&
+          navigate(`/courses/${slug}/lessons/${nextLesson.id}`)
+        }
+      />
 
     </main>
   )

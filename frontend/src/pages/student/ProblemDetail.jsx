@@ -9,6 +9,8 @@ import { invalidate } from "../../utils/cache"
 import { useAuth } from "../../context/AuthContext"
 import { isBookmarked, toggleBookmark, getNote, saveNote } from "../../utils/srhStudy"
 import AICodeMentor from "../../components/common/AICodeMentor"
+import { useMentorContext } from "../../context/useMentorContext"
+import { ChevronDown } from "lucide-react"
 
 const LANGUAGE_STARTERS = {
   java: "",
@@ -70,6 +72,11 @@ function ProblemDetail() {
   const [bookmarked, setBookmarked] = useState(false)
   const [noteOpen, setNoteOpen] = useState(false)
   const [note, setNote] = useState("")
+  const { setContext: setMentorContext } = useMentorContext()
+
+  useEffect(() => {
+    setMentorContext({ problem, code, result })
+  }, [problem, code, result, setMentorContext])
 
   useEffect(() => {
     Promise.all([
@@ -283,34 +290,39 @@ function ProblemDetail() {
         <div
           className={`cv-editor-shell ${mobileTab === "editor" ? "flex" : "hidden"} lg:flex flex-col bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg overflow-hidden h-[calc(100vh-220px)] lg:h-auto`}
         >
-          <div className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-[var(--color-border)] gap-2 flex-wrap">
+          <div className="cv-editor-toolbar flex items-center justify-between gap-2 flex-wrap border-b border-[var(--color-border)]">
             <div className="flex items-center gap-2 sm:gap-3">
-              <select
-                value={language}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-                disabled={running || submitting}
-                aria-label="Programming language"
-                className="text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text-secondary)] disabled:opacity-50"
-              >
-                <option value="java">Java 21</option>
-                <option value="python">Python 3.12</option>
-                <option value="javascript">JavaScript (Node.js 22)</option>
-              </select>
-              <select
-                value={editorTheme}
-                onChange={(e) => handleThemeChange(e.target.value)}
-                className="text-xs bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text-secondary)]"
-              >
-                <option value="vs-dark">Dark</option>
-                <option value="vs">Light</option>
-                <option value="hc-black">High Contrast</option>
-              </select>
+              <span className="cv-select-native">
+                <select
+                  value={language}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
+                  disabled={running || submitting}
+                  aria-label="Programming language"
+                >
+                  <option value="java">Java 21</option>
+                  <option value="python">Python 3.12</option>
+                  <option value="javascript">JavaScript (Node.js 22)</option>
+                </select>
+                <ChevronDown size={14} strokeWidth={2} aria-hidden="true" />
+              </span>
+              <span className="cv-select-native">
+                <select
+                  value={editorTheme}
+                  onChange={(e) => handleThemeChange(e.target.value)}
+                  aria-label="Editor theme"
+                >
+                  <option value="vs-dark">Dark</option>
+                  <option value="vs">Light</option>
+                  <option value="hc-black">High Contrast</option>
+                </select>
+                <ChevronDown size={14} strokeWidth={2} aria-hidden="true" />
+              </span>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={handleReset}
                 disabled={running || submitting}
-                className="text-xs sm:text-sm bg-[var(--color-bg-tertiary)] px-2 sm:px-3 py-1 rounded hover:opacity-80 disabled:opacity-50"
+                className="cv-toolbar-button"
                 title="Reset to starter code"
               >
                 Reset
@@ -318,14 +330,14 @@ function ProblemDetail() {
               <button
                 onClick={handleRun}
                 disabled={running || submitting}
-                className="text-xs sm:text-sm bg-[var(--color-bg-tertiary)] px-2 sm:px-3 py-1 rounded hover:opacity-80 disabled:opacity-50"
+                className="cv-toolbar-button"
               >
                 {running ? "Running..." : "Run"}
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={running || submitting}
-                className="text-xs sm:text-sm bg-[var(--color-forge-500)] text-white px-2 sm:px-3 py-1 rounded hover:bg-[var(--color-forge-600)] disabled:opacity-50"
+                className="cv-toolbar-button cv-toolbar-button--primary"
               >
                 {submitting ? "Submitting..." : "Submit"}
               </button>

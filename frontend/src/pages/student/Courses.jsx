@@ -241,7 +241,7 @@ function Courses() {
         </div>
       </header>
 
-      <section className="mb-8 rounded-2xl border border-[var(--cv-border)] bg-[var(--cv-surface)] p-4 sm:p-5">
+      <section className="cv-compact-filters mb-6 rounded-2xl border border-[var(--cv-border)] bg-[var(--cv-surface)] p-4 sm:p-5">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div className="min-w-0 sm:col-span-2 lg:col-span-1">
             <label
