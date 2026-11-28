@@ -297,7 +297,7 @@ function Problems() {
       </section>
 
       {/* Search and filters */}
-      <section className="cv-workspace-filter mb-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4 sm:p-5">
+      <section className="cv-workspace-filter cv-compact-filters mb-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4 sm:p-5">
         <label
           htmlFor="problem-search"
           className="mb-2 block text-xs font-semibold text-[var(--color-text-secondary)]"

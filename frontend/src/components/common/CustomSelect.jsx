@@ -19,6 +19,7 @@ export default function CustomSelect({
   placeholder = "Select...",
 }) {
   const [open, setOpen] = useState(false)
+  const [dropUp, setDropUp] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const rootRef = useRef(null)
   const listRef = useRef(null)
@@ -32,18 +33,30 @@ export default function CustomSelect({
     const closeOnOutside = (event) => {
       if (rootRef.current && !rootRef.current.contains(event.target)) setOpen(false)
     }
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setOpen(false)
+    }
     document.addEventListener("mousedown", closeOnOutside)
-    return () => document.removeEventListener("mousedown", closeOnOutside)
+    document.addEventListener("keydown", closeOnEscape)
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutside)
+      document.removeEventListener("keydown", closeOnEscape)
+    }
   }, [open])
 
   useEffect(() => {
-    if (open) setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0)
+    if (!open) return
+    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0)
+    const rect = rootRef.current?.getBoundingClientRect()
+    if (rect) setDropUp(window.innerHeight - rect.bottom < 280 && rect.top > 280)
   }, [open, selectedIndex])
 
   useEffect(() => {
     if (!open || !listRef.current) return
     const active = listRef.current.querySelector('[data-active="true"]')
-    active?.scrollIntoView({ block: "nearest" })
+    if (active && typeof active.scrollIntoView === "function") {
+      active.scrollIntoView({ block: "nearest" })
+    }
   }, [activeIndex, open])
 
   const commit = (index) => {
@@ -87,7 +100,7 @@ export default function CustomSelect({
   }
 
   return (
-    <div ref={rootRef} className={`cv-select ${className}`.trim()}>
+    <div ref={rootRef} className={`cv-select${dropUp ? " cv-select--drop-up" : ""} ${className}`.trim()}>
       <button
         type="button"
         disabled={disabled}

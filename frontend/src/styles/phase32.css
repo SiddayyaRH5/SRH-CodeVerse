@@ -3,36 +3,40 @@
    mentor panel and footer logo motion. Honours light/dark and reduced motion. */
 
 /* ---------------- Global search ---------------- */
+/* Icon and input are flex siblings, so text can never render under the icon
+   regardless of `.cv-input` padding specificity or theme overrides. */
 .cv-nav-search {
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex: 0 1 240px;
   min-width: 0;
   width: 240px;
 }
 
 .cv-nav-search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
   display: inline-flex;
+  align-items: center;
   color: var(--cv-subtle);
+  flex: 0 0 auto;
   pointer-events: none;
 }
 
-.cv-nav-search-input {
+.cv-nav-search .cv-nav-search-input {
+  display: block;
+  flex: 1 1 auto;
   width: 100%;
   min-width: 0;
   height: 40px;
-  padding: 0 12px 0 36px;
+  padding: 0 12px !important;
   border-radius: 999px;
   font-size: 12px;
   line-height: 40px;
 }
 
-.cv-nav-search-input::placeholder {
+.cv-nav-search .cv-nav-search-input::placeholder {
   font-size: 11px;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 @media (max-width: 1536px) {
@@ -44,7 +48,7 @@
 }
 
 .cv-nav-search--mobile {
-  display: block;
+  display: flex;
   flex: 1 1 auto;
   width: 100%;
 }
@@ -275,9 +279,12 @@
   min-width: 0;
 }
 
+/* Recharts 3 renders its wrapper inside a zero-width measuring div.
+   `max-width: 100%` here resolves against that 0px parent and collapses the
+   chart to width 0, so the SVG renders blank. ResponsiveContainer owns sizing. */
 .cv-analytics-chart .recharts-wrapper,
 .cv-analytics-chart .recharts-surface {
-  max-width: 100%;
+  max-width: none;
 }
 
 .cv-analytics-legend {
@@ -641,11 +648,163 @@
   line-height: 1.5;
 }
 
+/* ---------------- Global AI Mentor entry point ---------------- */
+.cv-mentor-fab {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
+  background: linear-gradient(135deg, #6d28d9, #2563eb 55%, #06b6d4);
+  color: #fff;
+  box-shadow: 0 16px 36px -14px rgba(124, 58, 237, 0.85);
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.cv-mentor-fab:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 22px 44px -14px rgba(124, 58, 237, 0.9);
+}
+
+.cv-mentor-fab:focus-visible {
+  outline: 3px solid rgba(6, 182, 212, 0.65);
+  outline-offset: 3px;
+}
+
+.cv-mentor-fab-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  background: #34d399;
+}
+
+.cv-mentor-drawer {
+  position: fixed;
+  right: 18px;
+  bottom: 88px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  width: min(390px, calc(100vw - 28px));
+  max-height: min(72vh, 620px);
+  overflow: hidden;
+  border: 1px solid var(--cv-border);
+  border-radius: 18px;
+  background: var(--cv-surface);
+  box-shadow: 0 28px 70px -24px rgba(15, 23, 42, 0.65);
+  animation: cv-mentor-drawer-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes cv-mentor-drawer-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.cv-mentor-drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border-bottom: 1px solid var(--cv-border);
+  background: var(--cv-surface-2);
+}
+
+.cv-mentor-drawer-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 9px;
+  min-height: 160px;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+.cv-mentor-drawer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 14px 10px;
+}
+
+.cv-mentor-drawer-input {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 0 14px 10px;
+}
+
+.cv-mentor-drawer-input textarea {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+}
+
+@media (max-width: 480px) {
+  .cv-mentor-fab { right: 14px; bottom: 14px; width: 50px; height: 50px; }
+  .cv-mentor-drawer {
+    inset: 10px 10px 74px;
+    width: auto;
+    max-height: none;
+  }
+}
+
+/* ---------------- Compact filter panels ---------------- */
+.cv-compact-filters {
+  padding: 14px !important;
+}
+
+.cv-compact-filters > div,
+.cv-compact-filters > label {
+  margin-top: 10px !important;
+}
+
+.cv-compact-filters .cv-input,
+.cv-compact-filters select {
+  min-height: 42px !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  font-size: 12px !important;
+}
+
+/* Consistent native dropdowns in dark and light themes */
+select.cv-input,
+.cv-compact-filters select {
+  color-scheme: dark;
+  border-radius: 11px;
+}
+
+:root[data-theme="light"] select.cv-input,
+:root[data-theme="light"] .cv-compact-filters select {
+  color-scheme: light;
+}
+
+.cv-select--drop-up .cv-select-menu {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
 /* ---------------- Reduced motion ---------------- */
 @media (prefers-reduced-motion: reduce) {
   .cv-footer-brand,
-  .cv-mentor-panel {
+  .cv-mentor-panel,
+  .cv-mentor-drawer {
     animation: none !important;
+  }
+
+  .cv-mentor-fab,
+  .cv-mentor-fab:hover {
+    transition: none !important;
+    transform: none !important;
   }
 
   .cv-analytics-stat,

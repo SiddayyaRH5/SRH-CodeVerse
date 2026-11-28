@@ -9,6 +9,7 @@ import { invalidate } from "../../utils/cache"
 import { useAuth } from "../../context/AuthContext"
 import { isBookmarked, toggleBookmark, getNote, saveNote } from "../../utils/srhStudy"
 import AICodeMentor from "../../components/common/AICodeMentor"
+import { useMentorContext } from "../../context/useMentorContext"
 import { ChevronDown } from "lucide-react"
 
 const LANGUAGE_STARTERS = {
@@ -71,6 +72,11 @@ function ProblemDetail() {
   const [bookmarked, setBookmarked] = useState(false)
   const [noteOpen, setNoteOpen] = useState(false)
   const [note, setNote] = useState("")
+  const { setContext: setMentorContext } = useMentorContext()
+
+  useEffect(() => {
+    setMentorContext({ problem, code, result })
+  }, [problem, code, result, setMentorContext])
 
   useEffect(() => {
     Promise.all([
